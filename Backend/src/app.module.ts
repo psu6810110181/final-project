@@ -4,7 +4,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
-import { AdminsModule } from './admins/admins.module';
 import { ProductsModule } from './products/products.module';
 import { OrdersModule } from './orders/orders.module';
 import { OrderItemsModule } from './order_items/order_items.module';
@@ -36,8 +35,6 @@ import { AuthModule } from './auth/auth.module';
     }),
 
     UsersModule,
-
-    AdminsModule,
 
     ProductsModule,
 

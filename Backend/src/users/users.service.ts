@@ -13,17 +13,36 @@ export class UsersService {
     private usersRepository: Repository<User>,
   ) {}
 
-  async create(createUserDto: CreateUserDto) {
-    // 2. เข้ารหัส Password ก่อนบันทึก
-    const salt = await bcrypt.genSalt();
-    const hashedPassword = await bcrypt.hash(createUserDto.password, salt);
+// src/users/users.service.ts
 
-    // 3. สร้าง User ด้วยรหัสผ่านที่เข้ารหัสแล้ว
-    const user = this.usersRepository.create({
-      ...createUserDto,
-      password: hashedPassword,
-    });
+  async create(createUserDto: CreateUserDto) {
+    // 1. สร้าง Object User ใหม่
+    const newUser = this.usersRepository.create(createUserDto);
     
+    // 2. 🛡️ บังคับยัดเยียดให้เป็น 'user' เท่านั้น! (ป้องกัน Hacker ส่ง role: admin มา)
+    newUser.role = 'user'; 
+
+    // 3. เข้ารหัสรหัสผ่าน (ถ้ายังไม่ได้ทำ)
+    // const salt = await bcrypt.genSalt();
+    // newUser.password = await bcrypt.hash(createUserDto.password, salt);
+
+    // 4. บันทึก
+    return await this.usersRepository.save(newUser);
+  }
+
+  async updateRole(id: string, role: string) {
+    // 1. หา User คนนั้นก่อน
+    const user = await this.usersRepository.findOne({ where: { id } });
+    
+    // 2. ถ้าไม่เจอ ให้แจ้ง error
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    // 3. เปลี่ยน Role
+    user.role = role;
+
+    // 4. บันทึก
     return await this.usersRepository.save(user);
   }
 

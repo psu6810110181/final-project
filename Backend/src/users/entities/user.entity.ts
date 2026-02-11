@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 import { Order } from '../../orders/entities/order.entity';
 import { Review } from '../../reviews/entities/review.entity';
+import { CartItem } from '../../cart_items/entities/cart_item.entity';
 
 @Entity('user') // ชื่อตารางใน DB
 export class User {
@@ -50,4 +51,6 @@ export class User {
   // [cite: 38] User "writes" Review
   //@OneToMany(() => Review, (review) => review.user)
  // reviews: Review[];
+  @OneToMany(() => CartItem, (cartItem) => cartItem.user)
+  cartItems: CartItem[];
 }

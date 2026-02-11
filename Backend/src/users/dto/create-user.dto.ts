@@ -37,9 +37,4 @@ export class CreateUserDto {
   @IsString()
   userImage?: string;
 
-  // role Varchar(15)
-  @IsOptional()
-  @IsString()
-  @MaxLength(15)
-  role?: string; // ถ้าไม่ส่งมา ใน Entity เราตั้ง default เป็น 'user' ไว้แล้ว
 }
