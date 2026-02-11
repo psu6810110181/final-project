@@ -10,6 +10,7 @@ import { OrdersModule } from './orders/orders.module';
 import { OrderItemsModule } from './order_items/order_items.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { CartItemsModule } from './cart_items/cart_items.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -47,6 +48,8 @@ import { CartItemsModule } from './cart_items/cart_items.module';
     ReviewsModule,
 
     CartItemsModule,
+
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
