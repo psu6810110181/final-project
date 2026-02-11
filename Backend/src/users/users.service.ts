@@ -23,8 +23,8 @@ export class UsersService {
     newUser.role = 'user'; 
 
     // 3. เข้ารหัสรหัสผ่าน (ถ้ายังไม่ได้ทำ)
-    // const salt = await bcrypt.genSalt();
-    // newUser.password = await bcrypt.hash(createUserDto.password, salt);
+    const salt = await bcrypt.genSalt();
+    newUser.password = await bcrypt.hash(createUserDto.password, salt);
 
     // 4. บันทึก
     return await this.usersRepository.save(newUser);
@@ -61,7 +61,18 @@ export class UsersService {
 
   async update(id: string, updateUserDto: UpdateUserDto) {
     const user = await this.findOne(id);
+
+    // 1. ตรวจสอบว่าในข้อมูลที่ส่งมา มีการขอเปลี่ยน password ไหม
+    if (updateUserDto.password) {
+      // 🔐 ถ้ามี ให้ทำการ Hash ก่อนเซฟ
+      const salt = await bcrypt.genSalt();
+      updateUserDto.password = await bcrypt.hash(updateUserDto.password, salt);
+    }
+
+    // 2. รวมข้อมูลใหม่ทับข้อมูลเก่า
     Object.assign(user, updateUserDto);
+
+    // 3. บันทึก
     return await this.usersRepository.save(user);
   }
 

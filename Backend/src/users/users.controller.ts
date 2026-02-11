@@ -57,7 +57,7 @@ export class UsersController {
     @Req() req: any, // 👈 รับค่า Request มาเพื่อดูว่า "ใครเป็นคนกด"
   ) {
     // 🛡️ เช็ค: ถ้า ID ที่จะแก้ ตรงกับ ID ของตัวเอง -> ห้ามทำ!
-    if (id === req.user.userId) { 
+    if (id === req.user.id) { 
       throw new ForbiddenException('Admin cannot change their own role');
     }
 
