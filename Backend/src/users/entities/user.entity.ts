@@ -45,8 +45,8 @@ export class User {
 
   // Relations
   // [cite: 39] User "places" Order
-  //@OneToMany(() => Order, (order) => order.user)
-  //orders: Order[];
+  @OneToMany(() => Order, (order) => order.user)
+  orders: Order[];
 
   // [cite: 38] User "writes" Review
   //@OneToMany(() => Review, (review) => review.user)

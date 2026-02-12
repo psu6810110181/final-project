@@ -16,6 +16,9 @@ export class Product {
   @Column({ default: 0 })
   stock: number;
 
+  @Column({ nullable: true }) // ยอมให้เป็น null ได้ (กัน error เพราะข้อมูลเก่าเรายังไม่มีรูป)
+  image: string;
+
   // 🔗 ต้องมีอันนี้ CartItem ถึงจะหายแดง
   @OneToMany(() => CartItem, (cartItem) => cartItem.product)
   cartItems: CartItem[];

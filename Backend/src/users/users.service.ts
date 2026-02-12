@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import * as bcrypt from 'bcrypt'; // 1. import bcrypt
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
@@ -13,44 +13,41 @@ export class UsersService {
     private usersRepository: Repository<User>,
   ) {}
 
-// src/users/users.service.ts
-
   async create(createUserDto: CreateUserDto) {
-    // 1. สร้าง Object User ใหม่
     const newUser = this.usersRepository.create(createUserDto);
-    
-    // 2. 🛡️ บังคับยัดเยียดให้เป็น 'user' เท่านั้น! (ป้องกัน Hacker ส่ง role: admin มา)
     newUser.role = 'user'; 
-
-    // 3. เข้ารหัสรหัสผ่าน (ถ้ายังไม่ได้ทำ)
     const salt = await bcrypt.genSalt();
     newUser.password = await bcrypt.hash(createUserDto.password, salt);
-
-    // 4. บันทึก
     return await this.usersRepository.save(newUser);
   }
 
-  async updateRole(id: string, role: string) {
-    // 1. หา User คนนั้นก่อน
-    const user = await this.usersRepository.findOne({ where: { id } });
-    
-    // 2. ถ้าไม่เจอ ให้แจ้ง error
-    if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found`);
-    }
+  // ---------------------------------------------------------
+  // ✅ [NEW] ฟังก์ชันสำหรับ User แก้ข้อมูลตัวเอง
+  // ---------------------------------------------------------
+  async updateProfile(id: string, updateData: { address?: string; phone?: string; email?: string }) {
+    // 1. หา User
+    const user = await this.findOne(id);
 
-    // 3. เปลี่ยน Role
-    user.role = role;
+    // 2. อัปเดตเฉพาะค่าที่ส่งมา (ถ้าไม่ส่งมา ให้ใช้ค่าเดิม)
+    // เขียนแบบนี้ชัดเจนและปลอดภัยกว่า Object.assign สำหรับเคสนี้ครับ
+    if (updateData.address !== undefined) user.address = updateData.address;
+    if (updateData.phone !== undefined) user.phone = updateData.phone;
+    // if (updateData.email !== undefined) user.email = updateData.email; // ถ้าจะให้แก้เมลด้วย
 
-    // 4. บันทึก
+    // 3. บันทึก
     return await this.usersRepository.save(user);
   }
 
-  async findOneByUsername(username: string) { // 4. เพิ่มฟังก์ชันหาด้วย username (เอาไว้ใช้ตอน Login)
+  async updateRole(id: string, role: string) {
+    const user = await this.findOne(id);
+    user.role = role;
+    return await this.usersRepository.save(user);
+  }
+
+  async findOneByUsername(username: string) {
     return await this.usersRepository.findOneBy({ username });
   }
 
-  // ... (findAll, findOne, update, remove อันเดิมคงไว้เหมือนเดิม) ...
   async findAll() { return await this.usersRepository.find(); }
   
   async findOne(id: string) {
@@ -59,20 +56,16 @@ export class UsersService {
       return user;
   }
 
+  // อันนี้สำหรับ Admin แก้ไขข้อมูล (รวมถึง Reset Password)
   async update(id: string, updateUserDto: UpdateUserDto) {
     const user = await this.findOne(id);
 
-    // 1. ตรวจสอบว่าในข้อมูลที่ส่งมา มีการขอเปลี่ยน password ไหม
     if (updateUserDto.password) {
-      // 🔐 ถ้ามี ให้ทำการ Hash ก่อนเซฟ
       const salt = await bcrypt.genSalt();
       updateUserDto.password = await bcrypt.hash(updateUserDto.password, salt);
     }
 
-    // 2. รวมข้อมูลใหม่ทับข้อมูลเก่า
     Object.assign(user, updateUserDto);
-
-    // 3. บันทึก
     return await this.usersRepository.save(user);
   }
 
