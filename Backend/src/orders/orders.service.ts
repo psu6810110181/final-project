@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Order } from './entities/order.entity';
@@ -13,11 +13,12 @@ export class OrdersService {
     @InjectRepository(Order) private ordersRepository: Repository<Order>,
     @InjectRepository(Product) private productsRepository: Repository<Product>,
     @InjectRepository(CartItem) private cartItemsRepository: Repository<CartItem>,
-    private dataSource: DataSource, // ใช้สำหรับทำ Transaction
+    private dataSource: DataSource,
   ) {}
 
-  async checkout(user: User) {
-    // 1. ดึงของในตะกร้าของ User ออกมา
+  // 1. สร้างคำสั่งซื้อ (User)
+  // 👇 แก้ไขตรงนี้: รับ address เพิ่มเข้ามา
+  async checkout(user: User, address: string) {
     const cartItems = await this.cartItemsRepository.find({
       where: { user: { id: user.id } },
       relations: ['product'],
@@ -27,7 +28,6 @@ export class OrdersService {
       throw new BadRequestException('ไม่มีสินค้าในตะกร้า');
     }
 
-    // 2. เริ่ม Transaction
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -36,38 +36,35 @@ export class OrdersService {
       let totalAmountProduct = 0;
       let totalAmountInstallation = 0;
 
-      // 3. ตรวจสอบสต็อกและคำนวณยอดเงิน
+      // คำนวณยอดและตัดสต็อก
       for (const item of cartItems) {
         if (item.product.stock < item.quantity) {
           throw new BadRequestException(`สินค้า ${item.product.name} เหลือไม่พอ`);
         }
-        
         totalAmountProduct += Number(item.product.price) * item.quantity;
         
-        // ถ้ามีการติ๊กขอรับบริการติดตั้ง (สมมติค่าติดตั้ง 500 ต่อชิ้น ถ้า item นั้นต้องการ)
-        // ในที่นี้เราอิงตามฟิลด์ requestInstallation ใน CartItem (ถ้าคุณมี)
-        // หรือถ้าใน UI เป็นยอดรวม 0 บาทตามรูป ก็ตั้งเป็น 0 ไว้ก่อนครับ
         if (item.requestInstallation) { 
-            totalAmountInstallation += 0; // ปรับเปลี่ยนตัวเลขตามความต้องการ
+            totalAmountInstallation += 500; 
         }
       }
 
       const totalAmount = totalAmountProduct + totalAmountInstallation;
 
-      // 4. สร้าง Order (ใบหลัก)
+      // สร้าง Order
       const order = this.ordersRepository.create({
         user: user,
-        totalAmountProduct: totalAmountProduct,
-        totalAmountInstallation: totalAmountInstallation,
-        totalAmount: totalAmount,
+        totalAmountProduct,
+        totalAmountInstallation,
+        totalAmount,
         status: 'PENDING',
-        installationCharge: totalAmountInstallation
+        installationCharge: totalAmountInstallation,
+        // 👇 เพิ่มบรรทัดนี้: บันทึกที่อยู่จัดส่ง (Snapshot)
+        shippingAddress: address || user.address 
       });
       const savedOrder = await queryRunner.manager.save(order);
 
-      // 5. ย้ายจาก CartItem ไปเป็น OrderItem และตัดสต็อก
+      // ย้าย Cart -> OrderItem และตัดสต็อกจริง
       for (const item of cartItems) {
-        // สร้าง OrderItem
         const orderItem = queryRunner.manager.create(OrderItem, {
           order: savedOrder,
           product: item.product,
@@ -77,15 +74,11 @@ export class OrdersService {
         });
         await queryRunner.manager.save(orderItem);
 
-        // ตัดสต็อกสินค้า
         item.product.stock -= item.quantity;
         await queryRunner.manager.save(item.product);
       }
 
-      // 6. ล้างตะกร้า
       await queryRunner.manager.delete(CartItem, { user: { id: user.id } });
-
-      // ยืนยัน Transaction
       await queryRunner.commitTransaction();
 
       return {
@@ -95,30 +88,79 @@ export class OrdersService {
       };
 
     } catch (err) {
-      // หากเกิด Error ให้ยกเลิกทั้งหมด
       await queryRunner.rollbackTransaction();
       throw err;
     } finally {
-      // ปล่อยการเชื่อมต่อ
       await queryRunner.release();
     }
   }
 
+  // 2. อัปโหลดสลิป (User)
   async updatePaymentSlip(orderId: string, fileName: string) {
     const order = await this.ordersRepository.findOne({ where: { id: orderId } });
-    
-    if (!order) {
-      throw new BadRequestException('ไม่พบคำสั่งซื้อนี้');
-    }
+    if (!order) throw new NotFoundException('ไม่พบคำสั่งซื้อ');
 
-    order.paymentSlipImage = fileName; // บันทึกชื่อไฟล์ลงฟิลด์ตาม ER Diagram
-    order.status = 'WAITING_FOR_VERIFICATION'; // อัปเดตสถานะเป็นรอตรวจสอบ
-    
+    order.paymentSlipImage = fileName;
+    order.status = 'WAITING_FOR_VERIFICATION'; 
     await this.ordersRepository.save(order);
     
-    return {
-      message: 'อัปโหลดสลิปเรียบร้อยแล้ว รอการตรวจสอบสถานะ',
-      fileName: fileName
-    };
- }
+    return { message: 'อัปโหลดสลิปเรียบร้อย', fileName };
+  }
+
+  // 3. ดูรายการของตัวเอง (User)
+  async findMyOrders(userId: string) {
+    return this.ordersRepository.find({
+      where: { user: { id: userId } },
+      relations: ['items', 'items.product'],
+      order: { orderDate: 'DESC' }
+    });
+  }
+
+  // 4. ดูรายละเอียดออเดอร์เดียว (User/Admin)
+  async findOne(orderId: string) {
+    const order = await this.ordersRepository.findOne({
+      where: { id: orderId },
+      relations: ['items', 'items.product', 'user'],
+    });
+    if (!order) throw new NotFoundException('ไม่พบคำสั่งซื้อ');
+    return order;
+  }
+
+  // ---------------------------------------------------------
+  // 👇 ส่วนของ Admin 👇
+  // ---------------------------------------------------------
+
+  // 5. ดูออเดอร์ทั้งหมดในระบบ (Admin)
+  async findAll() {
+    return this.ordersRepository.find({
+      relations: ['user', 'items'], 
+      order: { orderDate: 'DESC' }
+    });
+  }
+
+  // 6. อัปเดตสถานะ (Admin: อนุมัติ / ส่งของ / ยกเลิก)
+  async updateStatus(orderId: string, status: string) {
+    const order = await this.ordersRepository.findOne({
+      where: { id: orderId },
+      relations: ['items', 'items.product'] 
+    });
+
+    if (!order) throw new NotFoundException('ไม่พบคำสั่งซื้อ');
+
+    // คืนสต็อกกรณียกเลิก
+    if (status === 'CANCELLED' && order.status !== 'CANCELLED') {
+      for (const item of order.items) {
+        const product = item.product;
+        product.stock += item.quantity; 
+        await this.productsRepository.save(product);
+      }
+    }
+
+    if (order.status === 'CANCELLED' && status !== 'CANCELLED') {
+        throw new BadRequestException('ออเดอร์นี้ถูกยกเลิกไปแล้ว ไม่สามารถเปลี่ยนสถานะได้');
+    }
+
+    order.status = status;
+    return this.ordersRepository.save(order);
+  }
 }

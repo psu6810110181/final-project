@@ -1,3 +1,4 @@
+ /*
 import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { OrderItemsService } from './order_items.service';
 import { CreateOrderItemDto } from './dto/create-order_item.dto';
@@ -31,4 +32,4 @@ export class OrderItemsController {
   remove(@Param('id') id: string) {
     return this.orderItemsService.remove(+id);
   }
-}
+} */

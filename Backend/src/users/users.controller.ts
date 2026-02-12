@@ -1,11 +1,18 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, ForbiddenException } from '@nestjs/common';
+import { 
+  Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, ForbiddenException,
+  UseInterceptors, UploadedFile, BadRequestException
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateRoleDto } from './dto/update-role.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
-import { UpdateRoleDto } from './dto/update-role.dto';
+// 👇 import สำหรับจัดการไฟล์
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
 @Controller('users')
 export class UsersController {
@@ -18,14 +25,33 @@ export class UsersController {
   }
 
   // ---------------------------------------------------------
-  // ✅ [NEW] เพิ่มอันนี้ครับ: แก้ไขโปรไฟล์ตัวเอง (ที่อยู่/เบอร์โทร)
+  // ✅ แก้ไขโปรไฟล์ตัวเอง + อัปโหลดรูปภาพ 🖼️
   // ---------------------------------------------------------
-  // ต้องวางไว้ "ก่อน" @Patch(':id') นะครับ ไม่งั้นมันจะชนกัน
   @Patch('profile')
-  @UseGuards(AuthGuard('jwt')) // แค่ Login ก็เข้าได้
-  async updateProfile(@Req() req, @Body() body: { address?: string; phone?: string; email?: string }) {
-    // ดึง ID จาก Token โดยตรง (req.user.id) -> ปลอดภัย 100% แก้ของคนอื่นไม่ได้
-    return this.usersService.updateProfile(req.user.id, body);
+  @UseGuards(AuthGuard('jwt'))
+  @UseInterceptors(FileInterceptor('file', { // รับไฟล์ชื่อ 'file' จาก Frontend
+    storage: diskStorage({
+      destination: './uploads/profiles', // เก็บในโฟลเดอร์นี้
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(null, `user-${uniqueSuffix}${extname(file.originalname)}`);
+      },
+    }),
+  }))
+  async updateProfile(
+    @Req() req, 
+    @Body() body: UpdateUserDto, // ใช้ UpdateUserDto เพื่อรองรับทุก field (address, phone, etc.)
+    @UploadedFile() file?: Express.Multer.File 
+  ) {
+    // ถ้ามีรูปแนบมาด้วย ให้เพิ่มชื่อรูปลงใน body
+    if (file) {
+      body.userImage = file.filename;
+    }
+    
+    // เรียก Service โดยใช้ ID จาก Token (req.user.userId) -> ปลอดภัย
+    // หมายเหตุ: เช็คใน JWT Strategy อีกทีนะครับว่าใช้ .userId หรือ .id หรือ .sub
+    // ปกติถ้าใช้ req.user.id ก็ใส่ req.user.id ครับ
+    return this.usersService.update(req.user.id, body); 
   }
 
   // 2. ดูรายชื่อ User ทั้งหมด (Admin)
@@ -43,12 +69,27 @@ export class UsersController {
     return this.usersService.findOne(id);
   }
 
-  // 4. แก้ไขข้อมูล (แบบ Admin แก้ให้ หรือแก้แบบระบุ ID)
-  // อันนี้เอาไว้ให้ Admin ใช้แก้ Password หรือข้อมูลสำคัญให้ User
+  // 4. แก้ไขข้อมูล (Admin แก้ให้ User อื่น)
   @Patch(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('admin') // 🔒 ล็อกให้เฉพาะ Admin ใช้ท่านั้น (User ธรรมดาให้ไปใช้ /profile ข้างบน)
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+  @Roles('admin')
+  @UseInterceptors(FileInterceptor('file', { // Admin ก็ควรอัปรูปให้ User ได้ด้วย
+     storage: diskStorage({
+      destination: './uploads/profiles', 
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(null, `user-${uniqueSuffix}${extname(file.originalname)}`);
+      },
+    }),
+  }))
+  update(
+    @Param('id') id: string, 
+    @Body() updateUserDto: UpdateUserDto,
+    @UploadedFile() file?: Express.Multer.File
+  ) {
+    if (file) {
+      updateUserDto.userImage = file.filename;
+    }
     return this.usersService.update(id, updateUserDto);
   }
 

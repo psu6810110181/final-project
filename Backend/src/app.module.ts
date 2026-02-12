@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config'; // 👈 เรียกใช้ ConfigService
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -10,42 +10,45 @@ import { OrderItemsModule } from './order_items/order_items.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { CartItemsModule } from './cart_items/cart_items.module';
 import { AuthModule } from './auth/auth.module';
+// 👇 1. Import เพิ่มสำหรับ Serve Static Files
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
-    // 1. โหลดไฟล์ .env เข้ามาในระบบก่อน
+    // 1. โหลดไฟล์ .env
     ConfigModule.forRoot({
-      isGlobal: true, // ให้เรียกใช้ ConfigService ได้ทุกที่โดยไม่ต้อง import ใหม่
+      isGlobal: true,
     }),
 
-    // 2. เชื่อมต่อ Database แบบ Async (รออ่านค่า .env ให้เสร็จก่อน)
+    // 👇 2. เพิ่มส่วนนี้: เปิดให้เข้าถึงโฟลเดอร์ uploads ผ่าน URL
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'), // ชี้ไปที่โฟลเดอร์ uploads (อยู่นอก src)
+      serveRoot: '/uploads', // เรียกผ่าน http://localhost:3000/uploads/...
+    }),
+
+    // 3. เชื่อมต่อ Database
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         type: 'postgres',
-        host: configService.get<string>('DB_HOST'),      // อ่านค่า DB_HOST จาก .env
-        port: configService.get<number>('DB_PORT'),      // อ่านค่า DB_PORT
+        host: configService.get<string>('DB_HOST'),
+        port: configService.get<number>('DB_PORT'),
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_DATABASE'),
-        autoLoadEntities: true, // โหลด Entity (ตาราง) อัตโนมัติ
-        synchronize: true,      // (Dev Mode) แก้โค้ดปุ๊บ DB เปลี่ยนตาม
+        autoLoadEntities: true,
+        synchronize: true,
       }),
-      inject: [ConfigService], // ฉีด ConfigService เข้าไปใช้งาน
+      inject: [ConfigService],
     }),
 
     UsersModule,
-
     ProductsModule,
-
     OrdersModule,
-
     OrderItemsModule,
-
     ReviewsModule,
-
     CartItemsModule,
-
     AuthModule,
   ],
   controllers: [AppController],

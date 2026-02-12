@@ -1,15 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { OrderItemsService } from './order_items.service';
-import { OrderItemsController } from './order_items.controller';
-import { OrderItem } from './entities/order_item.entity'; // เช็ค path ให้ตรงนะครับ
+// ❌ ลบบรรทัดนี้ออก: import { OrderItemsController } ...
+import { OrderItem } from './entities/order_item.entity';
 
 @Module({
-  // 👇 เพิ่ม TypeOrmModule เพื่อลงทะเบียน Entity OrderItem
   imports: [TypeOrmModule.forFeature([OrderItem])],
-  controllers: [OrderItemsController],
+  controllers: [], // ❌ ลบ OrderItemsController ออกจากวงเล็บ (ปล่อยว่างไว้ หรือลบบรรทัดนี้ทิ้งก็ได้)
   providers: [OrderItemsService],
-  // 👇 Export ออกไปเพื่อให้ OrdersModule สามารถเรียกใช้ได้ (ถ้าจำเป็น)
-  exports: [TypeOrmModule] 
+  exports: [TypeOrmModule, OrderItemsService] // Export Service เผื่อที่อื่นต้องใช้
 })
 export class OrderItemsModule {}
