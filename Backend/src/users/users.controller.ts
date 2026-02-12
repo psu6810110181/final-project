@@ -9,7 +9,6 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
-// 👇 import สำหรับจัดการไฟล์
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
@@ -29,9 +28,9 @@ export class UsersController {
   // ---------------------------------------------------------
   @Patch('profile')
   @UseGuards(AuthGuard('jwt'))
-  @UseInterceptors(FileInterceptor('file', { // รับไฟล์ชื่อ 'file' จาก Frontend
+  @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
-      destination: './uploads/profiles', // เก็บในโฟลเดอร์นี้
+      destination: './uploads/profiles',
       filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
         cb(null, `user-${uniqueSuffix}${extname(file.originalname)}`);
@@ -40,17 +39,14 @@ export class UsersController {
   }))
   async updateProfile(
     @Req() req, 
-    @Body() body: UpdateUserDto, // ใช้ UpdateUserDto เพื่อรองรับทุก field (address, phone, etc.)
+    @Body() body: UpdateUserDto, 
     @UploadedFile() file?: Express.Multer.File 
   ) {
-    // ถ้ามีรูปแนบมาด้วย ให้เพิ่มชื่อรูปลงใน body
     if (file) {
       body.userImage = file.filename;
     }
     
-    // เรียก Service โดยใช้ ID จาก Token (req.user.userId) -> ปลอดภัย
-    // หมายเหตุ: เช็คใน JWT Strategy อีกทีนะครับว่าใช้ .userId หรือ .id หรือ .sub
-    // ปกติถ้าใช้ req.user.id ก็ใส่ req.user.id ครับ
+    // ✅ ใช้ ID จาก Token เสมอ เพื่อความปลอดภัย
     return this.usersService.update(req.user.id, body); 
   }
 
@@ -62,19 +58,23 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
-  // 3. ดูข้อมูล User ตาม ID
+  // 3. ดูข้อมูล User ตาม ID (Secure 🔒)
   @Get(':id')
   @UseGuards(AuthGuard('jwt')) 
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id') id: string, @Req() req) {
+    // 🛡️ Security Check: ต้องเป็น Admin หรือ เจ้าของ ID เท่านั้น
+    if (req.user.role !== 'admin' && req.user.id !== id) {
+        throw new ForbiddenException('คุณไม่มีสิทธิ์ดูข้อมูลผู้ใช้นี้');
+    }
     return this.usersService.findOne(id);
   }
 
-  // 4. แก้ไขข้อมูล (Admin แก้ให้ User อื่น)
+  // 4. แก้ไขข้อมูล (Admin)
   @Patch(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
-  @UseInterceptors(FileInterceptor('file', { // Admin ก็ควรอัปรูปให้ User ได้ด้วย
-     storage: diskStorage({
+  @UseInterceptors(FileInterceptor('file', {
+      storage: diskStorage({
       destination: './uploads/profiles', 
       filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);

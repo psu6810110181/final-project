@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, Min, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsNumber, Min, IsUUID, IsOptional, IsBoolean } from 'class-validator';
 
 export class CreateCartItemDto {
   @IsNotEmpty()
@@ -9,4 +9,9 @@ export class CreateCartItemDto {
   @IsNumber()
   @Min(1)
   quantity: number;
+
+  // 👇 เพิ่มส่วนนี้เข้าไปครับ
+  @IsOptional()
+  @IsBoolean()
+  requestInstallation?: boolean; 
 }

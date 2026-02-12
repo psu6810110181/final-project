@@ -13,64 +13,69 @@ export class UsersService {
     private usersRepository: Repository<User>,
   ) {}
 
+  // Helper function: ลบ password ออกจาก user object
+  private sanitizeUser(user: User): User {
+    if (user) delete (user as any).password;
+    return user;
+  }
+
   async create(createUserDto: CreateUserDto) {
     const newUser = this.usersRepository.create(createUserDto);
-    newUser.role = 'user'; 
+    // newUser.role = 'user'; // (ปกติ default ใน Entity จะเป็น user อยู่แล้ว แต่ใส่ไว้ก็ดีครับ)
     const salt = await bcrypt.genSalt();
     newUser.password = await bcrypt.hash(createUserDto.password, salt);
-    return await this.usersRepository.save(newUser);
+    
+    await this.usersRepository.save(newUser);
+    return this.sanitizeUser(newUser); // ✅ ส่งกลับแบบไม่มี password
   }
 
-  // ---------------------------------------------------------
-  // ✅ [NEW] ฟังก์ชันสำหรับ User แก้ข้อมูลตัวเอง
-  // ---------------------------------------------------------
-  async updateProfile(id: string, updateData: { address?: string; phone?: string; email?: string }) {
-    // 1. หา User
-    const user = await this.findOne(id);
-
-    // 2. อัปเดตเฉพาะค่าที่ส่งมา (ถ้าไม่ส่งมา ให้ใช้ค่าเดิม)
-    // เขียนแบบนี้ชัดเจนและปลอดภัยกว่า Object.assign สำหรับเคสนี้ครับ
-    if (updateData.address !== undefined) user.address = updateData.address;
-    if (updateData.phone !== undefined) user.phone = updateData.phone;
-    // if (updateData.email !== undefined) user.email = updateData.email; // ถ้าจะให้แก้เมลด้วย
-
-    // 3. บันทึก
-    return await this.usersRepository.save(user);
+  async findAll() { 
+    const users = await this.usersRepository.find();
+    return users.map(user => this.sanitizeUser(user)); // ✅ ลบ password ทุกคน
   }
-
-  async updateRole(id: string, role: string) {
-    const user = await this.findOne(id);
-    user.role = role;
-    return await this.usersRepository.save(user);
-  }
-
-  async findOneByUsername(username: string) {
-    return await this.usersRepository.findOneBy({ username });
-  }
-
-  async findAll() { return await this.usersRepository.find(); }
   
   async findOne(id: string) {
       const user = await this.usersRepository.findOneBy({ id });
       if (!user) throw new NotFoundException(`User not found`);
-      return user;
+      return this.sanitizeUser(user); // ✅ ลบ password
   }
 
-  // อันนี้สำหรับ Admin แก้ไขข้อมูล (รวมถึง Reset Password)
+  async findOneByUsername(username: string) {
+    // ⚠️ อันนี้ต้อง 'มี password' เพราะต้องเอาไปเช็คตอน Login
+    // ห้ามใช้ใน Controller ที่ส่งข้อมูลกลับหา User โดยตรง
+    return await this.usersRepository.findOneBy({ username });
+  }
+
   async update(id: string, updateUserDto: UpdateUserDto) {
-    const user = await this.findOne(id);
+    // ต้องใช้ findOne แบบติด password มาก่อน เพื่อมา update
+    // แต่เราใช้ findOneBy ({ id }) แทน findOne() ของเรา เพราะ findOne() ของเราลบ password ไปแล้ว
+    const user = await this.usersRepository.findOneBy({ id }); 
+    if (!user) throw new NotFoundException('User not found');
 
     if (updateUserDto.password) {
       const salt = await bcrypt.genSalt();
       updateUserDto.password = await bcrypt.hash(updateUserDto.password, salt);
     }
 
+    // รวมร่างข้อมูล
     Object.assign(user, updateUserDto);
-    return await this.usersRepository.save(user);
+    
+    const updatedUser = await this.usersRepository.save(user);
+    return this.sanitizeUser(updatedUser); // ✅ ส่งกลับแบบไม่มี password
+  }
+
+  async updateRole(id: string, role: string) {
+    const user = await this.usersRepository.findOneBy({ id });
+    if (!user) throw new NotFoundException('User not found');
+    
+    user.role = role;
+    const savedUser = await this.usersRepository.save(user);
+    return this.sanitizeUser(savedUser);
   }
 
   async remove(id: string) {
-    const user = await this.findOne(id);
+    const user = await this.usersRepository.findOneBy({ id });
+    if (!user) throw new NotFoundException('User not found');
     return await this.usersRepository.remove(user);
   }
 }

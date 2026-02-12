@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CartItem } from './entities/cart_item.entity';
-// import { CreateCartItemDto } from './dto/create-cart_item.dto'; // หากมีการใช้ DTO
+import { CreateCartItemDto } from './dto/create-cart_item.dto'; // ✅ ใช้ DTO
 import { User } from '../users/entities/user.entity';
 import { Product } from '../products/entities/product.entity';
 
@@ -15,9 +15,9 @@ export class CartItemsService {
     private productsRepository: Repository<Product>,
   ) {}
 
-  // 1. เพิ่มของใส่ตะกร้า (Upsert)
-  async addToCart(createCartItemDto: any, user: User) { // เปลี่ยน any เป็น DTO ของคุณถ้ามี
-    const { productId, quantity } = createCartItemDto;
+  // 1. เพิ่มของใส่ตะกร้า (Logic เดิมของคุณ + Type ที่ถูกต้อง)
+  async addToCart(createCartItemDto: CreateCartItemDto, user: User) { // ✅ แก้ any เป็น DTO
+    const { productId, quantity, requestInstallation } = createCartItemDto;
 
     // 1.1 เช็คสินค้า
     const product = await this.productsRepository.findOne({ where: { id: productId } });
@@ -25,7 +25,7 @@ export class CartItemsService {
       throw new NotFoundException(`Product with ID ${productId} not found`);
     }
 
-    // 1.2 เช็คตะกร้าเดิม
+    // 1.2 เช็คตะกร้าเดิม (ของ User คนนี้เท่านั้น)
     const existingItem = await this.cartItemsRepository.findOne({
       where: {
         user: { id: user.id },
@@ -33,7 +33,7 @@ export class CartItemsService {
       },
     });
 
-    // 1.3 เช็คสต็อก (ของเดิม + ของใหม่ > สต็อกไหม?)
+    // 1.3 เช็คสต็อก (Logic เดิมของคุณ)
     const currentQty = existingItem ? existingItem.quantity : 0;
     if (currentQty + quantity > product.stock) {
         throw new BadRequestException(
@@ -44,10 +44,13 @@ export class CartItemsService {
     // 1.4 บันทึก
     if (existingItem) {
       existingItem.quantity += quantity;
+      // อัปเดตตัวเลือกติดตั้งด้วยถ้ามีการส่งมาใหม่
+      if (requestInstallation !== undefined) existingItem.requestInstallation = requestInstallation;
       return await this.cartItemsRepository.save(existingItem);
     } else {
       const newItem = this.cartItemsRepository.create({
         quantity,
+        requestInstallation: requestInstallation || false,
         product,
         user,
       });
@@ -55,90 +58,93 @@ export class CartItemsService {
     }
   }
 
-  // 2. ลบของออกจากตะกร้า (ลบทีละชิ้น)
-  async remove(id: string, user: User) {
+  // 2. ลบของออกจากตะกร้า (Secure ✅)
+  async remove(id: string, userId: string) {
     const item = await this.cartItemsRepository.findOne({
-      where: { id, user: { id: user.id } }, // ✅ เช็คความเป็นเจ้าของ
+      where: { id, user: { id: userId } }, // ✅ เช็คว่าเป็นเจ้าของตะกร้าจริงๆ
     });
 
     if (!item) {
-      throw new NotFoundException(`Cart item not found`);
+      throw new NotFoundException(`ไม่พบสินค้าในตะกร้า หรือคุณไม่มีสิทธิ์ลบ`);
     }
 
     return await this.cartItemsRepository.remove(item);
   }
 
-  // 👇 เพิ่มใหม่: ล้างตะกร้าทั้งหมดของ User คนนั้น
-  async clearCart(user: User) {
-    // ลบรายการทั้งหมดที่มี user.id ตรงกับคนที่ยิง Request มา
-    await this.cartItemsRepository.delete({ user: { id: user.id } });
-    
-    // คืนค่าบอกว่าลบสำเร็จ
+  // 3. ล้างตะกร้าทั้งหมด (Secure ✅)
+  async clearCart(userId: string) {
+    await this.cartItemsRepository.delete({ user: { id: userId } }); // ✅ ลบเฉพาะของตัวเอง
     return {
       message: 'Cart cleared successfully',
       statusCode: 200
     };
   }
 
-  // 3. แก้ไขจำนวน (Security Fixed 🛡️)
-  async update(id: string, quantity: number, user: User) {
+  // 4. แก้ไขจำนวน (Secure + Logic เดิม ✅)
+  async update(id: string, quantity: number, userId: string) {
     const cartItem = await this.cartItemsRepository.findOne({
       where: { id },
-      relations: ['product', 'user'], // Load user มาเช็ค
+      relations: ['product', 'user'],
     });
 
     if (!cartItem) throw new NotFoundException('Item not found');
 
-    // 🛡️ เช็คว่าเป็นของ user คนนี้จริงไหม?
-    if (cartItem.user.id !== user.id) {
+    // 🛡️ Security: เช็คว่าเป็นของ user คนนี้จริงไหม?
+    if (cartItem.user.id !== userId) {
         throw new ForbiddenException('คุณไม่มีสิทธิ์แก้ไขตะกร้าของคนอื่น');
     }
 
-    // เช็คสต็อก
+    // เช็คสต็อก (Logic เดิม)
     if (quantity > cartItem.product.stock) {
-      throw new BadRequestException(`Product out of stock! Only ${cartItem.product.stock} left.`);
+      throw new BadRequestException(`สินค้าหมด! เหลือเพียง ${cartItem.product.stock} ชิ้น`);
     }
 
     cartItem.quantity = quantity;
     return await this.cartItemsRepository.save(cartItem);
   }
 
-  // 4. ดึงข้อมูลตะกร้า + สรุปยอดเงิน
+  // 5. ดึงข้อมูลตะกร้า + สรุปยอดเงิน (Logic เดิมของคุณที่สำคัญมาก! 💰)
   async getCartSummary(userId: string) {
-    // 1. ดึงรายการตะกร้าเหมือนเดิม
     const cartItems = await this.cartItemsRepository.find({
-      where: { user: { id: userId } },
+      where: { user: { id: userId } }, // ✅ ดึงเฉพาะของตัวเอง
       relations: ['product'],
     });
 
     let subTotal = 0;
-    
-    // 2. วนลูปคำนวณเงิน
+    let totalInstallationFee = 0; // เพิ่มตัวแปรเก็บค่าติดตั้งรวม
+
     const items = cartItems.map((item) => {
-      const totalLine = item.product.price * item.quantity;
+      const totalLine = Number(item.product.price) * item.quantity;
       subTotal += totalLine;
+      
+      // ถ้ามีค่าติดตั้ง (สมมติ 500 บาทต่อชิ้น หรือต่อออเดอร์ ตาม Logic คุณ)
+      // ใน OrderService คุณคิด 500 ดังนั้นตรงนี้ควรโชว์ให้ตรงกัน
+      if (item.requestInstallation) {
+          totalInstallationFee += 500; 
+      }
+
       return {
         id: item.id,
         productId: item.product.id,
         productName: item.product.name,
-        price: item.product.price,
+        price: Number(item.product.price), // แปลงเป็น Number กันเหนียว
         quantity: item.quantity,
         total: totalLine,
-        image: item.product.image 
+        image: item.product.image,
+        requestInstallation: item.requestInstallation
       };
     });
 
-    // 3. Logic คำนวณยอดสุทธิ
+    // Logic คำนวณค่าส่งเดิมของคุณ
     const shippingFee = subTotal >= 5000 ? 0 : 150;
-    const installationFee = 0; // ค่าติดตั้ง (ส่งไปให้ครบตาม UI)
-
+    
     return {
-      items: items, // รายการสินค้า
-      summary: {    // สรุปยอดเงิน
+      items: items,
+      summary: {
         subTotal: subTotal,
         shippingFee: shippingFee,
-        installationFee: installationFee,
-        grandTotal: subTotal + shippingFee + installationFee
+        installationFee: totalInstallationFee, // ส่งค่าติดตั้งกลับไปโชว์ด้วย
+        grandTotal: subTotal + shippingFee + totalInstallationFee
       }
     };
   }
