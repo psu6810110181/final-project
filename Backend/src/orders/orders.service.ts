@@ -139,10 +139,11 @@ export class OrdersService {
     return { message: 'อัปโหลดสลิปเรียบร้อย', fileName };
   }
 
-  // ... (findAll, updateStatus ของ Admin เหมือนเดิม) ...
+// 5. ดูออเดอร์ทั้งหมดในระบบ (Admin)
   async findAll() {
     return this.ordersRepository.find({
-      relations: ['user', 'items'], 
+      // ✅ เพิ่ม 'items.product' เข้าไปใน array นี้ครับ
+      relations: ['user', 'items', 'items.product'], 
       order: { orderDate: 'DESC' }
     });
   }

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common'; // ✅ เพิ่ม ConflictException
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
@@ -20,6 +20,25 @@ export class UsersService {
   }
 
   async create(createUserDto: CreateUserDto) {
+    // 🚨 1. ตรวจสอบว่ามี username หรือ email นี้ในระบบหรือยัง
+    const existingUser = await this.usersRepository.findOne({
+      where: [
+        { email: createUserDto.email },
+        { username: createUserDto.username }
+      ]
+    });
+
+    // 🚨 2. ถ้าเจอข้อมูลซ้ำ ให้โยน Error แจ้งเตือนแบบเจาะจง
+    if (existingUser) {
+      if (existingUser.email === createUserDto.email) {
+        throw new ConflictException('อีเมลนี้ถูกใช้งานแล้ว กรุณาใช้อีเมลอื่น');
+      }
+      if (existingUser.username === createUserDto.username) {
+        throw new ConflictException('ชื่อผู้ใช้งานนี้ถูกใช้งานแล้ว กรุณาใช้ชื่ออื่น');
+      }
+    }
+
+    // 3. ถ้าไม่ซ้ำ ก็ดำเนินการสร้าง User ใหม่ตามปกติ
     const newUser = this.usersRepository.create(createUserDto);
     // newUser.role = 'user'; // (ปกติ default ใน Entity จะเป็น user อยู่แล้ว แต่ใส่ไว้ก็ดีครับ)
     const salt = await bcrypt.genSalt();

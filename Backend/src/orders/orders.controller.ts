@@ -22,12 +22,6 @@ export class OrdersController {
     return this.ordersService.findMyOrders(req.user.id);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string, @Req() req) {
-    // ✅ ส่ง User ID และ Role ไปให้ Service ตรวจสอบสิทธิ์
-    return this.ordersService.findOne(id, req.user.id, req.user.role);
-  }
-
   @Post('upload-slip/:id')
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
@@ -51,6 +45,13 @@ export class OrdersController {
     return this.ordersService.findAll();
   }
 
+  @Get(':id')
+  @Roles('admin')
+  findOne(@Param('id') id: string, @Req() req) {
+    // ✅ ส่ง User ID และ Role ไปให้ Service ตรวจสอบสิทธิ์
+    return this.ordersService.findOne(id, req.user.id, req.user.role);
+  }
+  
   @Patch(':id/status')
   @Roles('admin')
   updateStatus(@Param('id') id: string, @Body('status') status: string) {
