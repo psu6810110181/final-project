@@ -19,6 +19,10 @@ export class CartItemsService {
   async addToCart(createCartItemDto: CreateCartItemDto, user: User) { // ✅ แก้ any เป็น DTO
     const { productId, quantity, requestInstallation } = createCartItemDto;
 
+    if (quantity <= 0) {
+      throw new BadRequestException('จำนวนสินค้าที่เพิ่มเข้าตะกร้าต้องมากกว่า 0 ชิ้น');
+    }
+
     // 1.1 เช็คสินค้า
     const product = await this.productsRepository.findOne({ where: { id: productId } });
     if (!product) {
@@ -80,8 +84,13 @@ export class CartItemsService {
     };
   }
 
-  // 4. แก้ไขจำนวน (Secure + Logic เดิม ✅)
+// 4. แก้ไขจำนวน (Secure + Logic เดิม ✅)
   async update(id: string, quantity: number, userId: string) {
+    // 🚨 ป้องกันการส่งเลข 0 หรือเลขติดลบ
+    if (quantity <= 0) {
+      throw new BadRequestException('จำนวนสินค้าต้องมากกว่า 0 หากต้องการลบสินค้ากรุณากดลบรายการ');
+    }
+
     const cartItem = await this.cartItemsRepository.findOne({
       where: { id },
       relations: ['product', 'user'],
