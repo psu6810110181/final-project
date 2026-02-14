@@ -1,9 +1,15 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Landing from './pages/Landing';
-// Import หน้าอื่นๆ ที่จะทำในลำดับถัดไป (ใส่ Placeholder ไว้ก่อน)
-const Login = () => <div>Login Page</div>;
-const Register = () => <div>Register Page</div>;
-const Home = () => <div>Home Page (User)</div>;
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Home from './pages/Home';
+import ProductDetail from './pages/ProductDetail';
+import Cart from './pages/Cart';
+import Profile from './pages/Profile';
+import OrderHistory from './pages/OrderHistory';
+import Review from './pages/Review';
+import Policy from './pages/Policy';
+import './App.css';
 
 function App() {
   return (
@@ -13,8 +19,12 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/home" element={<Home />} />
-        {/* Redirect กรณีไม่เจอหน้า */}
-        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="/product/:id" element={<ProductDetail />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/orders" element={<OrderHistory />} />
+        <Route path="/review" element={<Review />} />
+        <Route path="/policy" element={<Policy />} />
       </Routes>
     </BrowserRouter>
   );
