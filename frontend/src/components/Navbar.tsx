@@ -1,58 +1,105 @@
-// src/components/Navbar.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, ShoppingCart, User, Home } from 'lucide-react';
+import { FiSearch, FiShoppingCart, FiUser, FiMenu, FiX } from 'react-icons/fi';
 
-const Navbar: React.FC = () => {
+// TODO: Uncomment these when AuthContext and CartContext are implemented
+// import { useContext } from 'react';
+// import { AuthContext } from '../context/AuthContext';
+// import { CartContext } from '../context/CartContext';
+
+const Navbar = () => {
+  // TODO: Get user and cartItems from context
+  // const { user } = useContext(AuthContext);
+  // const { cartItems } = useContext(CartContext);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Mock data for now
+  const user = null; 
+  const cartItems: any[] = []; 
+
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
   return (
-    // Fixed Navbar top
-    <nav className="w-full h-16 bg-[#007c8a] flex items-center justify-between px-4 md:px-6 shadow-md fixed top-0 z-50">
-      
-      {/* 1. Logo Section -> Link to Home */}
-      <div className="flex items-center gap-2">
-        <Link to="/home" className="text-white font-bold text-xl flex items-center gap-2 hover:opacity-90 transition-opacity">
-           <div className="border-2 border-white p-1 rounded-lg">
-             <Home size={20} />
-           </div>
-           <span>HomeAlright</span>
-        </Link>
-      </div>
+    <nav className="bg-[#FDF8F5] py-4 px-6 shadow-sm sticky top-0 z-50">
+      <div className="container mx-auto flex items-center justify-between">
+        {/* Logo */}
+        <div className="text-2xl font-bold text-gray-800">
+          <Link to="/">HomeAlright</Link>
+        </div>
 
-      {/* 2. Search Bar Section */}
-      <div className="flex-1 max-w-xl mx-4 hidden md:block">
-        <div className="relative">
-          <input 
-            type="text" 
-            placeholder="ค้นหาสินค้า..." 
-            className="w-full py-2 pl-4 pr-10 rounded-full bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#5e9da3]"
-          />
-          <button className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-[#007c8a]">
-            <Search size={20} />
+        {/* Navigation Links (Desktop) */}
+        <div className="hidden md:flex space-x-8 text-gray-600 font-medium">
+          <Link to="/" className="hover:text-gray-900 transition-colors">หน้าแรก</Link>
+          <Link to="/home" className="hover:text-gray-900 transition-colors">สินค้าทั้งหมด</Link>
+          {/* Note: You'll need to create 'About' and 'Contact' pages if they don't exist */}
+          <Link to="/about" className="hover:text-gray-900 transition-colors">เกี่ยวกับเรา</Link>
+          <Link to="/contact" className="hover:text-gray-900 transition-colors">ติดต่อเรา</Link>
+        </div>
+
+        {/* Icons (Desktop & Mobile) */}
+        <div className="flex items-center space-x-4 sm:space-x-6 text-gray-600">
+          {/* Search Icon */}
+          <button className="hover:text-gray-900 transition-colors hidden sm:block">
+            <FiSearch size={24} />
+          </button>
+
+          {/* Cart Icon */}
+          <Link to="/cart" className="hover:text-gray-900 transition-colors relative">
+            <FiShoppingCart size={24} />
+            {cartItems.length > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                {cartItems.length}
+              </span>
+            )}
+          </Link>
+
+          {/* User Icon / Login */}
+          <div className="relative hidden sm:block">
+            {user ? (
+              <Link to="/profile" className="hover:text-gray-900 transition-colors">
+                <FiUser size={24} />
+              </Link>
+            ) : (
+              <Link to="/login" className="hover:text-gray-900 transition-colors">
+                <FiUser size={24} />
+              </Link>
+            )}
+          </div>
+
+          {/* Hamburger Menu Button (Mobile) */}
+          <button onClick={toggleMobileMenu} className="md:hidden hover:text-gray-900 focus:outline-none transition-colors">
+            {isMobileMenuOpen ? <FiX size={24} /> : <FiMenu size={24} />}
           </button>
         </div>
       </div>
 
-      {/* 3. Icons Section */}
-      <div className="flex items-center gap-4 md:gap-6">
-        {/* Search Icon for Mobile */}
-        <button className="text-white md:hidden hover:text-gray-200">
-            <Search size={24} />
-        </button>
-
-        {/* Cart Icon -> Link to /cart */}
-        <Link to="/cart" className="relative text-white hover:text-gray-200 transition-colors">
-          <ShoppingCart size={28} />
-          {/* Badge ตัวอย่างจำนวนสินค้า (ถ้ามี) */}
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-            0
-          </span>
-        </Link>
-
-        {/* Profile Icon -> Link to /profile */}
-        <Link to="/profile" className="text-white hover:text-gray-200 transition-colors">
-          <User size={28} />
-        </Link>
-      </div>
+      {/* Mobile Menu Dropdown */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden mt-4 pb-4 space-y-4 text-gray-600 font-medium flex flex-col items-center bg-[#FDF8F5]">
+          <Link to="/" className="hover:text-gray-900 transition-colors" onClick={toggleMobileMenu}>หน้าแรก</Link>
+          <Link to="/home" className="hover:text-gray-900 transition-colors" onClick={toggleMobileMenu}>สินค้าทั้งหมด</Link>
+          <Link to="/about" className="hover:text-gray-900 transition-colors" onClick={toggleMobileMenu}>เกี่ยวกับเรา</Link>
+          <Link to="/contact" className="hover:text-gray-900 transition-colors" onClick={toggleMobileMenu}>ติดต่อเรา</Link>
+          
+          {/* Mobile Icons (Search & User) */}
+          <div className="flex space-x-6 mt-4">
+            <button className="hover:text-gray-900 transition-colors">
+              <FiSearch size={24} />
+            </button>
+            {user ? (
+              <Link to="/profile" className="hover:text-gray-900 transition-colors" onClick={toggleMobileMenu}>
+                <FiUser size={24} />
+              </Link>
+            ) : (
+              <Link to="/login" className="hover:text-gray-900 transition-colors" onClick={toggleMobileMenu}>
+                <FiUser size={24} />
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
     </nav>
   );
 };
