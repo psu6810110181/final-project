@@ -1,0 +1,158 @@
+/* Navbar Container */
+.navbar {
+  background-color: #007C8A; /* ใช้สีหลักที่ต้องการที่นี่ */
+  height: 80px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.2rem;
+  position: sticky;
+  top: 0;
+  z-index: 999;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* เพิ่มเงาเล็กน้อยเพื่อให้ลอยเด่นขึ้น */
+}
+
+.navbar-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 80px;
+  max-width: 1500px;
+  width: 100%;
+  padding: 0 24px;
+}
+
+/* Logo */
+.navbar-logo {
+  color: #ffffff; /* เปลี่ยนโลโก้เป็นสีขาว */
+  justify-self: start;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 2rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+}
+
+.navbar-logo:hover {
+  color: #e2e8f0; /* สีขาวหม่นลงเล็กน้อยเมื่อเอาเมาส์ไปชี้ */
+  transition: all 0.3s ease;
+}
+
+/* Nav Menu (UL) */
+.nav-menu {
+  display: grid;
+  grid-template-columns: repeat(4, auto); /* ปรับจำนวนตามลิงก์ที่มี */
+  grid-gap: 10px;
+  list-style: none;
+  text-align: center;
+  width: 60vw;
+  justify-content: end;
+  margin-right: 2rem;
+}
+
+/* Nav Items (LI) */
+.nav-item {
+  height: 80px;
+}
+
+/* Nav Links (A) */
+.nav-links {
+  color: #ffffff; /* เปลี่ยนสี่ลิงก์เป็นสีขาว */
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  height: 100%;
+  font-weight: 500;
+}
+
+.nav-links:hover {
+  border-bottom: 4px solid #ffffff; /* เส้นใต้สีขาวเมื่อ hover */
+  transition: all 0.2s ease-out;
+  color: #ffffff;
+}
+
+/* Active Link (ถ้ามีการใช้งาน class .active) */
+.nav-links.active {
+  border-bottom: 4px solid #ffffff;
+  font-weight: bold;
+}
+
+/* Mobile Menu Icon (Hamburger) */
+.menu-icon {
+  display: none; /* ซ่อนบนจอใหญ่ */
+  color: #ffffff; /* ไอคอนสีขาว */
+}
+
+/* Button Styles (ถ้ามีปุ่มใน navbar) */
+.nav-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 16px;
+  height: 100%;
+  border: none;
+  outline: none;
+  background-color: transparent;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.nav-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+
+/* Responsive Design (Mobile) */
+@media screen and (max-width: 960px) {
+  .NavbarItems {
+    position: relative;
+  }
+
+  .nav-menu {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: auto; /* ปรับความสูงให้พอดีกับเนื้อหา หรือใช้ 90vh ก็ได้ */
+    position: absolute;
+    top: 80px;
+    left: -100%; /* ซ่อนไว้ทางซ้าย */
+    opacity: 0;
+    transition: all 0.5s ease;
+    background-color: #006a75; /* ใช้สีที่เข้มขึ้นเล็กน้อย หรือใช้สีเดิม #007C8A ก็ได้ */
+    padding-bottom: 20px;
+  }
+
+  .nav-menu.active {
+    left: 0;
+    opacity: 1;
+    transition: all 0.5s ease;
+    z-index: 1;
+  }
+
+  .nav-links {
+    text-align: center;
+    padding: 1.5rem;
+    width: 100%;
+    display: table;
+  }
+
+  .nav-links:hover {
+    background-color: rgba(255, 255, 255, 0.1); /* พื้นหลังสว่างขึ้นเล็กน้อยเมื่อ hover บนมือถือ */
+    color: #ffffff;
+    border-radius: 0;
+    border-bottom: none;
+  }
+
+  .menu-icon {
+    display: block;
+    position: absolute;
+    top: 0;
+    right: 0;
+    transform: translate(-100%, 60%);
+    font-size: 1.8rem;
+    cursor: pointer;
+  }
+}
