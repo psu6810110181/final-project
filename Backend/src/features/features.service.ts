@@ -16,6 +16,10 @@ export class FeaturesService {
   }
 
   findAll() {
-    return this.featuresRepository.find(); // ✅ ต้อง return เป็น Array จาก DB
+    return this.featuresRepository.find();
+  }
+
+  async remove(id: number) {
+    return await this.featuresRepository.delete(id);
   }
 }

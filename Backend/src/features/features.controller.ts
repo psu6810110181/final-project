@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Controller, Get, Post, Body, Delete, Param } from '@nestjs/common';
 import { FeaturesService } from './features.service';
 
 @Controller('features')
@@ -13,5 +13,10 @@ export class FeaturesController {
   @Get()
   findAll() {
     return this.featuresService.findAll();
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.featuresService.remove(+id);
   }
 }
