@@ -49,16 +49,24 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(true);
       const res = await api.getCart();
 
+      let fetchedItems: CartItem[] = [];
+
       // เช็คโครงสร้างข้อมูลที่ Backend ส่งมา
       if (res.data && Array.isArray(res.data.items)) {
-         setCartItems(res.data.items);
+         fetchedItems = res.data.items;
       } 
       else if (Array.isArray(res.data)) {
-         setCartItems(res.data);
-      } 
-      else {
-         setCartItems([]); 
+         fetchedItems = res.data;
       }
+
+      // ✅ เพิ่มส่วนนี้: สั่งเรียงลำดับตามชื่อ Product (ก-ฮ, A-Z) ก่อนเซ็ตค่า
+      const sortedItems = fetchedItems.sort((a, b) => {
+          const nameA = a.product?.name || '';
+          const nameB = b.product?.name || '';
+          return nameA.localeCompare(nameB, 'th'); // ใช้ 'th' เพื่อให้เรียงภาษาไทยได้ถูกต้อง
+      });
+
+      setCartItems(sortedItems); // เซ็ตข้อมูลที่เรียงลำดับแล้ว
 
     } catch (error) {
       console.error('Error fetching cart:', error);

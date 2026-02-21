@@ -196,10 +196,11 @@
 // };
 
 // export default Cart;
-import { useState } from 'react';
+import { useState , useEffect} from 'react';
 import { Trash2, Minus, Plus, MapPin, X, Upload, QrCode, CheckCircle } from 'lucide-react'; 
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
+import { useAuth } from '../contexts/AuthContext';
 import * as api from '../services/api';
 
 const Cart = () => {
@@ -207,9 +208,20 @@ const Cart = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [slipFile, setSlipFile] = useState<File | null>(null);
-  const [address, setAddress] = useState("มหาวิทยาลัยสงขลานครินทร์ 15 ถนน กาญจนวณิชย์ คอหงส์ อำเภอหาดใหญ่ สงขลา 90110");
+  const defaultAddress = "มหาวิทยาลัยสงขลานครินทร์ 15 ถนน กาญจนวณิชย์ คอหงส์ อำเภอหาดใหญ่ สงขลา 90110";
+  const [address, setAddress] = useState(defaultAddress);
 
   const { cartItems, removeFromCart, updateQuantity, cartTotal, fetchCart } = useCart();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    // ถ้ามีข้อมูล user ล็อกอินอยู่ และ user คนนั้นมี address บันทึกไว้
+    if (user && (user as any).address && (user as any).address.trim() !== "") {
+        setAddress((user as any).address); // ให้ใช้ที่อยู่ของ user
+    } else {
+        setAddress(defaultAddress); // ถ้าไม่มี ให้ใช้ที่อยู่ ม.อ. แทน
+    }
+  }, [user]);
   
   const shippingFee = cartItems.length > 0 ? 150 : 0; 
   const total = cartTotal + shippingFee;

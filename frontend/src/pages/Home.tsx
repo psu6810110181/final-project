@@ -296,44 +296,98 @@ const Home = () => {
 };
 
 export default Home;*/
+// frontend/src/pages/Home.tsx
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, SlidersHorizontal, Star, ShoppingCart, Heart, Loader } from 'lucide-react';
-import * as api from '../services/api'; // เรียก API
-import type { Product } from '../services/api';
+//  นำเข้าไอคอน Search เพิ่มเติม
+import { ShoppingCart, Loader, Search } from 'lucide-react';
+import * as api from '../services/api'; 
+import type { Product, Category, Room, Feature } from '../services/api';
 
 const Home = () => {
-  // --- STATE ---
+  // --- STATE ข้อมูลตั้งต้น ---
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [features, setFeatures] = useState<Feature[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+
+  // --- STATE สำหรับการ Filter ---
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
+  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
+  
+  //  STATE สำหรับการค้นหา (Search)
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
   // --- FETCH DATA ---
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchData = async () => {
       try {
-        const data = await api.getAllProducts();
-        setProducts(data);
+        setLoading(true);
+        const [productsData, categoriesData, roomsData, featuresData] = await Promise.all([
+          api.getAllProducts(),
+          api.getAllCategories(),
+          api.getAllRooms(),
+          api.getAllFeatures(),
+        ]);
+        setProducts(productsData);
+        setCategories(categoriesData);
+        setRooms(roomsData);
+        setFeatures(featuresData);
       } catch (error) {
-        console.error('Failed to fetch products:', error);
+        console.error('Failed to fetch data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProducts();
+    fetchData();
   }, []);
 
+  // --- FILTER & SEARCH LOGIC ---
+  const filteredProducts = products.filter((product) => {
+    // กรองหมวดหมู่
+    const matchCategory =
+      selectedCategories.length === 0 || 
+      (product.category && selectedCategories.includes(product.category));
+
+    // กรองห้อง
+    const matchRoom =
+      selectedRooms.length === 0 || 
+      (product.room && selectedRooms.includes(product.room));
+
+    // กรองคุณสมบัติ
+    const matchFeature =
+      selectedFeatures.length === 0 ||
+      (product.features && product.features.some((f) => selectedFeatures.includes(f)));
+
+    // กรองคำค้นหา (ค้นจากชื่อ และ รายละเอียด)
+    const matchSearch = 
+      searchTerm === '' ||
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    return matchCategory && matchRoom && matchFeature && matchSearch;
+  });
+
+  // --- TOGGLE HANDLERS ---
+  const handleToggle = (value: string, selectedList: string[], setList: React.Dispatch<React.SetStateAction<string[]>>) => {
+    if (selectedList.includes(value)) {
+      setList(selectedList.filter((item) => item !== value));
+    } else {
+      setList([...selectedList, value]);
+    }
+  };
+
   // --- HELPER FUNCTIONS ---
-  // ฟังก์ชันแปลงรูปภาพ (รองรับทั้ง JSON string และ Array)
   const getImageUrl = (product: Product) => {
     let images: string[] = [];
     try {
-        // @ts-ignore
         const rawImages = product.image;
         if (Array.isArray(rawImages)) {
             images = rawImages;
         } else if (typeof rawImages === 'string') {
-             // เช็คว่าเป็น JSON หรือไม่
              if (rawImages.startsWith('[')) {
                  images = JSON.parse(rawImages);
              } else {
@@ -352,14 +406,12 @@ const Home = () => {
     return "https://placehold.co/400x300?text=No+Image";
   };
 
-  const categories = ["ห้องนั่งเล่น", "ห้องนอน", "ห้องครัว", "ห้องทำงาน", "ของตกแต่ง"];
-
   // --- RENDER LOADING ---
   if (loading) {
      return (
         <div className="min-h-screen flex flex-col items-center justify-center text-[#148F96]">
             <Loader size={48} className="animate-spin mb-4" />
-            <p>กำลังโหลดสินค้า...</p>
+            <p>กำลังโหลดข้อมูล...</p>
         </div>
      );
   }
@@ -386,33 +438,94 @@ const Home = () => {
 
       <div className="container mx-auto px-4 flex flex-col lg:flex-row gap-8">
         
-        {/* --- SIDEBAR --- */}
-        <aside className="w-full lg:w-64 flex-shrink-0 space-y-8">
+        {/* --- SIDEBAR (Filters) --- */}
+        <aside className="w-full lg:w-64 flex-shrink-0 space-y-6">
+          
+          {/* Filter หมวดหมู่ */}
           <div className="bg-white p-6 rounded-xl shadow-sm">
             <h3 className="font-bold text-gray-800 mb-4 text-lg">หมวดหมู่สินค้า</h3>
             <ul className="space-y-3">
-              {categories.map((cat, i) => (
-                <li key={i} className="flex items-center gap-3 text-gray-600 hover:text-[#148F96] cursor-pointer transition-colors">
-                  <input type="checkbox" className="rounded border-gray-300 text-[#148F96] focus:ring-[#148F96]" />
-                  <span>{cat}</span>
+              {categories.map((cat) => (
+                <li key={cat.id} className="flex items-center gap-3 text-gray-600 hover:text-[#148F96] cursor-pointer transition-colors">
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-gray-300 text-[#148F96] focus:ring-[#148F96]"
+                    checked={selectedCategories.includes(cat.name)}
+                    onChange={() => handleToggle(cat.name, selectedCategories, setSelectedCategories)}
+                  />
+                  <span>{cat.name}</span>
                 </li>
               ))}
             </ul>
           </div>
+
+          {/* Filter ห้อง */}
+          <div className="bg-white p-6 rounded-xl shadow-sm">
+            <h3 className="font-bold text-gray-800 mb-4 text-lg">ห้อง</h3>
+            <ul className="space-y-3">
+              {rooms.map((room) => (
+                <li key={room.id} className="flex items-center gap-3 text-gray-600 hover:text-[#148F96] cursor-pointer transition-colors">
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-gray-300 text-[#148F96] focus:ring-[#148F96]"
+                    checked={selectedRooms.includes(room.name)}
+                    onChange={() => handleToggle(room.name, selectedRooms, setSelectedRooms)}
+                  />
+                  <span>{room.name}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Filter คุณสมบัติ */}
+          <div className="bg-white p-6 rounded-xl shadow-sm">
+            <h3 className="font-bold text-gray-800 mb-4 text-lg">คุณสมบัติเพิ่มเติม</h3>
+            <ul className="space-y-3">
+              {features.map((feat) => (
+                <li key={feat.id} className="flex items-center gap-3 text-gray-600 hover:text-[#148F96] cursor-pointer transition-colors">
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-gray-300 text-[#148F96] focus:ring-[#148F96]"
+                    checked={selectedFeatures.includes(feat.name)}
+                    onChange={() => handleToggle(feat.name, selectedFeatures, setSelectedFeatures)}
+                  />
+                  <span>{feat.name}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
         </aside>
 
         {/* --- MAIN CONTENT --- */}
         <main className="flex-1">
           
-          <div className="flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm">
-              <div className="text-gray-500 text-sm">ค้นพบ <span className="text-gray-800 font-bold">{products.length}</span> รายการ</div>
+          {/*  แถบด้านบน: จำนวนรายการ & แถบค้นหา */}
+          <div className="flex flex-col sm:flex-row justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm gap-4">
+              <div className="text-gray-500 text-sm w-full sm:w-auto text-left">
+                ค้นพบ <span className="text-gray-800 font-bold">{filteredProducts.length}</span> รายการ
+              </div>
+              
+              {/* แถบค้นหา (Search Bar) */}
+              <div className="relative w-full sm:w-72">
+                <input 
+                  type="text" 
+                  placeholder="ค้นหาชื่อ หรือ รายละเอียด..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#04A5E3] transition text-sm bg-gray-50"
+                />
+                <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+              </div>
           </div>
 
-          {products.length === 0 ? (
-             <div className="text-center py-20 text-gray-500">ยังไม่มีสินค้าในขณะนี้</div>
+          {filteredProducts.length === 0 ? (
+             <div className="text-center py-20 text-gray-500 bg-white rounded-xl shadow-sm">
+                ไม่พบสินค้าที่ตรงกับเงื่อนไข
+             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {products.map((product) => (
+                {filteredProducts.map((product) => (
                 <Link to={`/product/${product.id}`} key={product.id} className="group">
                     <div className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100 h-full flex flex-col relative">
                     
@@ -427,7 +540,9 @@ const Home = () => {
 
                     {/* Content */}
                     <div className="p-4 flex flex-col flex-1">
-                        <div className="text-xs text-[#148F96] font-bold mb-1">{product.category}</div>
+                        <div className="text-xs text-[#148F96] font-bold mb-1">
+                           {product.category || 'ไม่มีหมวดหมู่'}
+                        </div>
                         <h3 className="font-bold text-gray-800 text-lg mb-1 truncate group-hover:text-[#D65A31] transition-colors">{product.name}</h3>
                         <p className="text-gray-500 text-xs mb-3 line-clamp-1">{product.description || "ไม่มีรายละเอียด"}</p>
                         

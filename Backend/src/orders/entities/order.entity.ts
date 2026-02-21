@@ -35,7 +35,7 @@ export class Order {
   totalAmount: number;
 
   // NOT_NULL: status (Varchar 20)
-  @Column({ name: 'status', type: 'varchar', length: 20, default: 'PENDING' })
+  @Column({ name: 'status', type: 'varchar', length: 50, default: 'PENDING' })
   status: string;
 
   // payment_slip_image (Varchar 255)

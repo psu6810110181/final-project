@@ -10,6 +10,7 @@ import Navbar from './components/Navbar';
 import OrderHistory from './pages/OrderHistory';
 import { CartProvider } from './contexts/CartContext';
 import { AuthProvider } from './contexts/AuthContext';
+import Policy from './pages/Policy';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
               <Route path="/product/:id" element={<ProductDetail />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/orders" element={<OrderHistory />} />
+              <Route path="/policy" element={<Policy />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/admin" element={<AdminDashboard />} />
             </Routes>

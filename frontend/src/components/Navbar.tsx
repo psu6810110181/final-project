@@ -1,106 +1,160 @@
-import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
-import { useAuth } from "../contexts/AuthContext"; 
-import { useCart } from "../contexts/CartContext"; // ✅ 1. เพิ่มบรรทัดนี้
-import "./Navbar.css";
+// frontend/src/components/Navbar.tsx
+import { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { 
+  ShoppingCart, User, LogOut, ClipboardList, Star, 
+  UserCircle, Armchair, LayoutDashboard, Shield // เพิ่มไอคอน Shield
+} from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+
+// นำเข้าไฟล์โลโก้จากโฟลเดอร์ assets
+import logoImg from '../assets/HomeAlright_logo.webp';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
-  const { resetCart } = useCart(); // ✅ 2. ดึง resetCart มาใช้ (ต้องไปเพิ่มใน CartContext ก่อนนะ)
-  
-  // *ถ้าใน CartContext ไม่มี resetCart ให้ใช้บรรทัดนี้แทนชั่วคราว:
-  // const { setCartItems } = useCart(); // (แต่วิธีนี้ต้องแก้ CartContext ให้ส่ง setCartItems ออกมาด้วย)
-
   const navigate = useNavigate();
-  const [click, setClick] = useState(false);
+  
+  // --- STATE สำหรับ Dropdown โปรไฟล์ ---
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const handleClick = () => setClick(!click);
-  const closeMobileMenu = () => setClick(false);
+  // ปิด Dropdown เมื่อคลิกที่อื่นบนหน้าจอ
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleLogout = () => {
-    // ✅ 3. ล้างตะกร้าหน้าบ้านทิ้งทันที
-    if (resetCart) {
-       resetCart(); 
-    }
-    
-    logout(); // ล้าง Token และ User
-    closeMobileMenu();
-    navigate("/login"); // เด้งไปหน้า Login
-    
-    // บังคับ Reload หน้าเว็บ 1 ที เพื่อความชัวร์ว่า State ทุกอย่างหายเกลี้ยง (Optional)
-    // window.location.reload(); 
+    logout();
+    setIsDropdownOpen(false);
+    navigate('/login');
   };
 
   return (
-    <nav className="navbar">
-      <div className="navbar-container">
-        {/* ... (ส่วน Logo เหมือนเดิม) ... */}
-        <Link to="/" className="navbar-logo" onClick={closeMobileMenu}>
+    <nav className="bg-[#148F96] shadow-md sticky top-0 z-50">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        
+        {/* โลโก้แบบใหม่: มีรูปวงกลม ขอบสี #04A5E3 และข้อความ */}
+        <Link to="/" className="flex items-center gap-3 text-2xl font-bold text-white hover:text-gray-200 transition-colors">
+          <img 
+            src={logoImg} 
+            alt="HomeAlright Logo" 
+            className="w-10 h-10 rounded-full border-2 border-[#04A5E3] bg-white object-contain p-1"
+          />
           HomeAlright
         </Link>
 
-        <div className="menu-icon" onClick={handleClick}>
-          <i className={click ? "fas fa-times" : "fas fa-bars"} />
-        </div>
-
-        <ul className={click ? "nav-menu active" : "nav-menu"}>
-          <li className="nav-item">
-            <Link to="/home" className="nav-links" onClick={closeMobileMenu}>
-              สินค้า
-            </Link>
-          </li>
-          
+        {/* เมนูฝั่งขวา */}
+        <div className="flex items-center gap-6">
           {user ? (
             <>
-               {/* ... (เมนู Admin เหมือนเดิม) ... */}
-              {user.role === 'admin' && (
-                <li className="nav-item">
-                  <Link to="/admin" className="nav-links" style={{ color: '#ff4d4d' }} onClick={closeMobileMenu}>
-                    ระบบหลังบ้าน (Admin)
-                  </Link>
-                </li>
-              )}
+              {/* 1. ไอคอนเฟอร์นิเจอร์ (ไปหน้า Home) วางไว้หน้าตะกร้า */}
+              <Link to="/" className="text-white hover:text-gray-200 transition-colors" title="หน้าแรก">
+                <Armchair size={24} />
+              </Link>
 
-              <li className="nav-item">
-                <Link to="/cart" className="nav-links" onClick={closeMobileMenu}>
-                  ตะกร้า
-                </Link>
-              </li>
-              <li className="nav-item">
-                <Link to="/orders" className="nav-links" onClick={closeMobileMenu}>
-                  ประวัติสั่งซื้อ
-                </Link>
-              </li>
-              <li className="nav-item">
-                <Link to="/profile" className="nav-links" onClick={closeMobileMenu}>
-                  คุณ {user.username}
-                </Link>
-              </li>
-              <li className="nav-item">
-                <span 
-                  className="nav-links cursor-pointer" 
-                  onClick={handleLogout} // ✅ เรียกใช้ handleLogout ที่เราแก้ข้างบน
-                  style={{ cursor: 'pointer' }}
+              {/* 2. ไอคอนตะกร้า */}
+              <Link to="/cart" className="text-white hover:text-gray-200 transition-colors relative" title="ตะกร้าสินค้า">
+                <ShoppingCart size={24} />
+              </Link>
+
+              {/* 3. ไอคอนโปรไฟล์ & Dropdown */}
+              <div className="relative" ref={dropdownRef}>
+                <button 
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center gap-2 text-white hover:text-gray-200 transition-colors focus:outline-none"
                 >
-                  ออกจากระบบ
-                </span>
-              </li>
+                  <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center overflow-hidden border border-white/30">
+                    <User size={20} className="text-white" />
+                  </div>
+                  <span className="font-medium hidden sm:block">{user.username}</span>
+                </button>
+
+                {/* รายการเมนูใน Dropdown */}
+                {isDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg py-2 border border-gray-100 transform origin-top-right transition-all">
+                    
+                    {/* --- เช็คสิทธิ์ Admin เพื่อแสดง Admin Dashboard --- */}
+                    {user.role === 'admin' && (
+                      <>
+                        <Link 
+                          to="/admin" 
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-[#148F96] hover:bg-gray-50"
+                        >
+                          <LayoutDashboard size={18} />
+                          Admin Dashboard
+                        </Link>
+                        <hr className="my-1 border-gray-100" />
+                      </>
+                    )}
+
+                    <Link 
+                      to="/profile" 
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#148F96]"
+                    >
+                      <UserCircle size={18} />
+                      จัดการโปรไฟล์
+                    </Link>
+                    
+                    <Link 
+                      to="/orders" 
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#148F96]"
+                    >
+                      <ClipboardList size={18} />
+                      ประวัติการสั่งซื้อ
+                    </Link>
+                    
+                    <Link 
+                      to="/review" 
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#148F96]"
+                    >
+                      <Star size={18} />
+                      รีวิวของฉัน
+                    </Link>
+
+                    {/* เพิ่มเมนูนโยบายความเป็นส่วนตัวตรงนี้ */}
+                    <Link 
+                      to="/policy" 
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#148F96]"
+                    >
+                      <Shield size={18} />
+                      นโยบายความเป็นส่วนตัว
+                    </Link>
+                    
+                    <hr className="my-1 border-gray-100" />
+                    
+                    <button 
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 text-left"
+                    >
+                      <LogOut size={18} />
+                      ออกจากระบบ
+                    </button>
+
+                  </div>
+                )}
+              </div>
             </>
           ) : (
-            <>
-              <li className="nav-item">
-                <Link to="/login" className="nav-links" onClick={closeMobileMenu}>
-                  เข้าสู่ระบบ
-                </Link>
-              </li>
-              <li className="nav-item">
-                <Link to="/register" className="nav-links" onClick={closeMobileMenu}>
-                  สมัครสมาชิก
-                </Link>
-              </li>
-            </>
+            /* กรณีที่ยังไม่ได้ Login */
+            <div className="flex items-center gap-4">
+              <Link to="/login" className="text-white hover:text-gray-200 font-medium text-sm">เข้าสู่ระบบ</Link>
+              <Link to="/register" className="bg-white text-[#148F96] px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-100 transition-colors shadow-sm">
+                สมัครสมาชิก
+              </Link>
+            </div>
           )}
-        </ul>
+        </div>
       </div>
     </nav>
   );
