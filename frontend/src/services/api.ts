@@ -104,6 +104,9 @@ export const createCategory = async (name: string) => {
   return response.data;
 };
 
+export const deleteCategory = async (id: number) => {
+  return await api.delete(`/categories/${id}`);
+};
 
 // 4. Rooms
 export const getAllRooms = async (): Promise<Room[]> => {
@@ -115,6 +118,9 @@ export const createRoom = async (name: string) => {
   return await api.post('/rooms', { name });
 };
 
+export const deleteRoom = async (id: number) => {
+  return await api.delete(`/rooms/${id}`);
+};
 
 // 5. Features
 export const getAllFeatures = async (): Promise<Feature[]> => {
@@ -126,6 +132,9 @@ export const createFeature = async (name: string) => {
   return await api.post('/features', { name });
 };
 
+export const deleteFeature = async (id: number) => {
+  return await api.delete(`/features/${id}`);
+};
 
 // ---------------------------------------------------------
 // ✅ 6. Cart (ตะกร้าสินค้า) - เพิ่มส่วนนี้
