@@ -4,9 +4,11 @@ import "./AdminDashboard.css";
 import { 
   createProduct, 
   getAllCategories, createCategory, type Category,
-  getAllRooms, createRoom, type Room,        // ✅ เพิ่ม API ห้อง
-  getAllFeatures, createFeature, type Feature // ✅ เพิ่ม API คุณสมบัติ
+  getAllRooms, createRoom, type Room,
+  getAllFeatures, createFeature, type Feature,
+  getAllProducts, type Product
 } from "../services/api";
+import api from "../services/api"; // สำหรับ delete/update product
 
 // Interface สำหรับ Variant
 interface Variant {
@@ -19,7 +21,7 @@ interface Variant {
 
 const AdminDashboard: React.FC = () => {
   // ---------------------------------------------------------
-  //  เพิ่ม State สำหรับควบคุมหน้าหลัก (เมนูขวา)
+  //  State สำหรับควบคุมหน้าหลัก (เมนูขวา)
   // ---------------------------------------------------------
   const [activeView, setActiveView] = useState<'addProduct' | 'manageSystem' | 'manageOrders'>('addProduct');
 
@@ -35,11 +37,21 @@ const AdminDashboard: React.FC = () => {
   // State สำหรับ Master Data (List)
   const [categoriesList, setCategoriesList] = useState<Category[]>([]);
   const [roomsList, setRoomsList] = useState<Room[]>([]);       
-  const [featuresList, setFeaturesList] = useState<Feature[]>([]); 
+  const [featuresList, setFeaturesList] = useState<Feature[]>([]);
+  const [productsList, setProductsList] = useState<Product[]>([]);
 
-  // State สำหรับสร้าง Master Data ใหม่ (ย้ายจาก Sidebar เดิม)
+  // State สำหรับสร้าง Master Data ใหม่
   const [newItemName, setNewItemName] = useState("");
   const [activeTab, setActiveTab] = useState<'category' | 'room' | 'feature'>('category'); 
+
+  // State สำหรับ Edit Product
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPrice, setEditPrice] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editImageUrl, setEditImageUrl] = useState("");
+  const [editCategoryId, setEditCategoryId] = useState("");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // State สำหรับ Variants
   const [variants, setVariants] = useState<Variant[]>([
@@ -49,6 +61,7 @@ const AdminDashboard: React.FC = () => {
   // Load Data on Mount
   useEffect(() => {
     fetchMasterData();
+    fetchProducts();
   }, []);
 
   const fetchMasterData = async () => {
@@ -63,6 +76,15 @@ const AdminDashboard: React.FC = () => {
       setFeaturesList(fts);
     } catch (error) {
       console.error("Failed to fetch master data", error);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const products = await getAllProducts();
+      setProductsList(products);
+    } catch (error) {
+      console.error("Failed to fetch products", error);
     }
   };
 
@@ -91,6 +113,51 @@ const AdminDashboard: React.FC = () => {
     } catch (error) {
       console.error(error);
       alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+    }
+  };
+
+  // ---- Delete Product ----
+  const handleDeleteProduct = async (productId: string) => {
+    if (!window.confirm("ยืนยันการลบสินค้านี้?")) return;
+    try {
+      await api.delete(`/products/${productId}`);
+      alert("ลบสินค้าเรียบร้อยแล้ว");
+      fetchProducts();
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      alert("เกิดข้อผิดพลาดในการลบสินค้า");
+    }
+  };
+
+  // ---- Open Edit Modal ----
+  const handleOpenEdit = (product: Product) => {
+    setEditingProduct(product);
+    setEditName(product.name);
+    setEditPrice(String(product.price));
+    setEditDescription(product.description || "");
+    setEditImageUrl(product.image || "");
+    setEditCategoryId(product.category || "");
+    setIsEditModalOpen(true);
+  };
+
+  // ---- Save Edit ----
+  const handleSaveEdit = async () => {
+    if (!editingProduct) return;
+    try {
+      await api.patch(`/products/${editingProduct.id}`, {
+        name: editName,
+        price: parseFloat(editPrice),
+        description: editDescription,
+        image: editImageUrl,
+        category: editCategoryId,
+      });
+      alert("แก้ไขสินค้าเรียบร้อยแล้ว");
+      setIsEditModalOpen(false);
+      setEditingProduct(null);
+      fetchProducts();
+    } catch (error) {
+      console.error("Error updating product:", error);
+      alert("เกิดข้อผิดพลาดในการแก้ไขสินค้า");
     }
   };
 
@@ -137,6 +204,7 @@ const AdminDashboard: React.FC = () => {
       setName(""); setPrice(""); setDescription(""); setImageUrl("");
       setCategoryId(""); setRoomId(""); setSelectedFeatures([]);
       setVariants([{ color: "", material: "", size: "", price: "", stock: "" }]);
+      fetchProducts();
     } catch (error) {
       console.error("Error adding product:", error);
       alert("เกิดข้อผิดพลาดในการเพิ่มสินค้า");
@@ -152,7 +220,7 @@ const AdminDashboard: React.FC = () => {
             --------------------------------------------------------- */}
         <div className="main-section">
           
-          {/* ส่วนที่ 1: หน้าเพิ่มสินค้า (UI เดิม) */}
+          {/* ส่วนที่ 1: หน้าเพิ่มสินค้า */}
           {activeView === 'addProduct' && (
             <>
               <div className="product-form">
@@ -221,10 +289,89 @@ const AdminDashboard: React.FC = () => {
             </>
           )}
 
-        {/* ส่วนที่ 2: หน้าแก้ไข/ลบคุณสมบัติ (ย้ายจาก Sidebar มาไว้หน้าหลัก) */}
+          {/* ส่วนที่ 2: หน้าแก้ไข/ลบคุณสมบัติ + รายการสินค้า */}
           {activeView === 'manageSystem' && (
             <div className="manage-system-view">
-              <h2>แก้ไข / ลบคุณสมบัติ</h2>
+
+              {/* --- ส่วนบน: รายการสินค้า --- */}
+              <h2>แก้ไข / ลบสินค้า</h2>
+              <div className="product-list-section">
+                {productsList.length === 0 ? (
+                  <p style={{ color: '#888', textAlign: 'center', padding: '20px' }}>ยังไม่มีสินค้าในระบบ</p>
+                ) : (
+                  productsList.map(product => (
+                    <div key={product.id} className="product-list-item" style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '15px',
+                      background: 'white',
+                      borderRadius: '12px',
+                      padding: '12px 16px',
+                      marginBottom: '10px',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.08)'
+                    }}>
+                      {/* รูปสินค้า */}
+                      <div style={{ width: '70px', height: '70px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {product.image ? (
+                          <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <span style={{ fontSize: '28px' }}>🖼️</span>
+                        )}
+                      </div>
+
+                      {/* ข้อมูลสินค้า */}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#333' }}>{product.name}</div>
+                        <div style={{ fontSize: '14px', color: '#e07b39', marginTop: '3px' }}>
+                          ฿{Number(product.price).toLocaleString()}
+                        </div>
+                        <div style={{ fontSize: '13px', color: '#888', marginTop: '2px' }}>
+                          In stock {product.stock ?? '-'} Each
+                        </div>
+                      </div>
+
+                      {/* ปุ่ม Edit / Delete */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <button
+                          onClick={() => handleOpenEdit(product)}
+                          style={{
+                            background: '#3a9e9e',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '20px',
+                            padding: '7px 22px',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                            fontSize: '14px',
+                            minWidth: '80px'
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProduct(product.id)}
+                          style={{
+                            background: '#d94f2e',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '20px',
+                            padding: '7px 22px',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                            fontSize: '14px',
+                            minWidth: '80px'
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* --- ส่วนล่าง: จัดการ Category/Room/Feature --- */}
+              <h2 style={{ marginTop: '30px' }}>แก้ไข / ลบคุณสมบัติ</h2>
               <div className="tab-control-bar">
                 <button onClick={() => setActiveTab('category')} className={activeTab === 'category' ? 'active' : ''}>สินค้า</button>
                 <button onClick={() => setActiveTab('room')} className={activeTab === 'room' ? 'active' : ''}>ห้อง</button>
@@ -236,7 +383,6 @@ const AdminDashboard: React.FC = () => {
                   {(activeTab === 'category' ? categoriesList : activeTab === 'room' ? roomsList : featuresList).map(i => (
                     <div key={i.id} className="category-item">
                       <span>{activeTab === 'category' ? '📂' : activeTab === 'room' ? '🏠' : '✨'} {i.name}</span>
-                      {/* ปุ่มแก้ไข/ลบจะเพิ่มใน Phase ถัดไป */}
                     </div>
                   ))}
                 </div>
@@ -286,6 +432,88 @@ const AdminDashboard: React.FC = () => {
         </div>
 
       </div>
+
+      {/* ---------------------------------------------------------
+                  EDIT PRODUCT MODAL
+          --------------------------------------------------------- */}
+      {isEditModalOpen && editingProduct && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          background: 'rgba(0,0,0,0.5)', zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <div style={{
+            background: 'white', borderRadius: '16px', padding: '30px',
+            width: '500px', maxWidth: '90vw', boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+          }}>
+            <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#333' }}>✏️ แก้ไขสินค้า</h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ fontSize: '13px', color: '#666', display: 'block', marginBottom: '4px' }}>ชื่อสินค้า</label>
+                <input
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '13px', color: '#666', display: 'block', marginBottom: '4px' }}>ราคา</label>
+                <input
+                  type="number"
+                  value={editPrice}
+                  onChange={e => setEditPrice(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '13px', color: '#666', display: 'block', marginBottom: '4px' }}>หมวดหมู่</label>
+                <select
+                  value={editCategoryId}
+                  onChange={e => setEditCategoryId(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box' }}
+                >
+                  <option value="">-- เลือกหมวดหมู่ --</option>
+                  {categoriesList.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: '13px', color: '#666', display: 'block', marginBottom: '4px' }}>Image URL</label>
+                <input
+                  value={editImageUrl}
+                  onChange={e => setEditImageUrl(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '13px', color: '#666', display: 'block', marginBottom: '4px' }}>รายละเอียด</label>
+                <textarea
+                  value={editDescription}
+                  onChange={e => setEditDescription(e.target.value)}
+                  rows={3}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box', resize: 'vertical' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => { setIsEditModalOpen(false); setEditingProduct(null); }}
+                style={{ padding: '9px 20px', borderRadius: '8px', border: '1px solid #ccc', background: 'white', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                style={{ padding: '9px 20px', borderRadius: '8px', border: 'none', background: '#3a9e9e', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                บันทึกการแก้ไข
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
