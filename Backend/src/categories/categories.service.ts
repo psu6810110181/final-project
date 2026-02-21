@@ -20,4 +20,10 @@ export class CategoriesService {
     return await this.categoryRepository.find();
   }
 
+  async remove(id: number) {
+    const result = await this.categoryRepository.delete(id);
+    if (result.affected === 0) {
+      throw new Error(`Category with id ${id} not found`);
+    }
+  }
 }
