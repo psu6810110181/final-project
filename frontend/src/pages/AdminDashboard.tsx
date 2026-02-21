@@ -21,6 +21,7 @@ interface Variant {
   size: string;
   price: string;
   stock: string;
+  imageUrl?: string;
 }
 
 const AdminDashboard: React.FC = () => {
@@ -132,7 +133,7 @@ const AdminDashboard: React.FC = () => {
       alert("เกิดข้อผิดพลาดในการลบสินค้า");
     }
   };
-  
+
   // ---- Delete Category/Room/Feature ----
   const handleDeleteMasterData = async (id: number) => {
     if (window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?')) {
@@ -193,7 +194,7 @@ const AdminDashboard: React.FC = () => {
   };
 
   const addVariant = () => {
-    setVariants([...variants, { color: "", material: "", size: "", price: "", stock: "" }]);
+    setVariants([...variants, { color: "", material: "", size: "", price: "", stock: "", imageUrl: "" }]);
   };
 
   const removeVariant = (index: number) => {
@@ -294,17 +295,45 @@ const AdminDashboard: React.FC = () => {
               </div>
 
               <div className="variants-section" style={{ marginTop: '20px' }}>
-                <h3>ตัวเลือกสินค้า (สี, วัสดุ, ขนาด)</h3>
-                {variants.map((variant, index) => (
-                    <div key={index} className="variant-row" style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                        <input placeholder="สี" value={variant.color} onChange={e => handleVariantChange(index, 'color', e.target.value)} style={{flex: 1}} />
-                        <input placeholder="วัสดุ" value={variant.material} onChange={e => handleVariantChange(index, 'material', e.target.value)} style={{flex: 1}} />
-                        <input placeholder="ขนาด" value={variant.size} onChange={e => handleVariantChange(index, 'size', e.target.value)} style={{flex: 1}} />
-                        <input placeholder="ราคา" type="number" value={variant.price} onChange={e => handleVariantChange(index, 'price', e.target.value)} style={{width: '80px'}} />
-                        <input placeholder="จำนวน" type="number" value={variant.stock} onChange={e => handleVariantChange(index, 'stock', e.target.value)} style={{width: '80px'}} />
-                        {variants.length > 1 && <button onClick={() => removeVariant(index)} style={{ background: 'red', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '5px', width: '30px' }}>X</button>}
-                    </div>
-                ))}
+                
+    <h3>ตัวเลือกสินค้า (สี, วัสดุ, ขนาด, รูปภาพ)</h3>
+    {variants.map((variant, index) => (
+        <div key={index} className="variant-row" style={{ display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'center' }}>
+            
+            {/* ส่วนแสดงรูปตัวอย่าง (Preview) */}
+            <div style={{ width: '100px', height: '100px', border: '1px solid #ddd', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: '4px', backgroundColor: '#f9f9f9' }}>
+                {variant.imageUrl ? (
+                    <img src={variant.imageUrl} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                    <span style={{ fontSize: '10px', color: '#ccc' }}>ไม่มีรูป</span>
+                )}
+            </div>
+
+            {/* ช่องกรอก URL รูปภาพ */}
+            <input 
+                placeholder="ImageURL" 
+                value={variant.imageUrl || ''} 
+                onChange={e => handleVariantChange(index, 'imageUrl', e.target.value)} 
+                style={{ flex: 1.5 }} 
+            />
+
+            <input placeholder="สี" value={variant.color} onChange={e => handleVariantChange(index, 'color', e.target.value)} style={{ flex: 1 }} />
+            <input placeholder="วัสดุ" value={variant.material} onChange={e => handleVariantChange(index, 'material', e.target.value)} style={{ flex: 1 }} />
+            <input placeholder="ขนาด" value={variant.size} onChange={e => handleVariantChange(index, 'size', e.target.value)} style={{ flex: 1 }} />
+            
+            <input placeholder="ราคา" type="number" value={variant.price} onChange={e => handleVariantChange(index, 'price', e.target.value)} style={{ width: '80px' }} />
+            <input placeholder="จำนวน" type="number" value={variant.stock} onChange={e => handleVariantChange(index, 'stock', e.target.value)} style={{ width: '80px' }} />
+
+            {variants.length > 1 && (
+                <button 
+                    onClick={() => removeVariant(index)} 
+                    style={{ background: 'red', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '5px', width: '30px', height: '30px' }}
+                >
+                    X
+                </button>
+            )}
+        </div>
+    ))}
                 <button onClick={addVariant} style={{ background: '#4CAF50', color: 'white', padding: '8px 15px', border: 'none', cursor: 'pointer', borderRadius: '5px', fontWeight: 'bold' }}>+ เพิ่มตัวเลือก</button>
               </div>
 
