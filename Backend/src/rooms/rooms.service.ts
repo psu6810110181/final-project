@@ -16,8 +16,10 @@ export class RoomsService {
   }
 
   findAll() {
-    return this.roomsRepository.find(); // ✅ ต้อง return เป็น Array จาก DB
+    return this.roomsRepository.find();
   }
 
-  // ส่วนอื่นๆ (findOne, update, remove) ปล่อยไว้ก่อนได้ครับ
+  async remove(id: number) {
+    return await this.roomsRepository.delete(id);
+  }
 }
