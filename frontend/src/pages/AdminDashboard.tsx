@@ -6,7 +6,11 @@ import {
   getAllCategories, createCategory, type Category,
   getAllRooms, createRoom, type Room,
   getAllFeatures, createFeature, type Feature,
-  getAllProducts, type Product
+  getAllProducts, type Product,
+  deleteCategory, 
+  deleteRoom, 
+  deleteFeature
+
 } from "../services/api";
 import api from "../services/api"; // สำหรับ delete/update product
 
@@ -126,6 +130,27 @@ const AdminDashboard: React.FC = () => {
     } catch (error) {
       console.error("Error deleting product:", error);
       alert("เกิดข้อผิดพลาดในการลบสินค้า");
+    }
+  };
+  
+  // ---- Delete Category/Room/Feature ----
+  const handleDeleteMasterData = async (id: number) => {
+    if (window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?')) {
+      try {
+        if (activeTab === 'category') {
+          await deleteCategory(id);
+          setCategoriesList(prev => prev.filter(item => item.id !== id));
+        } else if (activeTab === 'room') {
+          await deleteRoom(id);
+          setRoomsList(prev => prev.filter(item => item.id !== id));
+        } else if (activeTab === 'feature') {
+          await deleteFeature(id);
+          setFeaturesList(prev => prev.filter(item => item.id !== id));
+        }
+      } catch (error) {
+        console.error("Error deleting data:", error);
+        alert("ไม่สามารถลบได้ (อาจมีสินค้านำไปใช้งานอยู่)");
+      }
     }
   };
 
@@ -381,8 +406,27 @@ const AdminDashboard: React.FC = () => {
               <div className="master-data-container">
                 <div className="category-list">
                   {(activeTab === 'category' ? categoriesList : activeTab === 'room' ? roomsList : featuresList).map(i => (
-                    <div key={i.id} className="category-item">
+                    <div 
+                      key={i.id} 
+                      className="category-item" 
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                    >
                       <span>{activeTab === 'category' ? '📂' : activeTab === 'room' ? '🏠' : '✨'} {i.name}</span>
+                      
+                      {/* ปุ่มลบ */}
+                      <button 
+                        onClick={() => handleDeleteMasterData(i.id)}
+                        style={{ 
+                          background: 'none', 
+                          border: 'none', 
+                          color: '#e74c3c', 
+                          cursor: 'pointer',
+                          fontSize: '16px'
+                        }}
+                        title="ลบ"
+                      >
+                        ❌
+                      </button>
                     </div>
                   ))}
                 </div>
