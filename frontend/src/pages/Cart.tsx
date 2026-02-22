@@ -10,14 +10,13 @@ const Cart = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [slipFile, setSlipFile] = useState<File | null>(null);
-  const defaultAddress = "มหาวิทยาลัยสงขลานครินทร์ 15 ถนน กาญจนวณิชย์ คอหงส์ อำเภอหาดใหญ่ สงขลา 90110";
-  const [address, setAddress] = useState(defaultAddress);
+  const [address, setAddress] = useState("");
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [tempAddress, setTempAddress] = useState("");
 
   // ✅ เปลี่ยนจาก updateQuantity เป็น updateCartItem
   const { cartItems, removeFromCart, updateCartItem, cartTotal, fetchCart } = useCart();
   const { user } = useAuth();
-
-  console.log("Cart Items: ", cartItems);
   
   // -- เพิ่ม Logic การคำนวณจำนวนชิ้นและค่าบริการ --
   // ✅ แบบใหม่: การคำนวณจำนวนชิ้นติดตั้งจาก installationQty
@@ -35,13 +34,29 @@ const Cart = () => {
 
 
   useEffect(() => {
-    // ถ้ามีข้อมูล user ล็อกอินอยู่ และ user คนนั้นมี address บันทึกไว้
-    if (user && (user as any).address && (user as any).address.trim() !== "") {
-        setAddress((user as any).address); // ให้ใช้ที่อยู่ของ user
-    } else {
-        setAddress(defaultAddress); // ถ้าไม่มี ให้ใช้ที่อยู่ ม.อ. แทน
+    // ดึงที่อยู่ที่อาจจะถูกแก้และเซฟไว้ชั่วคราว
+    const savedAddress = localStorage.getItem('delivery_address');
+    
+    if (savedAddress) {
+        // 1. ถ้ามีการแก้ที่อยู่เอาไว้ ให้ใช้ที่อยู่ที่แก้ก่อน
+        setAddress(savedAddress);
+    } 
+    else if (user && (user as any).address && (user as any).address.trim() !== "") {
+        // 2. ถ้ายังไม่เคยแก้ (localStorage ว่าง) ให้ใช้ที่อยู่จาก Profile เป็นค่าเริ่มต้น
+        setAddress((user as any).address);
+    } 
+    else {
+        // 3. ถ้าไม่มีทั้งคู่ ให้เป็นค่าว่าง
+        setAddress("");
     }
   }, [user]);
+
+  // ✅ ฟังก์ชันสำหรับบันทึกที่อยู่จาก Modal
+  const handleSaveAddress = () => {
+    setAddress(tempAddress);
+    localStorage.setItem('delivery_address', tempAddress); // จำไว้ในเครื่อง เผื่อเปลี่ยนหน้า
+    setShowAddressModal(false);
+  };
 
   // ฟังก์ชันดึงรูปภาพแบบ Safe 
   const getImageUrl = (product: any) => {
@@ -61,6 +76,10 @@ const Cart = () => {
       
       alert("สั่งซื้อเรียบร้อย!");
       setShowPaymentModal(false);
+
+      // ✅ เพิ่มบรรทัดนี้: ล้างที่อยู่ที่พิมพ์แก้ออก เพื่อให้ออเดอร์หน้ากลับไปใช้ค่าเริ่มต้นจาก Profile
+      localStorage.removeItem('delivery_address');
+      
       await fetchCart();
       navigate('/order-history');
     } catch (error: any) {
@@ -134,14 +153,30 @@ const Cart = () => {
 
           {/* --- ฝั่งขวา: สรุปราคาและที่อยู่ --- */}
           <div className="w-full lg:w-[380px] space-y-4">
+            
+            {/* ✅ ส่วนที่ 1: กล่องแสดงที่อยู่และปุ่มกดแก้ไข (ที่คุณให้มา) */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-white/60">
               <div className="flex justify-between items-center mb-4">
                 <h4 className="font-bold text-gray-800">ที่อยู่จัดส่ง</h4>
-                <button className="text-xs text-[#148F96] font-bold hover:underline">คลิกเพื่อเปลี่ยน</button>
+                {/* ✅ กดแล้วเปิด Modal พร้อมดึงที่อยู่เดิมมาแสดงในกล่องพิมพ์ */}
+                <button 
+                  onClick={() => {
+                    setTempAddress(address); 
+                    setShowAddressModal(true);
+                  }} 
+                  className="text-xs text-[#148F96] font-bold hover:underline"
+                >
+                  คลิกเพื่อเปลี่ยน
+                </button>
               </div>
-              <div className="flex gap-3 text-sm text-gray-600 bg-[#F9FBFC] p-4 rounded-xl border border-dashed border-gray-200">
+              <div className="flex gap-3 text-sm bg-[#F9FBFC] p-4 rounded-xl border border-dashed border-gray-200">
                 <MapPin className="text-[#148F96] flex-shrink-0" size={18} />
-                <p className="leading-relaxed">{address}</p>
+                {/* ✅ แสดงที่อยู่ หรือข้อความเทาๆ ถ้ายังไม่ได้กรอก */}
+                {address.trim() !== "" ? (
+                  <p className="leading-relaxed text-gray-800">{address}</p>
+                ) : (
+                  <p className="leading-relaxed text-gray-400">กรุณากรอกที่อยู่จัดส่ง...</p>
+                )}
               </div>
             </div>
 
@@ -168,8 +203,8 @@ const Cart = () => {
               </div>
               <button 
                 onClick={() => setShowPaymentModal(true)}
-                disabled={cartItems.length === 0}
-                className="w-full bg-[#D65A31] text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-[#D65A31]/20 hover:bg-[#bd4e2a] transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100"
+                disabled={cartItems.length === 0 || !address.trim()} 
+                className="w-full bg-[#D65A31] text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-[#D65A31]/20 hover:bg-[#bd4e2a] transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
               >
                 ดำเนินการชำระเงิน
               </button>
@@ -232,6 +267,44 @@ const Cart = () => {
           </div>
         </div>
       )}
+
+      {/* ✅ ส่วนที่ 2: Modal แก้ไขที่อยู่ (ที่คุณให้มา นำมาต่อท้ายไว้ด้านล่างสุด) */}
+      {showAddressModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#4A6365]/90 backdrop-blur-md">
+          <div className="bg-white w-full max-w-lg rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in duration-200">
+            <button 
+              onClick={() => setShowAddressModal(false)} 
+              className="absolute top-6 right-6 text-gray-400 hover:text-gray-800 transition-colors"
+            >
+              <X size={24}/>
+            </button>
+            <h3 className="text-xl font-bold text-gray-800 mb-6">ที่อยู่จัดส่ง</h3>
+            <textarea 
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-gray-800 outline-none focus:border-[#148F96] focus:ring-2 focus:ring-[#148F96]/20 transition-all resize-none"
+              rows={4}
+              value={tempAddress}
+              onChange={(e) => setTempAddress(e.target.value)}
+              placeholder="บ้านเลขที่, ถนน, ตำบล, อำเภอ, จังหวัด, รหัสไปรษณีย์..."
+            ></textarea>
+            <div className="flex gap-4 mt-6">
+              <button 
+                onClick={() => setShowAddressModal(false)}
+                className="flex-1 py-3 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                ยกเลิก
+              </button>
+              <button 
+                onClick={handleSaveAddress}
+                disabled={!tempAddress.trim()}
+                className="flex-1 py-3 rounded-xl font-bold text-white bg-[#148F96] hover:bg-[#0f6f75] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                ยืนยันที่อยู่
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

@@ -26,10 +26,14 @@ export class AuthService {
     return {
       access_token: this.jwtService.sign(payload),
       user: { 
-      id: user.id,
-      username: user.username,
-      role: user.role
-    }
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        address: user.address,     // ✅ เพิ่มบรรทัดนี้ ส่งที่อยู่กลับไป
+        email: user.email,         // ✅ (แนะนำ) ส่ง email เผื่อได้ใช้ในหน้า Profile
+        phone: user.phone,         // ✅ (แนะนำ) ส่งเบอร์โทร
+        userImage: user.userImage  // ✅ (แนะนำ) ส่งรูปภาพโปรไฟล์
+      }
     };
   }
 }
