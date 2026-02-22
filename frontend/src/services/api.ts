@@ -143,8 +143,13 @@ export const getCart = async () => {
   return await api.get('/cart-items');
 };
 
-export const addToCart = async (productId: number | string, quantity: number) => {
-  return await api.post('/cart-items', { productId, quantity });
+// ✅ เพิ่ม parameter ตัวที่ 3 และใส่ลงไปใน Body ที่ส่งไปหา Backend
+export const addToCart = async (productId: string | number, quantity: number, requestInstallation: boolean = false) => {
+  return await api.post('/cart-items', { 
+     productId, 
+     quantity, 
+     requestInstallation 
+  });
 };
 
 export const updateCartItem = async (id: number, quantity: number) => {

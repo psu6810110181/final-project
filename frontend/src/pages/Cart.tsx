@@ -214,6 +214,29 @@ const Cart = () => {
   const { cartItems, removeFromCart, updateQuantity, cartTotal, fetchCart } = useCart();
   const { user } = useAuth();
 
+  // ✅ ลองเพิ่มบรรทัดนี้เพื่อดูว่า Backend ส่ง requestInstallation มาเป็นอะไร
+  console.log("Cart Items: ", cartItems);
+  // -- เพิ่ม Logic การคำนวณจำนวนชิ้นและค่าบริการ --
+// แบบใหม่: นับเฉพาะชิ้นที่ติ๊ก requestInstallation
+  const totalInstallQty = cartItems.reduce((sum: number, item: any) => {
+    // เช็คว่าสินค้านี้มีการขอรับบริการติดตั้งหรือไม่ (item.requestInstallation === true)
+    if (item.requestInstallation) {
+      return sum + item.quantity;
+    }
+    return sum; // ถ้าไม่ได้ติ๊ก ก็ไม่เอามาบวก
+  }, 0);
+
+  // 2. คำนวณค่าติดตั้ง: 4 ชิ้นขึ้นไป 990 บาท, ต่ำกว่า 4 ชิ้น ชิ้นละ 400 บาท
+  let installationFee = 0;
+  if (totalInstallQty > 0) {
+      installationFee = totalInstallQty >= 4 ? 990 : (totalInstallQty * 400);
+  }
+
+  // 3. รวมค่าใช้จ่ายทั้งหมด
+  const shippingFee = cartItems.length > 0 ? 150 : 0; 
+  const total = cartTotal + installationFee + shippingFee;
+
+
   useEffect(() => {
     // ถ้ามีข้อมูล user ล็อกอินอยู่ และ user คนนั้นมี address บันทึกไว้
     if (user && (user as any).address && (user as any).address.trim() !== "") {
@@ -222,9 +245,6 @@ const Cart = () => {
         setAddress(defaultAddress); // ถ้าไม่มี ให้ใช้ที่อยู่ ม.อ. แทน
     }
   }, [user]);
-  
-  const shippingFee = cartItems.length > 0 ? 150 : 0; 
-  const total = cartTotal + shippingFee;
 
   // ฟังก์ชันดึงรูปภาพแบบ Safe (แก้ขีดแดงเรื่อง .image vs .images)
   const getImageUrl = (product: any) => {
@@ -286,7 +306,6 @@ const Cart = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-bold text-gray-800 text-lg truncate">{item.product.name}</h3>
-                      {/* แก้ขีดแดง category ด้วยการใช้ any หรือเช็คค่า */}
                       <p className="text-gray-400 text-sm mb-2">{(item.product as any).category || "ทั่วไป"}</p>
                       <div className="font-bold text-[#D65A31] text-lg">฿{Number(item.product.price).toLocaleString()}</div>
                     </div>
@@ -320,6 +339,7 @@ const Cart = () => {
               </div>
             </div>
 
+            {/* ส่วนสรุปคำสั่งซื้อที่รวมโค้ดใหม่แล้ว */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-white/60">
               <h4 className="font-bold text-gray-800 mb-4">สรุปคำสั่งซื้อ</h4>
               <div className="space-y-3 text-sm mb-6 border-b border-gray-50 pb-6">
@@ -329,11 +349,12 @@ const Cart = () => {
                 </div>
                 <div className="flex justify-between text-gray-500">
                   <span>ค่าบริการติดตั้ง</span>
-                  <span className="text-green-600 font-medium">฿0</span>
+                  {/* เปลี่ยนมาใช้ตัวแปร installationFee ที่คำนวณไว้ */}
+                  <span className="text-[#D65A31] font-medium">฿{installationFee.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-gray-500">
                   <span>ค่าจัดส่ง</span>
-                  <span className="font-medium text-gray-800">฿{shippingFee}</span>
+                  <span className="font-medium text-gray-800">฿{shippingFee.toLocaleString()}</span>
                 </div>
               </div>
               <div className="flex justify-between font-bold text-xl mb-8">

@@ -33,7 +33,7 @@ export class OrdersService {
 
     try {
       let totalAmountProduct = 0;
-      let totalAmountInstallation = 0;
+      let totalInstallQty = 0; // เพิ่มตัวแปรนับจำนวนชิ้นที่ต้องการติดตั้ง
 
       for (const item of cartItems) {
         // เช็คสต็อก
@@ -42,12 +42,21 @@ export class OrdersService {
         }
         totalAmountProduct += Number(item.product.price) * item.quantity;
         
+        // เก็บนับจำนวนชิ้น (อิงตาม logic เดิมที่เช็ค requestInstallation)
         if (item.requestInstallation) { 
-            totalAmountInstallation += 500; 
+            totalInstallQty += item.quantity; 
         }
       }
 
-      const totalAmount = totalAmountProduct + totalAmountInstallation;
+      // Logic ใหม่: 4 ชิ้นขึ้นไป 990 บาท, ต่ำกว่า 4 ชิ้น ชิ้นละ 400 บาท
+      let totalAmountInstallation = 0;
+      if (totalInstallQty > 0) {
+         totalAmountInstallation = totalInstallQty >= 4 ? 990 : (totalInstallQty * 400);
+      }
+
+      // เพิ่มค่าส่ง 150 บาทเหมือน Frontend
+      const shippingFee = cartItems.length > 0 ? 150 : 0;
+      const totalAmount = totalAmountProduct + totalAmountInstallation + shippingFee;
 
       // สร้าง Order
       const order = this.ordersRepository.create({

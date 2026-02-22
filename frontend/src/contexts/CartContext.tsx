@@ -19,7 +19,7 @@ export interface CartItem {
 interface CartContextType {
   cartItems: CartItem[];
   // ✅ addToCart รับ productId เป็น string
-  addToCart: (productId: string, quantity: number) => Promise<void>;
+  addToCart: (productId: string, quantity: number, requestInstallation?: boolean) => Promise<void>;
   // ✅ removeFromCart รับ id เป็น number (เพราะลบที่ CartItem ID)
   removeFromCart: (id: number) => Promise<void>;
   // ✅ updateQuantity รับ id เป็น number
@@ -82,10 +82,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   // 3. แก้ Function Implementation ให้รับ Type ตรงกับ Interface ด้านบน
 
-  // ✅ productId: string
-  const addToCart = async (productId: string, quantity: number) => {
+
+// ✅ รับ requestInstallation มาด้วย และส่งต่อไปให้ api
+  const addToCart = async (productId: string, quantity: number, requestInstallation: boolean = false) => {
     try {
-      await api.addToCart(productId, quantity);
+      // ✅ ส่ง requestInstallation ไปที่ API
+      await api.addToCart(productId, quantity, requestInstallation);
       alert('เพิ่มลงตะกร้าแล้ว!');
       await fetchCart(); 
     } catch (error) {

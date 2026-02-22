@@ -72,13 +72,12 @@ const ProductDetail = () => {
 
   // --- ฟังก์ชันกดเพิ่มลงตะกร้า ---
   const handleAddToCart = async () => {
-    if (!id) return; // เช็คว่ามี id จาก URL ไหม (บรรทัดนี้สำคัญ!)
+    if (!id) return; 
 
     try {
         setIsAdding(true);
-        // ✅ ใช้ 'id' จาก useParams แทน 'product.id'
-        // (หายแดงแน่นอน เพราะ id เป็น string ชัวร์ๆ)
-        await addToCart(id, quantity); 
+        // ✅ เพิ่ม addInstallation ส่งไปด้วย
+        await addToCart(id, quantity, addInstallation); 
     } catch (error) {
         console.error(error);
     } finally {
