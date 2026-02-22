@@ -27,6 +27,12 @@ export class OrdersController {
     return this.ordersService.findMyOrders(req.user.id);
   }
 
+  @Patch(':id/cancel')
+  async cancelMyOrder(@Param('id') id: string, @Req() req) { // ✅ เปลี่ยนจาก @Request เป็น @Req
+    // โยน orderId และ userId ไปให้ Service ตรวจสอบ
+    return this.ordersService.cancelMyOrder(id, req.user.id); 
+  }
+
   // ---------------------------------------------------------
   // ✅ อัปโหลดสลิป: Validate + Resize (Sharp) 🧾
   // ---------------------------------------------------------
@@ -68,6 +74,7 @@ export class OrdersController {
     // ✅ ส่ง User ID ไปเช็คด้วยว่าอัปโหลดให้ถูกใบไหม
     return this.ordersService.updatePaymentSlip(id, filename, req.user.id, req.user.role);
   }
+  
 
   // --- Admin Zone ---
   @Get()

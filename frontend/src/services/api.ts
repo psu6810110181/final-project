@@ -47,6 +47,29 @@ export interface Feature {
   name: string; 
 }
 
+export interface OrderItem {
+  id: string;
+  product: Product;
+  quantity: number;
+  priceAtPurchase: number | string;
+  installationQty?: number;
+}
+
+export interface Order {
+  id: string;
+  orderDate: string;
+  totalAmount: number | string;
+  
+  // 👇 เพิ่ม 3 บรรทัดนี้เข้ามารองรับค่าใช้จ่ายย่อย
+  totalAmountProduct: number | string; 
+  totalAmountInstallation: number | string;
+  shippingFee?: number | string; // (อนาคต) เผื่อ Backend ส่งค่าจัดส่งมา
+  
+  status: string;
+  shippingAddress: string;
+  items: OrderItem[];
+}
+
 // --- API Functions ---
 
 // 1. Auth & User
@@ -188,6 +211,12 @@ export const uploadSlip = async (orderId: string, file: File) => {
   const response = await api.post(`/orders/upload-slip/${orderId}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
+  return response.data;
+};
+
+// ยกเลิกออเดอร์ (User)
+export const cancelOrder = async (orderId: string) => {
+  const response = await api.patch(`/orders/${orderId}/cancel`);
   return response.data;
 };
 

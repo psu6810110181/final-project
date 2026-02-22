@@ -195,4 +195,37 @@ export class OrdersService {
     order.status = status;
     return this.ordersRepository.save(order);
   }
+
+  // 7. ยกเลิกออเดอร์โดยผู้ใช้งาน (เฉพาะสถานะ PENDING)
+  async cancelMyOrder(orderId: string, userId: string) {
+    const order = await this.ordersRepository.findOne({
+      where: { id: orderId },
+      relations: ['user', 'items', 'items.product'],
+    });
+
+    if (!order) throw new NotFoundException('ไม่พบคำสั่งซื้อ');
+
+    // 🔒 เช็คว่าเป็นเจ้าของออเดอร์จริงๆ
+    if (order.user.id !== userId) {
+      throw new ForbiddenException('คุณไม่มีสิทธิ์ยกเลิกคำสั่งซื้อนี้');
+    }
+
+    // 🔒 เช็คสถานะ: ต้องเป็น PENDING เท่านั้นถึงจะยกเลิกได้
+    if (order.status !== 'PENDING') {
+      throw new BadRequestException('ไม่สามารถยกเลิกคำสั่งซื้อนี้ได้ เนื่องจากถูกดำเนินการไปแล้ว');
+    }
+
+    // 🔄 คืนสต็อกสินค้าเข้าสู่ระบบ
+    for (const item of order.items) {
+      const product = item.product;
+      product.stock += item.quantity;
+      await this.productsRepository.save(product);
+    }
+
+    // ❌ อัปเดตสถานะเป็น CANCELLED
+    order.status = 'CANCELLED';
+    await this.ordersRepository.save(order);
+
+    return { message: 'ยกเลิกคำสั่งซื้อสำเร็จ' };
+  }
 }

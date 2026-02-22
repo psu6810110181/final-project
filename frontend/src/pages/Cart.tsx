@@ -81,7 +81,7 @@ const Cart = () => {
       localStorage.removeItem('delivery_address');
       
       await fetchCart();
-      navigate('/order-history');
+      navigate('/orders');
     } catch (error: any) {
       alert(error.response?.data?.message || "เกิดข้อผิดพลาดในการสั่งซื้อ");
     } finally {
@@ -154,11 +154,11 @@ const Cart = () => {
           {/* --- ฝั่งขวา: สรุปราคาและที่อยู่ --- */}
           <div className="w-full lg:w-[380px] space-y-4">
             
-            {/* ✅ ส่วนที่ 1: กล่องแสดงที่อยู่และปุ่มกดแก้ไข (ที่คุณให้มา) */}
+            {/* ✅ ส่วนที่ 1: กล่องแสดงที่อยู่และปุ่มกดแก้ไข (อัปเดต UX ใหม่แล้ว) */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-white/60">
               <div className="flex justify-between items-center mb-4">
                 <h4 className="font-bold text-gray-800">ที่อยู่จัดส่ง</h4>
-                {/* ✅ กดแล้วเปิด Modal พร้อมดึงที่อยู่เดิมมาแสดงในกล่องพิมพ์ */}
+                {/* ✅ 1. เปลี่ยนคำบนปุ่มอัตโนมัติ ถ้ามีที่อยู่แล้ว = แก้ไข, ถ้าไม่มี = เพิ่ม */}
                 <button 
                   onClick={() => {
                     setTempAddress(address); 
@@ -166,17 +166,28 @@ const Cart = () => {
                   }} 
                   className="text-xs text-[#148F96] font-bold hover:underline"
                 >
-                  คลิกเพื่อเปลี่ยน
+                  {address.trim() !== "" ? "แก้ไขที่อยู่" : "เพิ่มที่อยู่จัดส่ง"}
                 </button>
               </div>
-              <div className="flex gap-3 text-sm bg-[#F9FBFC] p-4 rounded-xl border border-dashed border-gray-200">
-                <MapPin className="text-[#148F96] flex-shrink-0" size={18} />
-                {/* ✅ แสดงที่อยู่ หรือข้อความเทาๆ ถ้ายังไม่ได้กรอก */}
-                {address.trim() !== "" ? (
-                  <p className="leading-relaxed text-gray-800">{address}</p>
-                ) : (
-                  <p className="leading-relaxed text-gray-400">กรุณากรอกที่อยู่จัดส่ง...</p>
-                )}
+              
+              {/* ✅ 2. ทำให้กล่องนี้กดได้ทั้งกล่อง (cursor-pointer) และเพิ่มลูกเล่นเวลาเอาเมาส์ชี้ (hover) */}
+              <div 
+                onClick={() => {
+                  setTempAddress(address); 
+                  setShowAddressModal(true);
+                }}
+                className="flex gap-3 text-sm bg-[#F9FBFC] p-4 rounded-xl border border-dashed border-gray-300 cursor-pointer hover:border-[#148F96] hover:bg-[#F2FAFA] transition-all group"
+              >
+                <MapPin className="text-[#148F96] flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform" size={18} />
+                <div className="flex-1 w-full">
+                  {address.trim() !== "" ? (
+                    <p className="leading-relaxed text-gray-800">{address}</p>
+                  ) : (
+                    <p className="leading-relaxed text-gray-400 group-hover:text-[#148F96] transition-colors">
+                      คลิกเพื่อเพิ่มที่อยู่จัดส่ง...
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -249,8 +260,7 @@ const Cart = () => {
                       <div className="bg-gray-100 p-5 rounded-2xl mb-4 group-hover:scale-110 transition-transform duration-300">
                         <Upload size={32} className="text-gray-400" />
                       </div>
-                      <span className="text-sm font-bold text-gray-500">ลากไฟล์สลิปมาวางที่นี่</span>
-                      <span className="text-xs text-gray-400 mt-2 bg-gray-100 px-4 py-1 rounded-full">หรือ เลือกจากเครื่อง</span>
+                      <span className="text-sm font-bold text-gray-500">อัพโหลดสลิปการชำระเงินที่นี่</span>
                     </>
                   )}
                   <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files && setSlipFile(e.target.files[0])} />
@@ -268,7 +278,7 @@ const Cart = () => {
         </div>
       )}
 
-      {/* ✅ ส่วนที่ 2: Modal แก้ไขที่อยู่ (ที่คุณให้มา นำมาต่อท้ายไว้ด้านล่างสุด) */}
+      {/* ✅ ส่วนที่ 2: Modal แก้ไขที่อยู่ */}
       {showAddressModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#4A6365]/90 backdrop-blur-md">
           <div className="bg-white w-full max-w-lg rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in duration-200">
