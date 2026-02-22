@@ -27,6 +27,6 @@ export class OrderItem {
   priceAtPurchase: number;
 
   // requestInstallation (Boolean) -> เก็บว่าสินค้านี้ขอรับบริการติดตั้งไหม
-  @Column({ name: 'requestInstallation', type: 'boolean', default: false })
-  requestInstallation: boolean;
+ @Column({ type: 'int', default: 0 })
+  installationQty: number; // จำนวนชิ้นที่ต้องการให้ติดตั้ง
 }

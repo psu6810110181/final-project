@@ -1,10 +1,11 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import * as api from '../services/api'; 
 
-// 1. แก้ Interface CartItem ให้รองรับ ID แบบ String
+// 1. แก้ Interface CartItem ให้รองรับ ID แบบ String และรองรับจำนวนชิ้นติดตั้ง
 export interface CartItem {
   id: number; // CartItem ID (มักจะเป็นตัวเลข 1, 2, 3...)
   quantity: number;
+  installationQty?: number; // ✅ เพิ่ม property นี้เพื่อเก็บจำนวนติดตั้ง
   product: {
     id: string;   // ✅ แก้เป็น string (รองรับ UUID)
     name: string;
@@ -18,12 +19,12 @@ export interface CartItem {
 // 2. แก้ Interface Context ให้ Type ตรงกับ Function ที่เราจะเขียน
 interface CartContextType {
   cartItems: CartItem[];
-  // ✅ addToCart รับ productId เป็น string
-  addToCart: (productId: string, quantity: number, requestInstallation?: boolean) => Promise<void>;
+  // ✅ addToCart รับ installationQty เป็น number
+  addToCart: (productId: string, quantity: number, installationQty?: number) => Promise<void>;
   // ✅ removeFromCart รับ id เป็น number (เพราะลบที่ CartItem ID)
   removeFromCart: (id: number) => Promise<void>;
-  // ✅ updateQuantity รับ id เป็น number
-  updateQuantity: (id: number, quantity: number) => Promise<void>;
+  // ✅ updateCartItem รับ id, quantity และ installationQty
+  updateCartItem: (id: number, quantity?: number, installationQty?: number) => Promise<void>;
   clearCart: () => Promise<void>;
   fetchCart: () => Promise<void>;
   resetCart: () => void;
@@ -82,15 +83,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   // 3. แก้ Function Implementation ให้รับ Type ตรงกับ Interface ด้านบน
 
-
-// ✅ รับ requestInstallation มาด้วย และส่งต่อไปให้ api
-  const addToCart = async (productId: string, quantity: number, requestInstallation: boolean = false) => {
+  // ✅ รับ installationQty มาด้วย และส่งต่อไปให้ api
+  const addToCart = async (productId: string, quantity: number, installationQty: number = 0) => {
     try {
-      // ✅ ส่ง requestInstallation ไปที่ API
-      await api.addToCart(productId, quantity, requestInstallation);
+      await api.addToCart(productId, quantity, installationQty);
       alert('เพิ่มลงตะกร้าแล้ว!');
       await fetchCart(); 
     } catch (error) {
+      // ✅ ลบ ... ออก และใส่โค้ดจัดการ Error
       console.error('Add to cart failed:', error);
       alert('เกิดข้อผิดพลาดในการเพิ่มสินค้า');
     }
@@ -106,14 +106,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // ✅ id: number (CartItem ID)
-  const updateQuantity = async (id: number, newQuantity: number) => {
-    if (newQuantity < 1) return;
+  // ✅ id: number (CartItem ID) และรับค่าได้ทั้ง 2 แบบ
+  const updateCartItem = async (id: number, newQuantity?: number, newInstallQty?: number) => {
     try {
-      await api.updateCartItem(id, newQuantity);
+      await api.updateCartItem(id, { quantity: newQuantity, installationQty: newInstallQty });
       await fetchCart();
     } catch (error) {
-      console.error('Update quantity failed:', error);
+      // ✅ ลบ ... ออก และใส่โค้ดจัดการ Error
+      console.error('Update cart item failed:', error);
     }
   };
 
@@ -147,7 +147,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       cartItems: safeCartItems,
       addToCart, 
       removeFromCart, 
-      updateQuantity, 
+      updateCartItem, // <--- ✅ แก้จาก updateQuantity เป็น updateCartItem ตรงนี้
       clearCart, 
       fetchCart,
       resetCart,

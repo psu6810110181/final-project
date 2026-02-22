@@ -21,9 +21,9 @@ export class CartItemsController {
   }
 
   @Patch(':id')
-  // รับ Body เป็น { quantity: 5 }
-  update(@Param('id') id: string, @Body('quantity') quantity: number, @Req() req) {
-    return this.cartItemsService.update(id, quantity, req.user.id);
+  update(@Param('id') id: string, @Body() body: { quantity?: number, installationQty?: number }, @Req() req) {
+    // รับเป็น Object เพื่อให้เลือกอัปเดตอย่างใดอย่างหนึ่ง หรือพร้อมกันได้
+    return this.cartItemsService.update(id, body.quantity, body.installationQty, req.user.id);
   }
 
   @Delete()

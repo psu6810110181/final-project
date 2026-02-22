@@ -14,8 +14,8 @@ export class CartItem {
   @ManyToOne(() => User, (user) => user.cartItems, { onDelete: 'CASCADE' })
   user: User;
 
-  @Column({ default: false })
-  requestInstallation: boolean;
+  @Column({ type: 'int', default: 0 })
+  installationQty: number; // จำนวนชิ้นที่ต้องการให้ติดตั้ง
 
   // 🔗 ความสัมพันธ์: Product 1 ชิ้น ไปอยู่ใน CartItem ของหลายคนได้
   @ManyToOne(() => Product, (product) => product.cartItems, { onDelete: 'CASCADE' })

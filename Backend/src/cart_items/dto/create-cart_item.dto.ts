@@ -12,6 +12,7 @@ export class CreateCartItemDto {
 
   // 👇 เพิ่มส่วนนี้เข้าไปครับ
   @IsOptional()
-  @IsBoolean()
-  requestInstallation?: boolean; 
+  @IsNumber()
+  @Min(0)
+  installationQty?: number;
 }

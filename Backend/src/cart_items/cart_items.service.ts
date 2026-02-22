@@ -17,7 +17,7 @@ export class CartItemsService {
 
   // 1. เพิ่มของใส่ตะกร้า (Logic เดิมของคุณ + Type ที่ถูกต้อง)
   async addToCart(createCartItemDto: CreateCartItemDto, user: User) { // ✅ แก้ any เป็น DTO
-    const { productId, quantity, requestInstallation } = createCartItemDto;
+    const { productId, quantity, installationQty } = createCartItemDto; // เปลี่ยนเป็นดึง installationQty
 
     if (quantity <= 0) {
       throw new BadRequestException('จำนวนสินค้าที่เพิ่มเข้าตะกร้าต้องมากกว่า 0 ชิ้น');
@@ -48,13 +48,18 @@ export class CartItemsService {
     // 1.4 บันทึก
     if (existingItem) {
       existingItem.quantity += quantity;
-      // อัปเดตตัวเลือกติดตั้งด้วยถ้ามีการส่งมาใหม่
-      if (requestInstallation !== undefined) existingItem.requestInstallation = requestInstallation;
+      // บวกจำนวนติดตั้งเพิ่มเข้าไป และบังคับว่าห้ามเกินจำนวนสินค้าทั้งหมด
+      if (installationQty !== undefined) {
+         existingItem.installationQty += installationQty;
+         if (existingItem.installationQty > existingItem.quantity) {
+             existingItem.installationQty = existingItem.quantity;
+         }
+      }
       return await this.cartItemsRepository.save(existingItem);
     } else {
       const newItem = this.cartItemsRepository.create({
         quantity,
-        requestInstallation: requestInstallation || false,
+        installationQty: installationQty || 0, // ค่าเริ่มต้น
         product,
         user,
       });
@@ -85,30 +90,26 @@ export class CartItemsService {
   }
 
 // 4. แก้ไขจำนวน (Secure + Logic เดิม ✅)
-  async update(id: string, quantity: number, userId: string) {
-    // 🚨 ป้องกันการส่งเลข 0 หรือเลขติดลบ
-    if (quantity <= 0) {
-      throw new BadRequestException('จำนวนสินค้าต้องมากกว่า 0 หากต้องการลบสินค้ากรุณากดลบรายการ');
-    }
-
-    const cartItem = await this.cartItemsRepository.findOne({
-      where: { id },
-      relations: ['product', 'user'],
-    });
-
+  async update(id: string, quantity: number | undefined, installationQty: number | undefined, userId: string) {
+    const cartItem = await this.cartItemsRepository.findOne({ where: { id }, relations: ['product', 'user'] });
     if (!cartItem) throw new NotFoundException('Item not found');
+    if (cartItem.user.id !== userId) throw new ForbiddenException('คุณไม่มีสิทธิ์แก้ไขตะกร้าของคนอื่น');
 
-    // 🛡️ Security: เช็คว่าเป็นของ user คนนี้จริงไหม?
-    if (cartItem.user.id !== userId) {
-        throw new ForbiddenException('คุณไม่มีสิทธิ์แก้ไขตะกร้าของคนอื่น');
+    if (quantity !== undefined) {
+      if (quantity <= 0) throw new BadRequestException('จำนวนสินค้าต้องมากกว่า 0');
+      if (quantity > cartItem.product.stock) throw new BadRequestException(`สินค้าหมด! เหลือเพียง ${cartItem.product.stock} ชิ้น`);
+      cartItem.quantity = quantity;
+    }
+    
+    if (installationQty !== undefined) {
+      cartItem.installationQty = installationQty;
     }
 
-    // เช็คสต็อก (Logic เดิม)
-    if (quantity > cartItem.product.stock) {
-      throw new BadRequestException(`สินค้าหมด! เหลือเพียง ${cartItem.product.stock} ชิ้น`);
+    // เซฟตี้: ห้ามให้ติดตั้งเยอะกว่าจำนวนที่ซื้อ
+    if (cartItem.installationQty > cartItem.quantity) {
+      cartItem.installationQty = cartItem.quantity;
     }
 
-    cartItem.quantity = quantity;
     return await this.cartItemsRepository.save(cartItem);
   }
 
@@ -116,39 +117,44 @@ export class CartItemsService {
 
   async getCartSummary(userId: string) {
     const cartItems = await this.cartItemsRepository.find({
-      where: { user: { id: userId } }, // ✅ ต้องกรองตาม userId
+      where: { user: { id: userId } }, 
       relations: ['product'],
     });
 
     let subTotal = 0;
-    let totalInstallationFee = 0;
+    let totalInstallQty = 0; // ✅ เปลี่ยนจากเก็บเงิน เป็นเก็บ 'จำนวนชิ้นรวม' ก่อน
 
     const items = cartItems.map((item) => {
       const totalLine = Number(item.product.price) * item.quantity;
       subTotal += totalLine;
       
-      if (item.requestInstallation) {
-          totalInstallationFee += 500; 
-      }
+      // ✅ ลบ if (item.requestInstallation) แบบเก่าออก 
+      // แล้วเปลี่ยนเป็นบวกจำนวนชิ้นที่ต้องติดตั้งเข้าไปแทน
+      totalInstallQty += item.installationQty || 0; 
 
-      // ✅ แก้ตรงนี้: ส่ง product กลับไปทั้งก้อน (Frontend จะได้ใช้ item.product.name ได้)
       return {
-        id: item.id,            // ID ของรายการในตะกร้า
+        id: item.id,            
         quantity: item.quantity,
-        product: item.product,  // <--- ส่ง Object Product กลับไปตรงๆ
-        requestInstallation: item.requestInstallation,
-        total: totalLine        // (Optional) ส่งราคารวมต่อชิ้นไปด้วยก็ได้
+        product: item.product,  
+        installationQty: item.installationQty, 
+        total: totalLine        
       };
     });
 
-    const shippingFee = subTotal >= 5000 ? 0 : 150;
+    // ✅ คำนวณค่าติดตั้งตรงนี้ (หลังจบลูป map)
+    let totalInstallationFee = 0;
+    if (totalInstallQty > 0) {
+      totalInstallationFee = totalInstallQty >= 4 ? 990 : (totalInstallQty * 400);
+    }
+
+    const shippingFee = subTotal >= 5000 ? 0 : 150; // (ตัวอย่างเงื่อนไขส่งฟรีของคุณ)
     
     return {
       items: items,
       summary: {
         subTotal: subTotal,
         shippingFee: shippingFee,
-        installationFee: totalInstallationFee,
+        installationFee: totalInstallationFee, // ส่งค่าติดตั้งที่คำนวณใหม่กลับไป
         grandTotal: subTotal + shippingFee + totalInstallationFee
       }
     };
