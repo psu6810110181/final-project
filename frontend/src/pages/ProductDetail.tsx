@@ -45,20 +45,47 @@ const ProductDetail = () => {
     return <div className="min-h-screen flex items-center justify-center text-red-500">ไม่พบสินค้า</div>;
   }
 
-  // --- แปลงรูปภาพ ---
-  let images: string[] = [];
-  try {
-    if (Array.isArray(product.image)) {
-        images = product.image;
-    } else if (typeof product.image === 'string') {
-        images = JSON.parse(product.image);
+  // // --- แปลงรูปภาพ ---
+  // let images: string[] = [];
+  // try {
+  //   if (Array.isArray(product.image)) {
+  //       images = product.image;
+  //   } else if (typeof product.image === 'string') {
+  //       images = JSON.parse(product.image);
+  //   }
+  //   if (images.length === 0) images = ["https://via.placeholder.com/600x400?text=No+Image"];
+  // } catch (e) {
+  //   images = ["https://via.placeholder.com/600x400?text=Error+Image"];
+  // }
+
+  // const getImageUrl = (img: string) => {
+  //   if (img.startsWith('http')) return img;
+  //   return `http://localhost:3000/uploads/products/${img}`;
+  // };
+
+  // --- แปลงรูปภาพ (เวอร์ชันแก้จอขาวและรูปไม่ขึ้น) ---
+  const images: string[] = (() => {
+    if (!product) return [];
+    
+    // ดึงข้อมูลรูปภาพ (รองรับทั้ง .image และ .images)
+    const raw = (product as any).image || (product as any).images;
+    if (!raw) return ["https://via.placeholder.com/600x400?text=No+Image"];
+
+    // ถ้าเป็น Array อยู่แล้ว
+    if (Array.isArray(raw)) return raw;
+
+    // ถ้าเป็น String
+    if (typeof raw === 'string') {
+      if (raw.startsWith('[') && raw.endsWith(']')) {
+        try { return JSON.parse(raw); } catch (e) { return [raw]; }
+      }
+      return [raw];
     }
-    if (images.length === 0) images = ["https://via.placeholder.com/600x400?text=No+Image"];
-  } catch (e) {
-    images = ["https://via.placeholder.com/600x400?text=Error+Image"];
-  }
+    return ["https://via.placeholder.com/600x400?text=Format+Error"];
+  })();
 
   const getImageUrl = (img: string) => {
+    if (!img) return "https://via.placeholder.com/600x400?text=No+Path";
     if (img.startsWith('http')) return img;
     return `http://localhost:3000/uploads/products/${img}`;
   };
