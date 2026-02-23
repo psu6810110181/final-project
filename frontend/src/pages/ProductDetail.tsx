@@ -45,50 +45,59 @@ const ProductDetail = () => {
     return <div className="min-h-screen flex items-center justify-center text-red-500">ไม่พบสินค้า</div>;
   }
 
-  // // --- แปลงรูปภาพ ---
-  // let images: string[] = [];
-  // try {
-  //   if (Array.isArray(product.image)) {
-  //       images = product.image;
-  //   } else if (typeof product.image === 'string') {
-  //       images = JSON.parse(product.image);
+  // // --- แปลงรูปภาพ (เวอร์ชันแก้จอขาวและรูปไม่ขึ้น) ---
+  // const images: string[] = (() => {
+  //   if (!product) return [];
+    
+  //   // ดึงข้อมูลรูปภาพ (รองรับทั้ง .image และ .images)
+  //   const raw = (product as any).image || (product as any).images;
+  //   if (!raw) return ["https://via.placeholder.com/600x400?text=No+Image"];
+
+  //   // ถ้าเป็น Array อยู่แล้ว
+  //   if (Array.isArray(raw)) return raw;
+
+  //   // ถ้าเป็น String
+  //   if (typeof raw === 'string') {
+  //     if (raw.startsWith('[') && raw.endsWith(']')) {
+  //       try { return JSON.parse(raw); } catch (e) { return [raw]; }
+  //     }
+  //     return [raw];
   //   }
-  //   if (images.length === 0) images = ["https://via.placeholder.com/600x400?text=No+Image"];
-  // } catch (e) {
-  //   images = ["https://via.placeholder.com/600x400?text=Error+Image"];
-  // }
+  //   return ["https://via.placeholder.com/600x400?text=Format+Error"];
+  // })();
 
   // const getImageUrl = (img: string) => {
+  //   if (!img) return "https://via.placeholder.com/600x400?text=No+Path";
   //   if (img.startsWith('http')) return img;
   //   return `http://localhost:3000/uploads/products/${img}`;
   // };
 
-  // --- แปลงรูปภาพ (เวอร์ชันแก้จอขาวและรูปไม่ขึ้น) ---
+  // --- แปลงรูปภาพ (รองรับหลายรูป) ---
   const images: string[] = (() => {
     if (!product) return [];
     
-    // ดึงข้อมูลรูปภาพ (รองรับทั้ง .image และ .images)
+    // ดึงข้อมูลจาก image หรือ images
     const raw = (product as any).image || (product as any).images;
     if (!raw) return ["https://via.placeholder.com/600x400?text=No+Image"];
 
-    // ถ้าเป็น Array อยู่แล้ว
+    // ถ้าเป็น Array (เช่น ["p1.jpg", "p2.jpg", "p3.jpg"])
     if (Array.isArray(raw)) return raw;
 
-    // ถ้าเป็น String
+    // ถ้าเป็น String (เผื่อเป็น JSON string)
     if (typeof raw === 'string') {
       if (raw.startsWith('[') && raw.endsWith(']')) {
         try { return JSON.parse(raw); } catch (e) { return [raw]; }
       }
-      return [raw];
+      return [raw]; // ถ้าเป็น string ชื่อไฟล์เดียว ก็จะกลายเป็น ["sofa.jpg"]
     }
     return ["https://via.placeholder.com/600x400?text=Format+Error"];
   })();
 
   const getImageUrl = (img: string) => {
-    if (!img) return "https://via.placeholder.com/600x400?text=No+Path";
-    if (img.startsWith('http')) return img;
-    return `http://localhost:3000/uploads/products/${img}`;
-  };
+     if (!img) return "https://via.placeholder.com/600x400?text=No+Path";
+     if (img.startsWith('http')) return img;
+     return `http://localhost:3000/uploads/products/${img}`;
+   };
 
   // --- ฟังก์ชันกดเพิ่มลงตะกร้า ---
   const handleAddToCart = async () => {
@@ -129,10 +138,19 @@ const ProductDetail = () => {
               {images.map((img, index) => (
                 <button 
                   key={index}
+                  // ✅ เปลี่ยนรูปหลักเมื่อเอาเมาส์วาง หรือ คลิก
+                  onClick={() => setSelectedImageIndex(index)}
                   onMouseEnter={() => setSelectedImageIndex(index)}
-                  className={`w-full aspect-square rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${selectedImageIndex === index ? 'border-[#D65A31]' : 'border-transparent'}`}
+                  className={`w-full aspect-square rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 
+                   ${selectedImageIndex === index ? 'border-[#D65A31] shadow-md' : 'border-gray-200 hover:border-gray-300'}`}
                 >
-                  <img src={getImageUrl(img)} alt="" className="w-full h-full object-cover" />
+                  <img 
+                    src={getImageUrl(img)} 
+                    alt={`preview-${index}`} 
+                    className="w-full h-full object-cover" 
+                    // ✅ กันรูปพัง
+                    onError={(e) => { (e.target as HTMLImageElement).src = "https://via.placeholder.com/150"; }}
+                  />
                 </button>
               ))}
             </div>
