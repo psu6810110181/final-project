@@ -103,7 +103,7 @@ const ProductDetail = () => {
     } finally {
         setIsAdding(false);
     }
-  };
+  }; 
 
   return (
     <div className="bg-gray-50 min-h-screen pb-10 font-sans">
