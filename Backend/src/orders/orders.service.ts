@@ -228,4 +228,36 @@ export class OrdersService {
 
     return { message: 'ยกเลิกคำสั่งซื้อสำเร็จ' };
   }
+  // 8. ลบออเดอร์ (Admin)
+  async removeOrder(orderId: string) {
+    const order = await this.ordersRepository.findOne({
+      where: { id: orderId },
+      relations: ['items'], // ดึง items มาด้วยเพื่อลบให้เกลี้ยง
+    });
+
+    if (!order) throw new NotFoundException('ไม่พบคำสั่งซื้อ');
+
+    // เริ่ม Transaction เพื่อความปลอดภัยในการลบ
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // ลบ items ที่เชื่อมกับออเดอร์นี้ก่อน (ป้องกัน Error Foreign Key Constraint)
+      if (order.items && order.items.length > 0) {
+        await queryRunner.manager.remove(order.items);
+      }
+      
+      // ลบตัวออเดอร์หลัก
+      await queryRunner.manager.remove(order);
+      
+      await queryRunner.commitTransaction();
+      return { message: 'ลบคำสั่งซื้อสำเร็จเรียบร้อย' };
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
 }

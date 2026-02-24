@@ -1,5 +1,5 @@
 import { 
-  Controller, Get, Post, Patch, Body, Param, UseGuards, Req, 
+  Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Req, 
   UseInterceptors, UploadedFile, BadRequestException, ParseFilePipe, 
   MaxFileSizeValidator, FileTypeValidator 
 } from '@nestjs/common';
@@ -95,4 +95,10 @@ export class OrdersController {
   updateStatus(@Param('id') id: string, @Body('status') status: string) {
     return this.ordersService.updateStatus(id, status);
   }
+  
+  @Delete(':id')
+  @Roles('admin')
+  removeOrder(@Param('id') id: string) {
+    return this.ordersService.removeOrder(id);
+}
 }

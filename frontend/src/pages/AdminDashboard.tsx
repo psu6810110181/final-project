@@ -22,6 +22,7 @@ interface Variant {
   price: string;
   stock: string;
   imageUrl?: string;
+  imageFile?: File; // สำหรับเก็บไฟล์จริงก่อนส่งไป Backend
 }
 
 const AdminDashboard: React.FC = () => {
@@ -60,8 +61,54 @@ const AdminDashboard: React.FC = () => {
 
   // State สำหรับ Variants
   const [variants, setVariants] = useState<Variant[]>([
-    { color: "", material: "", size: "", price: "", stock: "" },
-  ]);
+    { color: "", material: "", size: "", price: "", stock: "" },]);
+
+  // State และ Functions สำหรับจัดการคำสั่งซื้อ (Orders)
+  const [allOrders, setAllOrders] = useState<any[]>([]);
+
+  // ฟังก์ชันดึงข้อมูลออเดอร์ทั้งหมดจาก Backend
+  const fetchAllOrders = async () => {
+    try {
+      const response = await api.get('/orders');
+      setAllOrders(response.data);
+    } catch (error) {
+      console.error("Failed to fetch orders", error);
+    }
+  };
+
+  // โหลดข้อมูลอัตโนมัติเมื่อแอดมินกดเข้ามาหน้า "จัดการคำสั่งซื้อ"
+  useEffect(() => {
+    if (activeView === 'manageOrders') {
+      fetchAllOrders();
+    }
+  }, [activeView]);
+
+  // ฟังก์ชันเปลี่ยนสถานะออเดอร์
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
+    if (!window.confirm(`คุณต้องการเปลี่ยนสถานะเป็น ${newStatus} ใช่หรือไม่?`)) return;
+    try {
+      await api.patch(`/orders/${orderId}/status`, { status: newStatus });
+      alert("อัปเดตสถานะสำเร็จ!");
+      fetchAllOrders(); // รีเฟรชตารางใหม่
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      alert("เกิดข้อผิดพลาดในการอัปเดตสถานะ");
+    }
+  };
+
+  // ฟังก์ชันลบออเดอร์
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบคำสั่งซื้อ ID: ${orderId.substring(0, 8)}?\n(การกระทำนี้ไม่สามารถย้อนกลับได้)`)) return;
+    
+    try {
+      await api.delete(`/orders/${orderId}`);
+      alert("ลบคำสั่งซื้อออกจากระบบเรียบร้อยแล้ว");
+      fetchAllOrders(); // รีเฟรชตารางใหม่เพื่อให้รายการที่ลบหายไป
+    } catch (error) {
+      console.error("Error deleting order:", error);
+      alert("เกิดข้อผิดพลาดในการลบคำสั่งซื้อ");
+    }
+  };
 
   // Load Data on Mount
   useEffect(() => {
@@ -99,6 +146,14 @@ const AdminDashboard: React.FC = () => {
         ? prev.filter(f => f !== featureName) 
         : [...prev, featureName]              
     );
+  };
+
+  // ฟังก์ชันจัดการเมื่อมีการเลือกไฟล์
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageUrl(URL.createObjectURL(file));
+    }
   };
 
   const handleAddMasterData = async () => {
@@ -187,12 +242,22 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleVariantChange = (index: number, field: keyof Variant, value: string) => {
+  const handleVariantChange = (index: number, field: keyof Omit<Variant, 'imageFile'>, value: string) => {
     const newVariants = [...variants];
     newVariants[index][field] = value;
     setVariants(newVariants);
   };
 
+  // ฟังก์ชันสำหรับอัปโหลดรูปภาพแต่ละตัวเลือก
+  const handleVariantImageUpload = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (file) {
+    const newVariants = [...variants];
+    newVariants[index].imageFile = file; // เก็บไฟล์จริงเตรียมส่ง Backend
+    newVariants[index].imageUrl = URL.createObjectURL(file); // สร้าง Preview
+    setVariants(newVariants);
+  }
+};
   const addVariant = () => {
     setVariants([...variants, { color: "", material: "", size: "", price: "", stock: "", imageUrl: "" }]);
   };
@@ -214,7 +279,7 @@ const AdminDashboard: React.FC = () => {
         stock: totalStock, // ใช้ stock รวมจากทุก variant
         price: parseFloat(price),
         category: categoryId, 
-        room: roomId,                 
+        room: roomId,                
         features: selectedFeatures,   
         description,
         image: imageUrl,
@@ -227,6 +292,7 @@ const AdminDashboard: React.FC = () => {
       await createProduct(payload);
       alert("บันทึกสินค้าเรียบร้อยแล้ว");
       
+      // เคลียร์ค่า State หลังบันทึกสำเร็จ
       setName(""); setPrice(""); setDescription(""); setImageUrl("");
       setCategoryId(""); setRoomId(""); setSelectedFeatures([]);
       setVariants([{ color: "", material: "", size: "", price: "", stock: "" }]);
@@ -250,13 +316,27 @@ const AdminDashboard: React.FC = () => {
           {activeView === 'addProduct' && (
             <>
               <div className="product-form">
+                
+                {/* อัปโหลดรูปภาพ */}
                 <div className="image-upload">
+                  <input 
+                    type="file" 
+                    id="product-image" 
+                    accept="image/*" 
+                    style={{ display: 'none' }} 
+                    onChange={handleImageChange} 
+                  />
+                  {/* กำหนดให้คลิกพื้นที่ label แล้วทริกเกอร์ input ด้านบน */}
+                  <label htmlFor="product-image" style={{ cursor: 'pointer', display: 'block', width: '100%', height: '100%' }}>
                   {imageUrl ? (
-                      <img src={imageUrl} alt="preview" className="preview-img" />
-                  ) : (
-                      <div className="upload-placeholder"><span>🖼️</span></div>
-                  )}
-                </div>
+                  <img src={imageUrl} alt="preview" className="preview-img" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                 ) : (
+              <div className="upload-placeholder" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', minHeight: '200px', borderRadius: '8px', boxSizing: 'border-box' }}>
+                <span style={{ fontSize: '40px' }}>🖼️</span>
+              <p style={{ marginTop: '10px', color: '#888', fontSize: '20px' }}>คลิกเพื่ออัปโหลดรูปภาพ</p>
+                </div>)}
+              </label>
+              </div>
 
                 <div className="form-fields">
                   <div className="row">
@@ -272,9 +352,6 @@ const AdminDashboard: React.FC = () => {
                       <option value="">-- หมวดหมู่ห้อง --</option>
                       {roomsList.map(room => <option key={room.id} value={room.name}>{room.name}</option>)}
                     </select>
-                  </div>
-                  <div className="row">
-                    <input placeholder="Image URL" value={imageUrl} onChange={e => setImageUrl(e.target.value)} style={{width: '100%'}} />
                   </div>
                   <div className="features-container" style={{background: '#f8f8f8', padding: '15px', borderRadius: '15px', marginTop: '10px'}}>
                     <label style={{fontWeight: 'bold', marginBottom: '10px', display: 'block', color: '#555'}}>คุณสมบัติพิเศษ:</label>
@@ -297,25 +374,22 @@ const AdminDashboard: React.FC = () => {
               <div className="variants-section" style={{ marginTop: '20px' }}>
                 
     <h3>ตัวเลือกสินค้า (สี, วัสดุ, ขนาด, รูปภาพ)</h3>
-    {variants.map((variant, index) => (
-        <div key={index} className="variant-row" style={{ display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'center' }}>
-            
-            {/* ส่วนแสดงรูปตัวอย่าง (Preview) */}
-            <div style={{ width: '100px', height: '100px', border: '1px solid #ddd', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: '4px', backgroundColor: '#f9f9f9' }}>
-                {variant.imageUrl ? (
-                    <img src={variant.imageUrl} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                    <span style={{ fontSize: '10px', color: '#ccc' }}>ไม่มีรูป</span>
-                )}
-            </div>
-
-            {/* ช่องกรอก URL รูปภาพ */}
-            <input 
-                placeholder="ImageURL" 
-                value={variant.imageUrl || ''} 
-                onChange={e => handleVariantChange(index, 'imageUrl', e.target.value)} 
-                style={{ flex: 1.5 }} 
-            />
+    {variants.map((variant, index) => (<div key={index} className="variant-row" style={{ display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'center' }}>
+            <div style={{ width: '100px', height: '100px', border: '1px dashed #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: '4px', backgroundColor: '#f9f9f9' }}>
+          <input  type="file" id={`variant-image-${index}`} // สำคัญมาก: id ต้องไม่ซ้ำกันในแต่ละแถวaccept="image/*" style={{ display: 'none' }} 
+          onChange={e => handleVariantImageUpload(index, e)} 
+    />
+          <label htmlFor={`variant-image-${index}`} style={{ cursor: 'pointer', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+          {variant.imageUrl ? (
+            <img src={variant.imageUrl} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+            <>
+                <span style={{ fontSize: '20px' }}>🖼️</span>
+                <span style={{ fontSize: '10px', color: '#888', marginTop: '4px', textAlign: 'center' }}>เพิ่มรูป</span>
+            </>
+        )}
+      </label>
+</div>
 
             <input placeholder="สี" value={variant.color} onChange={e => handleVariantChange(index, 'color', e.target.value)} style={{ flex: 1 }} />
             <input placeholder="วัสดุ" value={variant.material} onChange={e => handleVariantChange(index, 'material', e.target.value)} style={{ flex: 1 }} />
@@ -471,16 +545,121 @@ const AdminDashboard: React.FC = () => {
 
           {/* ส่วนที่ 3: หน้าจัดการคำสั่งซื้อ (Placeholder) */}
           {activeView === 'manageOrders' && (
-            <div className="manage-orders-view">
-              <h2>จัดการคำสั่งซื้อ</h2>
-              <p style={{textAlign: 'center', marginTop: '50px', color: '#888'}}>ส่วนจัดการคำสั่งซื้อจะอยู่ตรงนี้</p>
+            <div className="manage-orders-view" style={{ padding: '10px' }}>
+              <h2 style={{ marginBottom: '20px', color: '#333' }}>📦 จัดการคำสั่งซื้อ</h2>
+              
+              <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #eee' }}>
+                      <th style={{ padding: '12px', color: '#555' }}>Order ID</th>
+                      <th style={{ padding: '12px', color: '#555' }}>วันที่สั่งซื้อ</th>
+                      <th style={{ padding: '12px', color: '#555' }}>ลูกค้า (Email)</th>
+                      <th style={{ padding: '12px', color: '#555' }}>ยอดรวม</th>
+                      <th style={{ padding: '12px', color: '#555' }}>สลิปโอนเงิน</th>
+                      <th style={{ padding: '12px', color: '#555' }}>สถานะ</th>
+                      <th style={{ padding: '12px', color: '#555' }}>จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allOrders.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} style={{ textAlign: 'center', padding: '30px', color: '#888' }}>
+                          ยังไม่มีคำสั่งซื้อในระบบ
+                        </td>
+                      </tr>
+                    ) : (
+                      allOrders.map((order) => (
+                        <tr key={order.id} style={{ borderBottom: '1px solid #eee', transition: '0.3s' }}>
+                          <td style={{ padding: '12px', fontSize: '14px', fontFamily: 'monospace' }}>
+                            #{order.id.substring(0, 8)}
+                          </td>
+                          <td style={{ padding: '12px', fontSize: '14px' }}>
+                            {new Date(order.orderDate).toLocaleDateString('th-TH')}
+                          </td>
+                          <td style={{ padding: '12px', fontSize: '14px' }}>
+                            {order.user?.email || 'N/A'}
+                          </td>
+                          <td style={{ padding: '12px', fontSize: '14px', color: '#D65A31', fontWeight: 'bold' }}>
+                            ฿{Number(order.totalAmount).toLocaleString()}
+                          </td>
+                          <td style={{ padding: '12px', fontSize: '14px' }}>
+                            {order.paymentSlipImage ? (
+                              <a 
+                                href={`http://localhost:3000/uploads/slips/${order.paymentSlipImage}`} 
+                                target="_blank" 
+                                rel="noreferrer"
+                                style={{ color: '#148F96', textDecoration: 'underline', fontWeight: 'bold' }}
+                              >
+                                🧾 ดูสลิป
+                              </a>
+                            ) : (
+                              <span style={{ color: '#aaa' }}>-</span>
+                            )}
+                          </td>
+                          <td style={{ padding: '12px' }}>
+                            <span style={{ 
+                              padding: '6px 10px', 
+                              borderRadius: '20px', 
+                              fontSize: '12px', 
+                              fontWeight: 'bold',
+                              background: order.status === 'COMPLETED' ? '#e6f4ea' : order.status === 'CANCELLED' ? '#fce8e6' : order.status === 'WAITING_FOR_VERIFICATION' ? '#e8f0fe' : '#fff3e0',
+                              color: order.status === 'COMPLETED' ? '#1e8e3e' : order.status === 'CANCELLED' ? '#d93025' : order.status === 'WAITING_FOR_VERIFICATION' ? '#1a73e8' : '#f57c00'
+                            }}>
+                              {order.status}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px' }}>
+                            <select 
+                              value={order.status}
+                              onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
+                              style={{ 
+                                padding: '6px', 
+                                borderRadius: '6px', 
+                                border: '1px solid #ddd', 
+                                fontSize: '13px', 
+                                cursor: 'pointer',
+                                outline: 'none'
+                              }}
+                            >
+                              <option value="PENDING">PENDING (รอชำระเงิน)</option>
+                              <option value="WAITING_FOR_VERIFICATION">WAITING (รอตรวจสอบสลิป)</option>
+                              <option value="COMPLETED">COMPLETED (สำเร็จ)</option>
+                              <option value="SHIPPED">SHIPPED (จัดส่งแล้ว)</option>
+                              <option value="CANCELLED">CANCELLED (ยกเลิก)</option>
+                            </select>
+                            
+                            {/*  เพิ่มปุ่มลบ  */}
+                            <button
+                              onClick={() => handleDeleteOrder(order.id)}
+                              style={{
+                                background: 'none',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '6px 12px',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                fontWeight: 'bold'
+                              }}
+                              title="ลบคำสั่งซื้อนี้"
+                            >
+                              ❌
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
         </div>
         
         {/* ---------------------------------------------------------
-                    RIGHT NAVIGATION SIDEBAR 
+                   RIGHT NAVIGATION SIDEBAR 
             --------------------------------------------------------- */}
         <div className="side-navigation">
           <div className="nav-header">จัดการระบบ</div> 
@@ -507,7 +686,7 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       {/* ---------------------------------------------------------
-                  EDIT PRODUCT MODAL
+                 EDIT PRODUCT MODAL
           --------------------------------------------------------- */}
       {isEditModalOpen && editingProduct && (
         <div style={{
