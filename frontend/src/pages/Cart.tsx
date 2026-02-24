@@ -58,13 +58,45 @@ const Cart = () => {
     setShowAddressModal(false);
   };
 
-  // ฟังก์ชันดึงรูปภาพแบบ Safe 
-  const getImageUrl = (product: any) => {
-    if (!product) return "https://via.placeholder.com/150";
-    const img = product.image || (Array.isArray(product.images) ? product.images[0] : product.images);
-    if (!img) return "https://via.placeholder.com/150";
-    return img.startsWith('http') ? img : `http://localhost:3000/uploads/products/${img}`;
-  };
+  // // ฟังก์ชันดึงรูปภาพแบบ Safe 
+  // const getImageUrl = (product: any) => {
+  //   if (!product) return "https://via.placeholder.com/150";
+  //   const img = product.image || (Array.isArray(product.images) ? product.images[0] : product.images);
+  //   if (!img) return "https://via.placeholder.com/150";
+  //   return img.startsWith('http') ? img : `http://localhost:3000/uploads/products/${img}`;
+  // };
+
+  // ฟังก์ชันดึงรูปภาพแบบ Safe (แก้ไขใหม่)
+  const getImageUrl = (product: any) => {
+    if (!product) return "https://via.placeholder.com/150";
+    
+    // 1. ดึงค่าดิบออกมา
+    const raw = product.image || product.images;
+    if (!raw) return "https://via.placeholder.com/150";
+
+    let fileName = "";
+
+    // 2. ถ้าเป็น Array อยู่แล้ว
+    if (Array.isArray(raw)) {
+      fileName = raw[0];
+    } 
+    // 3. ถ้าเป็น String (ต้องเช็คว่าเป็น JSON string หรือชื่อไฟล์ตรงๆ)
+    else if (typeof raw === 'string') {
+      if (raw.startsWith('[') && raw.endsWith(']')) {
+        try {
+          const parsed = JSON.parse(raw);
+          fileName = parsed[0];
+        } catch (e) {
+          fileName = raw;
+        }
+      } else {
+        fileName = raw;
+      }
+    }
+
+    if (!fileName) return "https://via.placeholder.com/150";
+    return fileName.startsWith('http') ? fileName : `http://localhost:3000/uploads/products/${fileName}`;
+  };
 
   const handleCheckout = async () => {
     if (!slipFile) return alert("กรุณาอัปโหลดสลิปการโอนเงิน");
