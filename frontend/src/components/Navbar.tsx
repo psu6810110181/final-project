@@ -1,9 +1,9 @@
 // frontend/src/components/Navbar.tsx
 import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   ShoppingCart, User, LogOut, ClipboardList, Star, 
-  UserCircle, Armchair, LayoutDashboard, Shield // เพิ่มไอคอน Shield
+  UserCircle, Armchair, LayoutDashboard, Shield
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -13,6 +13,7 @@ import logoImg from '../assets/HomeAlright_logo.webp';
 const Navbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation(); // เรียกใช้ useLocation เพื่อเช็ค Path ปัจจุบัน
   
   // --- STATE สำหรับ Dropdown โปรไฟล์ ---
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -35,6 +36,17 @@ const Navbar = () => {
     navigate('/login');
   };
 
+  // --- Function เช็คสถานะ Active สำหรับไอคอน Navbar ---
+  const getNavStyle = (path: string) => {
+    const isActive = location.pathname === path;
+    return isActive
+      ? "text-white border-2 border-white rounded-lg p-1.5 transition-all duration-300" // สไตล์ตอนกด (มีกรอบสีขาว)
+      : "text-white hover:text-gray-200 border-2 border-transparent hover:border-white/50 rounded-lg p-1.5 transition-all duration-300"; // สไตล์ปกติ
+  };
+
+  // ตรวจสอบว่าอยู่หน้าหมวดหมู่ที่เกี่ยวข้องกับโปรไฟล์หรือไม่ (เพื่อให้ปุ่ม User Active)
+  const isProfileActive = ['/profile', '/orders', '/review', '/policy', '/admin'].includes(location.pathname);
+
   return (
     <nav className="bg-[#148F96] shadow-md sticky top-0 z-50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -53,13 +65,13 @@ const Navbar = () => {
         <div className="flex items-center gap-6">
           {user ? (
             <>
-              {/* 1. ไอคอนเฟอร์นิเจอร์ (ไปหน้า Home) วางไว้หน้าตะกร้า */}
-              <Link to="/" className="text-white hover:text-gray-200 transition-colors" title="หน้าแรก">
+              {/* 1. ไอคอนเฟอร์นิเจอร์ (ไปหน้า Home) */}
+              <Link to="/" className={getNavStyle('/')} title="หน้าแรก">
                 <Armchair size={24} />
               </Link>
 
               {/* 2. ไอคอนตะกร้า */}
-              <Link to="/cart" className="text-white hover:text-gray-200 transition-colors relative" title="ตะกร้าสินค้า">
+              <Link to="/cart" className={getNavStyle('/cart')} title="ตะกร้าสินค้า">
                 <ShoppingCart size={24} />
               </Link>
 
@@ -67,7 +79,11 @@ const Navbar = () => {
               <div className="relative" ref={dropdownRef}>
                 <button 
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center gap-2 text-white hover:text-gray-200 transition-colors focus:outline-none"
+                  className={`flex items-center gap-2 text-white hover:text-gray-200 transition-colors focus:outline-none p-1.5 rounded-lg border-2 ${
+                    isProfileActive || isDropdownOpen 
+                      ? 'border-white' // หากอยู่หน้า Profile/เมนูย่อย หรือเปิด Dropdown ให้โชว์กรอบสีขาว
+                      : 'border-transparent hover:border-white/50'
+                  }`}
                 >
                   <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center overflow-hidden border border-white/30">
                     <User size={20} className="text-white" />
@@ -121,7 +137,7 @@ const Navbar = () => {
                       รีวิวของฉัน
                     </Link>
 
-                    {/* เพิ่มเมนูนโยบายความเป็นส่วนตัวตรงนี้ */}
+                    {/* เมนูนโยบายความเป็นส่วนตัว */}
                     <Link 
                       to="/policy" 
                       onClick={() => setIsDropdownOpen(false)}
@@ -148,8 +164,27 @@ const Navbar = () => {
           ) : (
             /* กรณีที่ยังไม่ได้ Login */
             <div className="flex items-center gap-4">
-              <Link to="/login" className="text-white hover:text-gray-200 font-medium text-sm">เข้าสู่ระบบ</Link>
-              <Link to="/register" className="bg-white text-[#148F96] px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-100 transition-colors shadow-sm">
+              {/* ปุ่มเข้าสู่ระบบ */}
+              <Link 
+                to="/login" 
+                className={`font-medium text-sm transition-all duration-300 px-4 py-2 rounded-lg border-2 ${
+                  location.pathname === '/login' 
+                    ? 'text-white border-white' 
+                    : 'text-white border-transparent hover:border-white/50'
+                }`}
+              >
+                เข้าสู่ระบบ
+              </Link>
+
+              {/* ปุ่มสมัครสมาชิก */}
+              <Link 
+                to="/register" 
+                className={`font-medium text-sm transition-all duration-300 px-4 py-2 rounded-lg border-2 ${
+                  location.pathname === '/register'
+                    ? 'text-white border-white' 
+                    : 'text-white border-transparent hover:border-white/50'
+                }`}
+              >
                 สมัครสมาชิก
               </Link>
             </div>

@@ -252,7 +252,7 @@ const Register = () => {
     uppercase: /[A-Z]/.test(formData.password),
     lowercase: /[a-z]/.test(formData.password),
     number: /[0-9]/.test(formData.password),
-    specialChar: /[!@#$%^&*]/.test(formData.password),
+    specialChar: /[!@#$%^&*-_]/.test(formData.password),
   };
 
   const isPasswordValid = Object.values(passwordRules).every(Boolean);
@@ -345,7 +345,7 @@ const Register = () => {
               <RuleItem isValid={passwordRules.uppercase} text="อักษรตัวพิมพ์ใหญ่ (A-Z)" />
               <RuleItem isValid={passwordRules.lowercase} text="อักษรตัวพิมพ์เล็ก (a-z)" />
               <RuleItem isValid={passwordRules.number} text="ตัวเลข (0-9)" />
-              <RuleItem isValid={passwordRules.specialChar} text="สัญลักษณ์พิเศษ (! @ # $ % ^ & *)" />
+              <RuleItem isValid={passwordRules.specialChar} text="สัญลักษณ์พิเศษ (! @ # $ % ^ & * - _)" />
             </div>
 
             <div className="space-y-1">
