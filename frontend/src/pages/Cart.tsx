@@ -58,14 +58,6 @@ const Cart = () => {
     setShowAddressModal(false);
   };
 
-  // // ฟังก์ชันดึงรูปภาพแบบ Safe 
-  // const getImageUrl = (product: any) => {
-  //   if (!product) return "https://via.placeholder.com/150";
-  //   const img = product.image || (Array.isArray(product.images) ? product.images[0] : product.images);
-  //   if (!img) return "https://via.placeholder.com/150";
-  //   return img.startsWith('http') ? img : `http://localhost:3000/uploads/products/${img}`;
-  // };
-
   // ฟังก์ชันดึงรูปภาพแบบ Safe (แก้ไขใหม่)
   const getImageUrl = (product: any) => {
     if (!product) return "https://via.placeholder.com/150";

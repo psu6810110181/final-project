@@ -1,34 +1,27 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { 
+  Controller, 
+  Post, 
+  Body, 
+  Get, 
+  Param
+} from '@nestjs/common';
 import { ReviewsService } from './reviews.service';
 import { CreateReviewDto } from './dto/create-review.dto';
-import { UpdateReviewDto } from './dto/update-review.dto';
 
 @Controller('reviews')
 export class ReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
 
+  // 1. ส่งรีวิวใหม่ (ส่ง userId มาใน Body ตรงๆ เพื่อทดสอบ)
   @Post()
-  create(@Body() createReviewDto: CreateReviewDto) {
-    return this.reviewsService.create(createReviewDto);
+  async create(@Body() dto: CreateReviewDto & { userId: number }) {
+    // ส่งทั้ง dto และ userId ที่รับมาไปให้ service
+    return await this.reviewsService.create(dto.userId, dto);
   }
 
-  @Get()
-  findAll() {
-    return this.reviewsService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.reviewsService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateReviewDto: UpdateReviewDto) {
-    return this.reviewsService.update(+id, updateReviewDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.reviewsService.remove(+id);
+  // 2. ดึงรีวิวตาม ID สินค้า
+  @Get('product/:productId')
+  async findByProduct(@Param('productId') productId: string) {
+    return await this.reviewsService.findByProduct(productId);
   }
 }
