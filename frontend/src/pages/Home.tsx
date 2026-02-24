@@ -1,10 +1,11 @@
 // frontend/src/pages/Home.tsx
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Loader, Search, ChevronDown, FilterX } from 'lucide-react';
 import * as api from '../services/api'; 
 import type { Product, Category, Room, Feature } from '../services/api';
 import toast from 'react-hot-toast';
+import { useCart } from '../contexts/CartContext';
 
 const Home = () => {
   // --- STATE ข้อมูลตั้งต้น ---
@@ -28,6 +29,10 @@ const Home = () => {
 
   // STATE สำหรับควบคุม Dropdown Menu
   const [activeDropdown, setActiveDropdown] = useState<'category' | 'room' | 'feature' | null>(null);
+
+  // --- HOOKS สำหรับระบบตะกร้าและ Routing ---
+  const { addToCart } = useCart();
+  const navigate = useNavigate();
 
   // --- FETCH DATA ---
   useEffect(() => {
@@ -135,6 +140,26 @@ const Home = () => {
         console.error(e);
     }
     return "https://placehold.co/400x300?text=No+Image";
+  };
+
+  // --- HANDLE ADD TO CART ---
+  const handleAddToCart = async (e: React.MouseEvent, product: Product) => {
+    e.preventDefault(); // ป้องกันไม่ให้คลิกปุ่มแล้วเด้งไปหน้า Detail ทันที
+    
+    // ตรวจสอบว่ามี Token ล็อกอินหรือไม่ (เช็คแบบง่ายๆ)
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้าลงตะกร้า');
+      navigate('/login'); // เด้งไปหน้าล็อกอิน
+      return;
+    }
+
+    try {
+      // เรียกใช้ฟังก์ชัน addToCart โดยส่ง ID และจำนวนเริ่มต้นคือ 1
+      await addToCart(product.id, 1); 
+    } catch (error) {
+      console.error("Add to cart error:", error);
+    }
   };
 
   // --- RENDER LOADING ---
@@ -340,12 +365,12 @@ const Home = () => {
                         
                         <div className="mt-auto flex items-center justify-between">
                             <div className="text-xl font-bold text-[#D65A31]">฿{Number(product.price).toLocaleString()}</div>
+                            {/* ✅ ปุ่มหยิบใส่ตะกร้า ที่ผูกฟังก์ชัน handleAddToCart แล้ว */}
                             <button 
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  toast.success(`เพิ่ม "${product.name}" ลงตะกร้าแล้ว`);
-                                }}
-                                className="bg-gray-100 hover:bg-[#148F96] hover:text-white text-gray-600 p-2 rounded-full transition-colors">
+                                onClick={(e) => handleAddToCart(e, product)}
+                                className="bg-gray-100 hover:bg-[#148F96] hover:text-white text-gray-600 p-2 rounded-full transition-colors"
+                                title="เพิ่มลงตะกร้า"
+                            >
                                 <ShoppingCart size={18} />
                             </button>
                         </div>

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import * as api from '../services/api'; 
+import toast from 'react-hot-toast';
 
 // 1. แก้ Interface CartItem ให้รองรับ ID แบบ String และรองรับจำนวนชิ้นติดตั้ง
 export interface CartItem {
@@ -87,12 +88,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const addToCart = async (productId: string, quantity: number, installationQty: number = 0) => {
     try {
       await api.addToCart(productId, quantity, installationQty);
-      alert('เพิ่มลงตะกร้าแล้ว!');
+      toast.success('เพิ่มลงตะกร้าแล้ว!'); // ✅ เปลี่ยนจาก alert เป็น toast
       await fetchCart(); 
     } catch (error) {
-      // ✅ ลบ ... ออก และใส่โค้ดจัดการ Error
       console.error('Add to cart failed:', error);
-      alert('เกิดข้อผิดพลาดในการเพิ่มสินค้า');
+      toast.error('เกิดข้อผิดพลาดในการเพิ่มสินค้า'); // ✅ เปลี่ยนจาก alert เป็น toast
+      throw error; // ✅ (Optional) Throw error ให้เผื่อมีการเรียกใช้ try-catch ข้างนอก
     }
   };
 
