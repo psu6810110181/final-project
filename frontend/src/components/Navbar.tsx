@@ -191,10 +191,10 @@ const Navbar = () => {
               </Link>
               <Link 
                 to="/register" 
-                className={`font-bold text-sm transition-all duration-300 px-4 py-2 rounded-lg shadow-sm border-2 ${
+                className={`font-medium text-sm transition-all duration-300 px-4 py-2 rounded-lg border-2 ${
                   location.pathname === '/register'
-                    ? 'bg-gray-100 text-[#148F96] border-white' 
-                    : 'bg-white text-[#148F96] border-transparent hover:bg-gray-100'
+                    ? 'text-white border-white' 
+                    : 'text-white border-transparent hover:border-white/50'
                 }`}
               >
                 สมัครสมาชิก
