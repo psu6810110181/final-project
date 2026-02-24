@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { ShoppingCart, Loader, Search, ChevronDown, FilterX } from 'lucide-react';
 import * as api from '../services/api'; 
 import type { Product, Category, Room, Feature } from '../services/api';
+import toast from 'react-hot-toast';
 
 const Home = () => {
   // --- STATE ข้อมูลตั้งต้น ---
@@ -45,6 +46,7 @@ const Home = () => {
         setFeatures(featuresData);
       } catch (error) {
         console.error('Failed to fetch data:', error);
+        toast.error('ไม่สามารถดึงข้อมูลสินค้าได้ กรุณาลองใหม่อีกครั้ง');
       } finally {
         setLoading(false);
       }
@@ -338,7 +340,12 @@ const Home = () => {
                         
                         <div className="mt-auto flex items-center justify-between">
                             <div className="text-xl font-bold text-[#D65A31]">฿{Number(product.price).toLocaleString()}</div>
-                            <button className="bg-gray-100 hover:bg-[#148F96] hover:text-white text-gray-600 p-2 rounded-full transition-colors">
+                            <button 
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  toast.success(`เพิ่ม "${product.name}" ลงตะกร้าแล้ว`);
+                                }}
+                                className="bg-gray-100 hover:bg-[#148F96] hover:text-white text-gray-600 p-2 rounded-full transition-colors">
                                 <ShoppingCart size={18} />
                             </button>
                         </div>

@@ -11,12 +11,25 @@ import OrderHistory from './pages/OrderHistory';
 import { CartProvider } from './contexts/CartContext';
 import { AuthProvider } from './contexts/AuthContext';
 import Policy from './pages/Policy';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   return (
     <BrowserRouter> {/* ✅ 1. เอา Router ไว้บนสุด */}
       <AuthProvider> {/* ✅ 2. AuthProvider ครอบทุกอย่าง */}
         <CartProvider> {/* ✅ 3. CartProvider อยู่ข้างในเพื่อให้ดึง Token จาก Auth มาใช้ได้ */}
+          <Toaster 
+            position="top-center" 
+            reverseOrder={false} 
+            toastOptions={{
+              duration: 3000,
+              style: {
+                borderRadius: '10px',
+                background: '#333',
+                color: '#fff',
+              },
+            }} 
+          />
           <Navbar /> 
           <div className="min-h-screen bg-gray-50">
             <Routes>  
