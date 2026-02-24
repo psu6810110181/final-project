@@ -22,6 +22,7 @@ interface Variant {
   price: string;
   stock: string;
   imageUrl?: string;
+  imageFile?: File; // สำหรับเก็บไฟล์จริงก่อนส่งไป Backend
 }
 
 const AdminDashboard: React.FC = () => {
@@ -99,6 +100,14 @@ const AdminDashboard: React.FC = () => {
         ? prev.filter(f => f !== featureName) 
         : [...prev, featureName]              
     );
+  };
+
+  // ฟังก์ชันจัดการเมื่อมีการเลือกไฟล์
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageUrl(URL.createObjectURL(file));
+    }
   };
 
   const handleAddMasterData = async () => {
@@ -187,12 +196,22 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleVariantChange = (index: number, field: keyof Variant, value: string) => {
+  const handleVariantChange = (index: number, field: keyof Omit<Variant, 'imageFile'>, value: string) => {
     const newVariants = [...variants];
     newVariants[index][field] = value;
     setVariants(newVariants);
   };
 
+  // ✨ [เพิ่มใหม่] ฟังก์ชันสำหรับอัปโหลดรูปภาพแต่ละตัวเลือก
+  const handleVariantImageUpload = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (file) {
+    const newVariants = [...variants];
+    newVariants[index].imageFile = file; // เก็บไฟล์จริงเตรียมส่ง Backend
+    newVariants[index].imageUrl = URL.createObjectURL(file); // สร้าง Preview
+    setVariants(newVariants);
+  }
+};
   const addVariant = () => {
     setVariants([...variants, { color: "", material: "", size: "", price: "", stock: "", imageUrl: "" }]);
   };
@@ -214,7 +233,7 @@ const AdminDashboard: React.FC = () => {
         stock: totalStock, // ใช้ stock รวมจากทุก variant
         price: parseFloat(price),
         category: categoryId, 
-        room: roomId,                 
+        room: roomId,                
         features: selectedFeatures,   
         description,
         image: imageUrl,
@@ -227,6 +246,7 @@ const AdminDashboard: React.FC = () => {
       await createProduct(payload);
       alert("บันทึกสินค้าเรียบร้อยแล้ว");
       
+      // เคลียร์ค่า State หลังบันทึกสำเร็จ
       setName(""); setPrice(""); setDescription(""); setImageUrl("");
       setCategoryId(""); setRoomId(""); setSelectedFeatures([]);
       setVariants([{ color: "", material: "", size: "", price: "", stock: "" }]);
@@ -250,13 +270,27 @@ const AdminDashboard: React.FC = () => {
           {activeView === 'addProduct' && (
             <>
               <div className="product-form">
+                
+                {/* อัปโหลดรูปภาพ */}
                 <div className="image-upload">
+                  <input 
+                    type="file" 
+                    id="product-image" 
+                    accept="image/*" 
+                    style={{ display: 'none' }} 
+                    onChange={handleImageChange} 
+                  />
+                  {/* กำหนดให้คลิกพื้นที่ label แล้วทริกเกอร์ input ด้านบน */}
+                  <label htmlFor="product-image" style={{ cursor: 'pointer', display: 'block', width: '100%', height: '100%' }}>
                   {imageUrl ? (
-                      <img src={imageUrl} alt="preview" className="preview-img" />
-                  ) : (
-                      <div className="upload-placeholder"><span>🖼️</span></div>
-                  )}
-                </div>
+                  <img src={imageUrl} alt="preview" className="preview-img" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                 ) : (
+              <div className="upload-placeholder" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', minHeight: '200px', borderRadius: '8px', boxSizing: 'border-box' }}>
+                <span style={{ fontSize: '40px' }}>🖼️</span>
+              <p style={{ marginTop: '10px', color: '#888', fontSize: '20px' }}>คลิกเพื่ออัปโหลดรูปภาพ</p>
+                </div>)}
+              </label>
+              </div>
 
                 <div className="form-fields">
                   <div className="row">
@@ -272,9 +306,6 @@ const AdminDashboard: React.FC = () => {
                       <option value="">-- หมวดหมู่ห้อง --</option>
                       {roomsList.map(room => <option key={room.id} value={room.name}>{room.name}</option>)}
                     </select>
-                  </div>
-                  <div className="row">
-                    <input placeholder="Image URL" value={imageUrl} onChange={e => setImageUrl(e.target.value)} style={{width: '100%'}} />
                   </div>
                   <div className="features-container" style={{background: '#f8f8f8', padding: '15px', borderRadius: '15px', marginTop: '10px'}}>
                     <label style={{fontWeight: 'bold', marginBottom: '10px', display: 'block', color: '#555'}}>คุณสมบัติพิเศษ:</label>
@@ -297,25 +328,26 @@ const AdminDashboard: React.FC = () => {
               <div className="variants-section" style={{ marginTop: '20px' }}>
                 
     <h3>ตัวเลือกสินค้า (สี, วัสดุ, ขนาด, รูปภาพ)</h3>
-    {variants.map((variant, index) => (
-        <div key={index} className="variant-row" style={{ display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'center' }}>
-            
-            {/* ส่วนแสดงรูปตัวอย่าง (Preview) */}
-            <div style={{ width: '100px', height: '100px', border: '1px solid #ddd', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: '4px', backgroundColor: '#f9f9f9' }}>
-                {variant.imageUrl ? (
-                    <img src={variant.imageUrl} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                    <span style={{ fontSize: '10px', color: '#ccc' }}>ไม่มีรูป</span>
-                )}
-            </div>
-
-            {/* ช่องกรอก URL รูปภาพ */}
-            <input 
-                placeholder="ImageURL" 
-                value={variant.imageUrl || ''} 
-                onChange={e => handleVariantChange(index, 'imageUrl', e.target.value)} 
-                style={{ flex: 1.5 }} 
-            />
+    {variants.map((variant, index) => (<div key={index} className="variant-row" style={{ display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'center' }}>
+            <div style={{ width: '100px', height: '100px', border: '1px dashed #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: '4px', backgroundColor: '#f9f9f9' }}>
+    <input 
+        type="file" 
+        id={`variant-image-${index}`} // สำคัญมาก: id ต้องไม่ซ้ำกันในแต่ละแถว
+        accept="image/*" 
+        style={{ display: 'none' }} 
+        onChange={e => handleVariantImageUpload(index, e)} 
+    />
+    <label htmlFor={`variant-image-${index}`} style={{ cursor: 'pointer', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+        {variant.imageUrl ? (
+            <img src={variant.imageUrl} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+            <>
+                <span style={{ fontSize: '20px' }}>🖼️</span>
+                <span style={{ fontSize: '10px', color: '#888', marginTop: '4px', textAlign: 'center' }}>เพิ่มรูป</span>
+            </>
+        )}
+    </label>
+</div>
 
             <input placeholder="สี" value={variant.color} onChange={e => handleVariantChange(index, 'color', e.target.value)} style={{ flex: 1 }} />
             <input placeholder="วัสดุ" value={variant.material} onChange={e => handleVariantChange(index, 'material', e.target.value)} style={{ flex: 1 }} />
@@ -480,7 +512,7 @@ const AdminDashboard: React.FC = () => {
         </div>
         
         {/* ---------------------------------------------------------
-                    RIGHT NAVIGATION SIDEBAR 
+                   RIGHT NAVIGATION SIDEBAR 
             --------------------------------------------------------- */}
         <div className="side-navigation">
           <div className="nav-header">จัดการระบบ</div> 
@@ -507,7 +539,7 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       {/* ---------------------------------------------------------
-                  EDIT PRODUCT MODAL
+                 EDIT PRODUCT MODAL
           --------------------------------------------------------- */}
       {isEditModalOpen && editingProduct && (
         <div style={{
