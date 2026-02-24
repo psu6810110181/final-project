@@ -65,9 +65,14 @@ const Navbar = () => {
         <div className="flex items-center gap-6">
           {user ? (
             <>
-              {/* 1. ไอคอนเฟอร์นิเจอร์ (ไปหน้า Home) */}
-              <Link to="/" className={getNavStyle('/')} title="หน้าแรก">
+              {/* 1. ไอคอนเฟอร์นิเจอร์ (ไปหน้า Home) + เพิ่มข้อความ */}
+              <Link 
+                to="/" 
+                className={`${getNavStyle('/')} flex items-center gap-2 sm:px-3`} 
+                title="หน้าแรก"
+              >
                 <Armchair size={24} />
+                <span className="font-medium text-sm hidden sm:block">เฟอร์นิเจอร์</span>
               </Link>
 
               {/* 2. ไอคอนตะกร้า */}
@@ -179,10 +184,10 @@ const Navbar = () => {
               {/* ปุ่มสมัครสมาชิก */}
               <Link 
                 to="/register" 
-                className={`font-medium text-sm transition-all duration-300 px-4 py-2 rounded-lg border-2 ${
+                className={`font-bold text-sm transition-all duration-300 px-4 py-2 rounded-lg shadow-sm border-2 ${
                   location.pathname === '/register'
-                    ? 'text-white border-white' 
-                    : 'text-white border-transparent hover:border-white/50'
+                    ? 'bg-gray-100 text-[#148F96] border-white' 
+                    : 'bg-white text-[#148F96] border-transparent hover:bg-gray-100'
                 }`}
               >
                 สมัครสมาชิก
