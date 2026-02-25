@@ -11,6 +11,7 @@ import OrderHistory from './pages/OrderHistory';
 import { CartProvider } from './contexts/CartContext';
 import { AuthProvider } from './contexts/AuthContext';
 import Policy from './pages/Policy';
+import ReviewPage from './pages/Review';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
               <Route path="/policy" element={<Policy />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/review" element={<ReviewPage />} />
             </Routes>
           </div>
         </CartProvider>

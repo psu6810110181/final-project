@@ -236,4 +236,27 @@ export const getReviewsByProduct = async (productId: string) => {
   return response.data;
 };
 
+// ในไฟล์ src/services/api.ts
+export const createReview = async (reviewData: { productId: string, rating: number, comment: string }) => {
+  // ต้องส่ง Token ไปด้วย เพราะ Backend ของพี่ใช้ @UseGuards(JwtAuthGuard)
+  const token = localStorage.getItem('token'); 
+  const response = await axios.post(`${API_URL}/reviews`, reviewData, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return response.data;
+};
+
+// ในไฟล์ src/services/api.ts
+
+// ฟังก์ชันสำหรับดึงประวัติการสั่งซื้อของ User (ที่ Login อยู่)
+export const getOrderHistory = async () => {
+  const token = localStorage.getItem('token'); // ดึง token มาใช้ยืนยันตัวตน
+  const response = await axios.get(`${API_URL}/orders/user/history`, { // URL นี้ต้องตรงกับใน Backend ของพี่นะครับ
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+  return response.data;
+};
+
 export default api;
