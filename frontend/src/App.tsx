@@ -8,6 +8,7 @@ import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
 import Navbar from './components/Navbar';
 import OrderHistory from './pages/OrderHistory';
+import Review from './pages/Review'; // ✅ 1. Import หน้า Review เข้ามา
 import { CartProvider } from './contexts/CartContext';
 import { AuthProvider } from './contexts/AuthContext';
 import Policy from './pages/Policy';
@@ -43,6 +44,12 @@ function App() {
               <Route path="/policy" element={<Policy />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/admin" element={<AdminDashboard />} />
+              
+              {/* ✅ 2. เพิ่ม Route สำหรับ Review */}
+              <Route path="/review" element={<Review />} />
+              
+              {/* 💡 Note: หากในอนาคตต้องการให้ลิงก์รีวิวผูกกับ ID สินค้าแต่ละชิ้นโดยเฉพาะ 
+                  สามารถเปลี่ยนเป็น <Route path="/review/:productId" element={<Review />} /> ได้ครับ */}
             </Routes>
           </div>
         </CartProvider>
