@@ -1,13 +1,13 @@
-import { IsInt, IsString, Min, Max, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsInt, IsString, Min, Max, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
 
 export class CreateReviewDto {
-  @IsInt()
+  @IsUUID() // เปลี่ยนจาก IsInt เป็น IsUUID
   @IsNotEmpty()
-  productId: number;
+  productId: string; // เปลี่ยนจาก number เป็น string
 
-  @IsInt()
+  @IsUUID() // เปลี่ยนจาก IsInt เป็น IsUUID
   @IsNotEmpty()
-  orderId: number; // ส่ง Order ID มาเพื่ออ้างอิง
+  orderId: string; // เปลี่ยนจาก number เป็น string
 
   @IsInt()
   @Min(1)
