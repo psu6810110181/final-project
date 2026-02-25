@@ -1,5 +1,4 @@
-// Backend/src/reviews/dto/create-review.dto.ts
-import { IsInt, IsString, Min, Max, IsNotEmpty } from 'class-validator';
+import { IsInt, IsString, Min, Max, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class CreateReviewDto {
   @IsInt()
@@ -7,11 +6,16 @@ export class CreateReviewDto {
   productId: number;
 
   @IsInt()
+  @IsNotEmpty()
+  orderId: number; // ส่ง Order ID มาเพื่ออ้างอิง
+
+  @IsInt()
   @Min(1)
   @Max(5)
+  @IsNotEmpty()
   rating: number;
 
   @IsString()
-  @IsNotEmpty()
-  comment: string;
+  @IsOptional()
+  comment?: string;
 }
