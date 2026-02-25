@@ -230,4 +230,10 @@ export const getAllOrders = async () => {
   return response.data;
 };
 
+// ในไฟล์ src/services/api.ts
+export const getReviewsByProduct = async (productId: string) => {
+  const response = await axios.get(`${API_URL}/reviews/product/${productId}`);
+  return response.data;
+};
+
 export default api;

@@ -5,6 +5,7 @@ import { useCart } from '../contexts/CartContext';
 import * as api from '../services/api'; 
 import type { Product } from '../services/api'; 
 
+
 const ProductDetail = () => {
   const { id } = useParams(); 
   const { addToCart } = useCart();
@@ -16,24 +17,50 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   const [installationQty, setInstallationQty] = useState(0); // ✅ เปลี่ยนเป็นตัวเลข
   const [isAdding, setIsAdding] = useState(false); 
+  const [reviews, setReviews] = useState<any[]>([]); // ✅ เพิ่มเพื่อเก็บข้อมูลรีวิวจริง
 
-  // --- Fetch Data ---
+  // // --- Fetch Data ---
+  // useEffect(() => {
+  //   const fetchProduct = async () => {
+  //     if (!id) return;
+  //     try {
+  //       setLoading(true);
+  //       const data = await api.getProductById(id);
+  //       setProduct(data as any); 
+  //     } catch (error) {
+  //       console.error("Failed to load product", error);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+
+  //   fetchProduct();
+  // }, [id]);
+
   useEffect(() => {
-    const fetchProduct = async () => {
-      if (!id) return;
-      try {
-        setLoading(true);
-        const data = await api.getProductById(id);
-        setProduct(data as any); 
-      } catch (error) {
-        console.error("Failed to load product", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const fetchProductAndReviews = async () => {
+      if (!id) return;
+      try {
+        setLoading(true);
+        
+        // ดึงทั้งข้อมูลสินค้าและรีวิวขนานกันไปเลยครับ
+        const [productData, reviewsData] = await Promise.all([
+          api.getProductById(id),
+          api.getReviewsByProduct(id) // มั่นใจว่าใน api.ts มีฟังก์ชัน getReviewsByProduct นะครับ
+        ]);
 
-    fetchProduct();
-  }, [id]);
+        setProduct(productData as any); 
+        setReviews(reviewsData); // ✅ เซตค่ารีวิวที่ได้จาก Backend
+      } catch (error) {
+        console.error("Failed to load data", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProductAndReviews();
+  }, [id]);
+
 
   // --- Loading State ---
   if (loading) {
@@ -44,33 +71,6 @@ const ProductDetail = () => {
   if (!product) {
     return <div className="min-h-screen flex items-center justify-center text-red-500">ไม่พบสินค้า</div>;
   }
-
-  // // --- แปลงรูปภาพ (เวอร์ชันแก้จอขาวและรูปไม่ขึ้น) ---
-  // const images: string[] = (() => {
-  //   if (!product) return [];
-    
-  //   // ดึงข้อมูลรูปภาพ (รองรับทั้ง .image และ .images)
-  //   const raw = (product as any).image || (product as any).images;
-  //   if (!raw) return ["https://via.placeholder.com/600x400?text=No+Image"];
-
-  //   // ถ้าเป็น Array อยู่แล้ว
-  //   if (Array.isArray(raw)) return raw;
-
-  //   // ถ้าเป็น String
-  //   if (typeof raw === 'string') {
-  //     if (raw.startsWith('[') && raw.endsWith(']')) {
-  //       try { return JSON.parse(raw); } catch (e) { return [raw]; }
-  //     }
-  //     return [raw];
-  //   }
-  //   return ["https://via.placeholder.com/600x400?text=Format+Error"];
-  // })();
-
-  // const getImageUrl = (img: string) => {
-  //   if (!img) return "https://via.placeholder.com/600x400?text=No+Path";
-  //   if (img.startsWith('http')) return img;
-  //   return `http://localhost:3000/uploads/products/${img}`;
-  // };
 
   // --- แปลงรูปภาพ (รองรับหลายรูป) ---
   const images: string[] = (() => {
@@ -113,6 +113,11 @@ const ProductDetail = () => {
         setIsAdding(false);
     }
   }; 
+
+  // คำนวณคะแนนเฉลี่ย
+const averageRating = reviews.length > 0 
+  ? (reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviews.length).toFixed(1)
+  : "0.0";
 
   return (
     <div className="bg-gray-50 min-h-screen pb-10 font-sans">
@@ -169,17 +174,22 @@ const ProductDetail = () => {
             </div>
             <p className="text-gray-400 text-xs mb-4">Stock: {product.stock} ชิ้น</p>
             
-            {/* Rating */}
+            {/* Rating จริงจาก Backend */}
             <div className="flex items-center gap-1 mb-4">
               {[...Array(5)].map((_, i) => (
-                 <Star key={i} size={16} className="fill-yellow-400 text-yellow-400" />
+                <Star 
+                  key={i} 
+                  size={16} 
+                  // ถ้า index น้อยกว่าคะแนนเฉลี่ย ให้ระบายสีเหลือง
+                  className={i < Math.round(Number(averageRating)) 
+                    ? "fill-yellow-400 text-yellow-400" 
+                    : "text-gray-300"} 
+                />
               ))}
-              <span className="text-gray-500 text-sm ml-2">5.0 (Review Mock)</span>
+              <span className="text-gray-500 text-sm ml-2">
+                {averageRating} ({reviews.length} รีวิว)
+              </span>
             </div>
-
-            <p className="text-gray-600 text-sm mb-6 leading-relaxed">
-                {product.description || "ไม่มีรายละเอียดสินค้า"}
-            </p>
 
             {/* Options */}
             <div className="space-y-5 border-t border-gray-100 pt-5">
@@ -255,17 +265,58 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        {/* --- ส่วนล่าง: รีวิว (Mock) --- */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-             <h2 className="text-xl font-bold text-gray-800 mb-6">รายละเอียดเพิ่มเติม</h2>
-             <p className="text-gray-600">
-                Category: {product.category} <br/>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-             </p>
-        </div>
+        {/* --- ส่วนล่าง: รายละเอียดและรีวิวจริง --- */}
+        <div className="bg-white rounded-xl shadow-sm p-6 space-y-8">
+             <div>
+                <h2 className="text-xl font-bold text-gray-800 mb-4">รายละเอียดเพิ่มเติม</h2>
+                <p className="text-gray-600">
+                    Category: {product.category} <br/>
+                    {product.description}
+                </p>
+             </div>
 
+             <div className="border-t border-gray-100 pt-8">
+                <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                    รีวิวจากลูกค้า 
+                    <span className="text-sm font-normal text-gray-400">({reviews.length})</span>
+                </h2>
+
+                {reviews.length > 0 ? (
+                    <div className="grid gap-6">
+                        {reviews.map((review) => (
+                            <div key={review.id} className="border-b border-gray-50 pb-6">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">
+                                        {review.user?.name?.charAt(0) || 'U'}
+                                    </div>
+                                    <span className="font-bold text-gray-700">{review.user?.name || 'ลูกค้าทั่วไป'}</span>
+                                    <div className="flex ml-auto">
+                                        {[...Array(5)].map((_, i) => (
+                                            <Star 
+                                                key={i} 
+                                                size={14} 
+                                                className={i < review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"} 
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                                <p className="text-gray-600 text-sm ml-10">{review.comment}</p>
+                                <span className="text-[10px] text-gray-400 ml-10">
+                                    {new Date(review.createdAt).toLocaleDateString('th-TH')}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-10 text-gray-400 bg-gray-50 rounded-lg">
+                        ยังไม่มีรีวิวสำหรับสินค้านี้
+                    </div>
+                )}
+             </div>
+        </div>
       </div>
     </div>
+
   );
 };
 
