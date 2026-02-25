@@ -160,13 +160,12 @@ export const deleteFeature = async (id: number) => {
 };
 
 // ---------------------------------------------------------
-// ✅ 6. Cart (ตะกร้าสินค้า) - เพิ่มส่วนนี้
+// ✅ 6. Cart (ตะกร้าสินค้า)
 // ---------------------------------------------------------
 export const getCart = async () => {
   return await api.get('/cart-items');
 };
 
-// ✅ เพิ่ม parameter ตัวที่ 3 และใส่ลงไปใน Body ที่ส่งไปหา Backend
 export const addToCart = async (productId: string | number, quantity: number, installationQty: number = 0) => {
   return await api.post('/cart-items', { productId, quantity, installationQty });
 };
@@ -180,14 +179,12 @@ export const removeCartItem = async (id: number) => {
 };
 
 export const clearCart = async () => {
-  // หมายเหตุ: ต้องมี Endpoint นี้ใน Backend หรือใช้ loop ลบเอา
-  // ถ้า Backend ไม่มี ให้แก้เป็น loop ลบทีละตัว หรือสร้าง Route เพิ่ม
   return await api.delete('/cart-items'); 
 };
 
 
 // ---------------------------------------------------------
-// ✅ 7. Orders (การสั่งซื้อ) - เพิ่มส่วนนี้
+// ✅ 7. Orders (การสั่งซื้อ)
 // ---------------------------------------------------------
 export const checkout = async (address: string) => {
   const response = await api.post('/orders/checkout', { address });
@@ -200,7 +197,7 @@ export const getMyOrders = async () => {
 };
 
 export const getOrderById = async (id: string) => {
-  const response = await api.get(`/orders/${id}`); // User ดูของตัวเอง หรือ Admin ดูของคนอื่น
+  const response = await api.get(`/orders/${id}`); 
   return response.data;
 };
 
@@ -214,19 +211,33 @@ export const uploadSlip = async (orderId: string, file: File) => {
   return response.data;
 };
 
-// ยกเลิกออเดอร์ (User)
 export const cancelOrder = async (orderId: string) => {
   const response = await api.patch(`/orders/${orderId}/cancel`);
   return response.data;
 };
 
-// สำหรับ Admin เปลี่ยนสถานะ
 export const updateOrderStatus = async (orderId: string, status: string) => {
   return await api.patch(`/orders/${orderId}/status`, { status });
 };
 
 export const getAllOrders = async () => {
   const response = await api.get('/orders');
+  return response.data;
+};
+
+// ---------------------------------------------------------
+// ✅ 8. Reviews (รีวิวสินค้า)
+// ---------------------------------------------------------
+
+// ดึงรีวิวตาม ID สินค้า
+export const getReviewsByProduct = async (productId: string) => {
+  const response = await api.get(`/reviews/product/${productId}`);
+  return response.data;
+};
+
+// สร้างรีวิวใหม่
+export const createReview = async (reviewData: { productId: string; orderId: string; rating: number; comment: string }) => {
+  const response = await api.post('/reviews', reviewData);
   return response.data;
 };
 
