@@ -1,17 +1,21 @@
-// Backend/src/reviews/dto/create-review.dto.ts
-import { IsInt, IsString, Min, Max, IsNotEmpty } from 'class-validator';
+import { IsInt, IsString, Min, Max, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
 
 export class CreateReviewDto {
-  @IsInt()
+  @IsUUID() // เปลี่ยนจาก IsInt เป็น IsUUID
   @IsNotEmpty()
-  productId: number;
+  productId: string; // เปลี่ยนจาก number เป็น string
+
+  @IsUUID() // เปลี่ยนจาก IsInt เป็น IsUUID
+  @IsNotEmpty()
+  orderId: string; // เปลี่ยนจาก number เป็น string
 
   @IsInt()
   @Min(1)
   @Max(5)
+  @IsNotEmpty()
   rating: number;
 
   @IsString()
-  @IsNotEmpty()
-  comment: string;
+  @IsOptional()
+  comment?: string;
 }
