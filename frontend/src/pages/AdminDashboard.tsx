@@ -803,7 +803,7 @@ const AdminDashboard: React.FC = () => {
   };
 
   return (
-    <div className="admin-container">
+    <main className="admin-container">
       <div className="admin-body">
         
         {/* MAIN SECTION */}
@@ -834,7 +834,7 @@ const AdminDashboard: React.FC = () => {
         />
 
       </div>
-    </div>
+    </main>
   );
 };
 

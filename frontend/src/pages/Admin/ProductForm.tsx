@@ -1,5 +1,5 @@
+// ProductForm.tsx
 import React, { useState, useEffect } from "react";
-// อ้างอิงตามโค้ดเดิม แต่ถอยหลัง 2 ชั้นเพราะอยู่ในโฟลเดอร์ Admin
 import api from "../../services/api"; 
 import { 
   createProduct, 
@@ -123,7 +123,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
   const addVariant = () => setVariants([...variants, { color: "", material: "", size: "", price: "", stock: "", imageUrl: "" }]);
   const removeVariant = (index: number) => setVariants(variants.filter((_, i) => i !== index));
 
-  const handleConfirm = async () => {
+  const handleConfirm = async (e: React.FormEvent) => {
+    e.preventDefault(); 
     try {
       if (!name || !price || !categoryId) {
         alert("กรุณากรอกชื่อสินค้า, ราคา และเลือกหมวดหมู่");
@@ -153,99 +154,106 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
 
   return (
     <>
-      <h2 style={{ marginBottom: '20px', color: editingProductId ? '#3a9e9e' : '#333' }}>
-        {editingProductId ? '✏️ แก้ไขข้อมูลสินค้า' : '➕ เพิ่มสินค้าใหม่'}
-      </h2>
+      <header>
+        <h2 style={{ marginBottom: '20px', color: editingProductId ? '#3a9e9e' : '#333' }}>
+          {editingProductId ? '✏️ แก้ไขข้อมูลสินค้า' : '➕ เพิ่มสินค้าใหม่'}
+        </h2>
+      </header>
 
-      <div className="product-form">
-        <div className="image-upload">
-          <input type="file" id="product-image" accept="image/*" style={{ display: 'none' }} onChange={handleImageChange} />
-          <label htmlFor="product-image" style={{ cursor: 'pointer', display: 'block', width: '100%', height: '100%' }}>
-            {imageUrl ? (
-              <img src={imageUrl} alt="preview" className="preview-img" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
-            ) : (
-              <div className="upload-placeholder" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', minHeight: '200px', borderRadius: '8px', boxSizing: 'border-box' }}>
-                <span style={{ fontSize: '40px' }}>🖼️</span>
-                <p style={{ marginTop: '10px', color: '#888', fontSize: '20px' }}>คลิกเพื่ออัปโหลดรูปภาพ</p>
+      {/*ใช้ <form> เพื่อให้เป็น Semantic Form ที่ถูกต้อง */}
+      <form onSubmit={handleConfirm}>
+        
+        <div className="product-form">
+          <div className="image-upload">
+            <input type="file" id="product-image" accept="image/*" style={{ display: 'none' }} onChange={handleImageChange} />
+            <label htmlFor="product-image" style={{ cursor: 'pointer', display: 'block', width: '100%', height: '100%' }}>
+              {imageUrl ? (
+                <img src={imageUrl} alt="preview" className="preview-img" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+              ) : (
+                <div className="upload-placeholder" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', minHeight: '200px', borderRadius: '8px', boxSizing: 'border-box' }}>
+                  <span style={{ fontSize: '40px' }}>🖼️</span>
+                  <p style={{ marginTop: '10px', color: '#888', fontSize: '20px' }}>คลิกเพื่ออัปโหลดรูปภาพ</p>
+                </div>
+              )}
+            </label>
+          </div>
+
+          <div className="form-fields">
+            <div className="row">
+              <input placeholder="ชื่อสินค้า" value={name} onChange={e => setName(e.target.value)} required />
+              <input placeholder="ราคาเริ่มต้น" type="number" value={price} onChange={e => setPrice(e.target.value)} required />
+            </div>
+            <div className="row">
+              <select value={categoryId} onChange={e => setCategoryId(e.target.value)} className="dropdown-input" required>
+                <option value="">-- หมวดหมู่สินค้า --</option>
+                {categoriesList.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
+              </select>
+              <select value={roomId} onChange={e => setRoomId(e.target.value)} className="dropdown-input">
+                <option value="">-- หมวดหมู่ห้อง --</option>
+                {roomsList.map(room => <option key={room.id} value={room.name}>{room.name}</option>)}
+              </select>
+            </div>
+            
+            <div className="features-container" style={{background: '#f8f8f8', padding: '15px', borderRadius: '15px', marginTop: '10px'}}>
+              <label style={{fontWeight: 'bold', marginBottom: '10px', display: 'block', color: '#555'}}>คุณสมบัติพิเศษ:</label>
+              <div style={{display: 'flex', flexWrap: 'wrap', gap: '15px'}}>
+                {featuresList.map(feat => (
+                  <label key={feat.id} style={{display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', background: 'white', padding: '5px 10px', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)'}}>
+                    <input type="checkbox" checked={selectedFeatures.includes(feat.name)} onChange={() => toggleFeature(feat.name)} />
+                    <span style={{fontSize: '14px'}}>{feat.name}</span>
+                  </label>
+                ))}
               </div>
-            )}
-          </label>
+            </div>
+          </div>
         </div>
 
-        <div className="form-fields">
-          <div className="row">
-            <input placeholder="ชื่อสินค้า" value={name} onChange={e => setName(e.target.value)} />
-            <input placeholder="ราคาเริ่มต้น" type="number" value={price} onChange={e => setPrice(e.target.value)} />
-          </div>
-          <div className="row">
-            <select value={categoryId} onChange={e => setCategoryId(e.target.value)} className="dropdown-input">
-              <option value="">-- หมวดหมู่สินค้า --</option>
-              {categoriesList.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
-            </select>
-            <select value={roomId} onChange={e => setRoomId(e.target.value)} className="dropdown-input">
-              <option value="">-- หมวดหมู่ห้อง --</option>
-              {roomsList.map(room => <option key={room.id} value={room.name}>{room.name}</option>)}
-            </select>
-          </div>
-          <div className="features-container" style={{background: '#f8f8f8', padding: '15px', borderRadius: '15px', marginTop: '10px'}}>
-            <label style={{fontWeight: 'bold', marginBottom: '10px', display: 'block', color: '#555'}}>คุณสมบัติพิเศษ:</label>
-            <div style={{display: 'flex', flexWrap: 'wrap', gap: '15px'}}>
-              {featuresList.map(feat => (
-                <label key={feat.id} style={{display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', background: 'white', padding: '5px 10px', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)'}}>
-                  <input type="checkbox" checked={selectedFeatures.includes(feat.name)} onChange={() => toggleFeature(feat.name)} />
-                  <span style={{fontSize: '14px'}}>{feat.name}</span>
+        <div className="description-section">
+          <textarea className="full-textarea" placeholder="รายละเอียดสินค้า" value={description} onChange={e => setDescription(e.target.value)} />
+        </div>
+
+        <section className="variants-section" style={{ marginTop: '20px' }}>
+          <h3>ตัวเลือกสินค้า (สี, วัสดุ, ขนาด, รูปภาพ)</h3>
+          {variants.map((variant, index) => (
+            <article key={index} className="variant-row" style={{ display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'center' }}>
+              <div style={{ width: '100px', height: '100px', border: '1px dashed #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: '4px', backgroundColor: '#f9f9f9', flexShrink: 0 }}>
+                <input type="file" id={`variant-image-${index}`} accept="image/*" style={{ display: 'none' }} onChange={e => handleVariantImageUpload(index, e)} />
+                <label htmlFor={`variant-image-${index}`} style={{ cursor: 'pointer', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+                  {variant.imageUrl ? (
+                    <img src={variant.imageUrl} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <>
+                      <span style={{ fontSize: '20px' }}>🖼️</span>
+                      <span style={{ fontSize: '10px', color: '#888', marginTop: '4px', textAlign: 'center' }}>เพิ่มรูป</span>
+                    </>
+                  )}
                 </label>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+              </div>
+              <input placeholder="สี" value={variant.color} onChange={e => handleVariantChange(index, 'color', e.target.value)} style={{ flex: 1 }} />
+              <input placeholder="วัสดุ" value={variant.material} onChange={e => handleVariantChange(index, 'material', e.target.value)} style={{ flex: 1 }} />
+              <input placeholder="ขนาด" value={variant.size} onChange={e => handleVariantChange(index, 'size', e.target.value)} style={{ flex: 1 }} />
+              <input placeholder="ราคา" type="number" value={variant.price} onChange={e => handleVariantChange(index, 'price', e.target.value)} style={{ width: '80px' }} />
+              <input placeholder="จำนวน" type="number" value={variant.stock} onChange={e => handleVariantChange(index, 'stock', e.target.value)} style={{ width: '80px' }} />
 
-      <div className="description-section">
-        <textarea className="full-textarea" placeholder="รายละเอียดสินค้า" value={description} onChange={e => setDescription(e.target.value)} />
-      </div>
+              {variants.length > 1 && (
+                <button type="button" onClick={() => removeVariant(index)} style={{ background: 'red', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '5px', width: '30px', height: '30px', flexShrink: 0 }}>X</button>
+              )}
+            </article>
+          ))}
+          <button type="button" onClick={addVariant} style={{ background: '#4CAF50', color: 'white', padding: '8px 15px', border: 'none', cursor: 'pointer', borderRadius: '5px', fontWeight: 'bold' }}>+ เพิ่มตัวเลือก</button>
+        </section>
 
-      <div className="variants-section" style={{ marginTop: '20px' }}>
-        <h3>ตัวเลือกสินค้า (สี, วัสดุ, ขนาด, รูปภาพ)</h3>
-        {variants.map((variant, index) => (
-          <div key={index} className="variant-row" style={{ display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'center' }}>
-            <div style={{ width: '100px', height: '100px', border: '1px dashed #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: '4px', backgroundColor: '#f9f9f9', flexShrink: 0 }}>
-              <input type="file" id={`variant-image-${index}`} accept="image/*" style={{ display: 'none' }} onChange={e => handleVariantImageUpload(index, e)} />
-              <label htmlFor={`variant-image-${index}`} style={{ cursor: 'pointer', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-                {variant.imageUrl ? (
-                  <img src={variant.imageUrl} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <>
-                    <span style={{ fontSize: '20px' }}>🖼️</span>
-                    <span style={{ fontSize: '10px', color: '#888', marginTop: '4px', textAlign: 'center' }}>เพิ่มรูป</span>
-                  </>
-                )}
-              </label>
-            </div>
-            <input placeholder="สี" value={variant.color} onChange={e => handleVariantChange(index, 'color', e.target.value)} style={{ flex: 1 }} />
-            <input placeholder="วัสดุ" value={variant.material} onChange={e => handleVariantChange(index, 'material', e.target.value)} style={{ flex: 1 }} />
-            <input placeholder="ขนาด" value={variant.size} onChange={e => handleVariantChange(index, 'size', e.target.value)} style={{ flex: 1 }} />
-            <input placeholder="ราคา" type="number" value={variant.price} onChange={e => handleVariantChange(index, 'price', e.target.value)} style={{ width: '80px' }} />
-            <input placeholder="จำนวน" type="number" value={variant.stock} onChange={e => handleVariantChange(index, 'stock', e.target.value)} style={{ width: '80px' }} />
-
-            {variants.length > 1 && (
-              <button onClick={() => removeVariant(index)} style={{ background: 'red', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '5px', width: '30px', height: '30px', flexShrink: 0 }}>X</button>
-            )}
-          </div>
-        ))}
-        <button onClick={addVariant} style={{ background: '#4CAF50', color: 'white', padding: '8px 15px', border: 'none', cursor: 'pointer', borderRadius: '5px', fontWeight: 'bold' }}>+ เพิ่มตัวเลือก</button>
-      </div>
-
-      <div style={{ marginTop: "25px", textAlign: "center", display: "flex", justifyContent: "center", gap: "10px" }}>
-        {editingProductId && (
-          <button onClick={onCancel} style={{ padding: "10px 20px", background: "#aaa", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "16px", fontWeight: "bold" }}>
-            ยกเลิกการแก้ไข
+        <div style={{ marginTop: "25px", textAlign: "center", display: "flex", justifyContent: "center", gap: "10px" }}>
+          {editingProductId && (
+            <button type="button" onClick={onCancel} style={{ padding: "10px 20px", background: "#aaa", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "16px", fontWeight: "bold" }}>
+              ยกเลิกการแก้ไข
+            </button>
+          )}
+          <button type="submit" className="confirm-btn" style={{ background: editingProductId ? '#3a9e9e' : undefined }}>
+            {editingProductId ? 'บันทึกการแก้ไข' : 'ยืนยันการเพิ่มสินค้า'}
           </button>
-        )}
-        <button className="confirm-btn" onClick={handleConfirm} style={{ background: editingProductId ? '#3a9e9e' : undefined }}>
-          {editingProductId ? 'บันทึกการแก้ไข' : 'ยืนยันการเพิ่มสินค้า'}
-        </button>
-      </div>
+        </div>
+      </form>
     </>
   );
 };

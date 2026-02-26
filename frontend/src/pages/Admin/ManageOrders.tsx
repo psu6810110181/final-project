@@ -1,3 +1,4 @@
+// ManageOrders.tsx
 import React, { useState, useEffect } from "react";
 import api from "../../services/api";
 
@@ -42,20 +43,26 @@ const ManageOrders: React.FC = () => {
   };
 
   return (
-    <div className="manage-orders-view" style={{ padding: '10px' }}>
-      <h2 style={{ marginBottom: '20px', color: '#333' }}>📦 จัดการคำสั่งซื้อ</h2>
+    // ✨ เปลี่ยนจาก <div> เป็น <section> เพื่อบ่งบอกว่าเป็นส่วนหนึ่งของเนื้อหา
+    <section className="manage-orders-view" style={{ padding: '10px' }} aria-labelledby="manage-orders-heading">
       
+      {/* ✨ ครอบหัวข้อด้วย <header> */}
+      <header>
+        <h2 id="manage-orders-heading" style={{ marginBottom: '20px', color: '#333' }}>📦 จัดการคำสั่งซื้อ</h2>
+      </header>
+      
+      {/* <div> ตรงนี้เก็บไว้ได้ครับ เพราะเอาไว้จัดขอบโค้ง (border-radius) และเงา (box-shadow) ให้กับตาราง */}
       <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #eee' }}>
-              <th style={{ padding: '12px', color: '#555' }}>Order ID</th>
-              <th style={{ padding: '12px', color: '#555' }}>วันที่สั่งซื้อ</th>
-              <th style={{ padding: '12px', color: '#555' }}>ลูกค้า (Email)</th>
-              <th style={{ padding: '12px', color: '#555' }}>ยอดรวม</th>
-              <th style={{ padding: '12px', color: '#555' }}>สลิปโอนเงิน</th>
-              <th style={{ padding: '12px', color: '#555' }}>สถานะ</th>
-              <th style={{ padding: '12px', color: '#555' }}>จัดการ</th>
+              <th scope="col" style={{ padding: '12px', color: '#555' }}>Order ID</th>
+              <th scope="col" style={{ padding: '12px', color: '#555' }}>วันที่สั่งซื้อ</th>
+              <th scope="col" style={{ padding: '12px', color: '#555' }}>ลูกค้า (Email)</th>
+              <th scope="col" style={{ padding: '12px', color: '#555' }}>ยอดรวม</th>
+              <th scope="col" style={{ padding: '12px', color: '#555' }}>สลิปโอนเงิน</th>
+              <th scope="col" style={{ padding: '12px', color: '#555' }}>สถานะ</th>
+              <th scope="col" style={{ padding: '12px', color: '#555' }}>จัดการ</th>
             </tr>
           </thead>
           <tbody>
@@ -92,6 +99,7 @@ const ManageOrders: React.FC = () => {
                     <select 
                       value={order.status} onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
                       style={{ padding: '6px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '13px', cursor: 'pointer', outline: 'none' }}
+                      aria-label={`เปลี่ยนสถานะของออเดอร์ ${order.id.substring(0, 8)}`}
                     >
                       <option value="PENDING">PENDING (รอชำระเงิน)</option>
                       <option value="WAITING_FOR_VERIFICATION">WAITING (รอตรวจสอบสลิป)</option>
@@ -102,6 +110,7 @@ const ManageOrders: React.FC = () => {
                       onClick={() => handleDeleteOrder(order.id)}
                       style={{ background: 'none', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 12px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}
                       title="ลบคำสั่งซื้อนี้"
+                      aria-label={`ลบออเดอร์ ${order.id.substring(0, 8)}`}
                     >
                       ❌
                     </button>
@@ -112,7 +121,7 @@ const ManageOrders: React.FC = () => {
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   );
 };
 
