@@ -49,8 +49,9 @@ export class User {
   orders: Order[];
 
   // [cite: 38] User "writes" Review
-  //@OneToMany(() => Review, (review) => review.user)
- // reviews: Review[];
+  @OneToMany(() => Review, (review) => review.user)
+ reviews: Review[];
+ 
   @OneToMany(() => CartItem, (cartItem) => cartItem.user)
   cartItems: CartItem[];
 }

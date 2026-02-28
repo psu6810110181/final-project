@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { CartItem } from '../../cart_items/entities/cart_item.entity';
 import { ProductVariant } from './product-variant.entity';
+import { Review } from '../../reviews/entities/review.entity';
 
 @Entity()
 export class Product {
@@ -47,4 +48,7 @@ export class Product {
 
   @OneToMany(() => CartItem, (cartItem) => cartItem.product)
   cartItems: CartItem[];
+
+  @OneToMany(() => Review, (review) => review.product)
+  reviews: Review[];
 }

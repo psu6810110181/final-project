@@ -2,30 +2,25 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request }
 import { ReviewsService } from './reviews.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
-import { AuthGuard } from '@nestjs/passport'; // 👈 นำเข้า AuthGuard (หรือ JwtAuthGuard ที่คุณสร้างไว้)
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('reviews')
 export class ReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
 
   // 1. สร้างรีวิว (ต้องแนบ Token เข้ามาถึงจะสร้างได้)
-  @UseGuards(AuthGuard('jwt')) // 👈 เช็ค Login สมมติว่าคุณใช้ JWT Strategy
+  @UseGuards(AuthGuard('jwt')) 
   @Post()
-  create(@Request() req, @Body() createReviewDto: CreateReviewDto) {
-    // ดึง id ของผู้ใช้จาก payload ของ JWT token (ในระบบคุณใช้ UUID เป็น string)
+  async create(@Request() req, @Body() createReviewDto: CreateReviewDto) {
+    // ดึง id ของผู้ใช้จาก payload ของ JWT token
     const userId = req.user.id; 
-    return this.reviewsService.create(userId, createReviewDto);
+    return await this.reviewsService.create(userId, createReviewDto);
   }
 
   // 2. ดึงรีวิวทั้งหมดตาม ID สินค้า (เพื่อแสดงหน้า Product Detail)
   @Get('product/:productId')
-  findByProduct(@Param('productId') productId: string) {
-    return this.reviewsService.findByProduct(productId);
-  }
-
-  @Get()
-  findAll() {
-    return this.reviewsService.findAll();
+  async findByProduct(@Param('productId') productId: string) {
+    return await this.reviewsService.findByProduct(productId);
   }
 
   @Get(':id')
