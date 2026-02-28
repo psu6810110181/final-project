@@ -1,3 +1,4 @@
+// app.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -16,6 +17,11 @@ import { join } from 'path';
 import { CategoriesModule } from './categories/categories.module';
 import { RoomsModule } from './rooms/rooms.module';
 import { FeaturesModule } from './features/features.module';
+
+// 👇 เพิ่ม Import สำหรับ Colors, Materials, Sizes ที่เราเพิ่งสร้าง
+import { ColorsModule } from './colors/colors.module';
+import { MaterialsModule } from './materials/materials.module';
+import { SizesModule } from './sizes/sizes.module';
 
 @Module({
   imports: [
@@ -40,7 +46,7 @@ import { FeaturesModule } from './features/features.module';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_DATABASE'),
-        autoLoadEntities: true,
+        autoLoadEntities: true, // ตรงนี้เจ๋งมาก! มันจะดึง Entity ใหม่ๆ ของเราไปสร้างตารางให้อัตโนมัติ
         synchronize: true,
       }),
       inject: [ConfigService],
@@ -56,6 +62,11 @@ import { FeaturesModule } from './features/features.module';
     CategoriesModule,
     RoomsModule,
     FeaturesModule,
+    
+    // 👇 นำ Module ลงทะเบียนใช้งานในระบบ
+    ColorsModule,
+    MaterialsModule,
+    SizesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

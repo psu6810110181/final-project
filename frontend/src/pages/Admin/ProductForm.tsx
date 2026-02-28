@@ -5,7 +5,10 @@ import {
   createProduct, 
   getAllCategories, type Category,
   getAllRooms, type Room,
-  getAllFeatures, type Feature
+  getAllFeatures, type Feature,
+  getAllColors, type Color,
+  getAllMaterials, type Material,
+  getAllSizes, type Size
 } from "../../services/api"; 
 
 interface Variant {
@@ -39,14 +42,19 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
   const [categoriesList, setCategoriesList] = useState<Category[]>([]);
   const [roomsList, setRoomsList] = useState<Room[]>([]);       
   const [featuresList, setFeaturesList] = useState<Feature[]>([]);
+  const [colorsList, setColorsList] = useState<Color[]>([]);
+  const [materialsList, setMaterialsList] = useState<Material[]>([]);
+  const [sizesList, setSizesList] = useState<Size[]>([]);
 
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
-        const [cats, rms, fts] = await Promise.all([
-          getAllCategories(), getAllRooms(), getAllFeatures()
+        const [cats, rms, fts, cols, mats, szs] = await Promise.all([
+          getAllCategories(), getAllRooms(), getAllFeatures(),
+          getAllColors(), getAllMaterials(), getAllSizes()
         ]);
         setCategoriesList(cats); setRoomsList(rms); setFeaturesList(fts);
+        setColorsList(cols); setMaterialsList(mats); setSizesList(szs);
       } catch (error) {
         console.error("Failed to fetch dropdown data", error);
       }
@@ -152,109 +160,296 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
     }
   };
 
+  // --- Design System Styles ---
+  const colors = {
+    primary: '#148F96', 
+    primaryLight: '#E6F7F8',
+    secondary: '#D65A31', 
+    secondaryLight: '#FCE8E1',
+    textMain: '#1F2937',
+    textMuted: '#6B7280',
+    border: '#E5E7EB',
+    bgLight: '#F9FAFB',
+    bgWhite: '#FFFFFF',
+    danger: '#EF4444',
+    dangerLight: '#FEF2F2',
+  };
+
+  const cardStyle: React.CSSProperties = {
+    background: colors.bgWhite,
+    borderRadius: '16px',
+    padding: '24px',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+    border: `1px solid ${colors.border}`,
+    marginBottom: '24px'
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '12px 16px',
+    borderRadius: '10px',
+    border: `1px solid ${colors.border}`,
+    fontSize: '15px',
+    color: colors.textMain,
+    backgroundColor: colors.bgLight,
+    boxSizing: 'border-box',
+    outline: 'none',
+    transition: 'all 0.2s ease',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: '14px',
+    fontWeight: '600',
+    color: colors.textMain,
+    marginBottom: '8px'
+  };
+
   return (
-    <>
-      <header>
-        <h2 style={{ marginBottom: '20px', color: editingProductId ? '#3a9e9e' : '#333' }}>
-          {editingProductId ? '✏️ แก้ไขข้อมูลสินค้า' : '➕ เพิ่มสินค้าใหม่'}
-        </h2>
+    <article style={{ maxWidth: '1000px', margin: '0 auto', padding: '10px 0', fontFamily: "'Prompt', sans-serif" }}>
+      
+      {/* 🚀 Semantic Header */}
+      <header style={{ 
+        background: 'linear-gradient(to right, #ffffff, #f8fafc)',
+        padding: '24px 32px',
+        borderRadius: '16px',
+        boxShadow: '0 4px 20px -2px rgba(0, 0, 0, 0.04)',
+        border: `1px solid ${colors.border}`,
+        borderLeft: `8px solid ${editingProductId ? colors.primary : colors.secondary}`,
+        marginBottom: '28px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '24px'
+      }}>
+        <div style={{
+          width: '64px', height: '64px',
+          background: editingProductId ? colors.primaryLight : colors.secondaryLight,
+          borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '32px', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.04)', flexShrink: 0
+        }} aria-hidden="true">
+          {editingProductId ? '📝' : '✨'}
+        </div>
+        
+        <div>
+          <h2 id="form-main-heading" style={{ margin: 0, color: '#1E293B', fontSize: '24px', fontWeight: '700', letterSpacing: '-0.5px' }}>
+            {editingProductId ? 'แก้ไขข้อมูลสินค้า' : 'เพิ่มสินค้าใหม่ลงในระบบ'}
+          </h2>
+          <p style={{ margin: '6px 0 0 0', color: '#64748B', fontSize: '15px' }}>
+            {editingProductId
+              ? 'อัปเดตรายละเอียด ราคา และตัวเลือกของสินค้านี้ให้เป็นปัจจุบัน'
+              : 'กรอกข้อมูลรายละเอียดสินค้า รูปภาพ และตัวเลือกสินค้าให้ครบถ้วนเพื่อนำไปแสดงบนหน้าร้าน'}
+          </p>
+        </div>
       </header>
 
-      {/*ใช้ <form> เพื่อให้เป็น Semantic Form ที่ถูกต้อง */}
-      <form onSubmit={handleConfirm}>
+      {/* 🚀 Semantic Form */}
+      <form onSubmit={handleConfirm} aria-labelledby="form-main-heading">
         
-        <div className="product-form">
-          <div className="image-upload">
-            <input type="file" id="product-image" accept="image/*" style={{ display: 'none' }} onChange={handleImageChange} />
-            <label htmlFor="product-image" style={{ cursor: 'pointer', display: 'block', width: '100%', height: '100%' }}>
-              {imageUrl ? (
-                <img src={imageUrl} alt="preview" className="preview-img" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
-              ) : (
-                <div className="upload-placeholder" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', minHeight: '200px', borderRadius: '8px', boxSizing: 'border-box' }}>
-                  <span style={{ fontSize: '40px' }}>🖼️</span>
-                  <p style={{ marginTop: '10px', color: '#888', fontSize: '20px' }}>คลิกเพื่ออัปโหลดรูปภาพ</p>
+        {/* Section 1: ข้อมูลทั่วไป & รูปภาพ */}
+        <section style={cardStyle} aria-labelledby="general-info-heading">
+          <header style={{ borderBottom: `1px solid ${colors.border}`, paddingBottom: '12px', marginBottom: '20px' }}>
+            <h3 id="general-info-heading" style={{ margin: 0, fontSize: '18px', color: colors.textMain }}>📦 ข้อมูลทั่วไป</h3>
+          </header>
+          
+          <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap' }}>
+            {/* อัปโหลดรูปภาพหลัก */}
+            <div style={{ flex: '1 1 300px', maxWidth: '350px' }}>
+              <label htmlFor="product-image" style={labelStyle}>รูปภาพหลักของสินค้า <span style={{color: colors.danger}} aria-label="จำเป็น">*</span></label>
+              <input type="file" id="product-image" accept="image/*" style={{ display: 'none' }} onChange={handleImageChange} />
+              <label htmlFor="product-image" style={{ cursor: 'pointer', display: 'block', width: '100%', aspectRatio: '1/1', borderRadius: '12px', overflow: 'hidden', border: imageUrl ? 'none' : `2px dashed #CBD5E1`, backgroundColor: colors.bgLight, transition: 'all 0.2s', position: 'relative' }}>
+                {imageUrl ? (
+                  <>
+                    <img src={imageUrl} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <div style={{ position: 'absolute', bottom: '10px', right: '10px', background: 'rgba(0,0,0,0.6)', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '500' }}>เปลี่ยนรูปภาพ</div>
+                  </>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94A3B8' }}>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                    <p style={{ marginTop: '12px', fontSize: '15px', fontWeight: '500', color: colors.textMuted }}>อัปโหลดรูปภาพ</p>
+                  </div>
+                )}
+              </label>
+            </div>
+
+            {/* ฟิลด์ข้อมูล */}
+            <div style={{ flex: '2 1 400px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ display: 'flex', gap: '16px' }}>
+                <div style={{ flex: 2 }}>
+                  <label htmlFor="product-name" style={labelStyle}>ชื่อสินค้า <span style={{color: colors.danger}} aria-label="จำเป็น">*</span></label>
+                  <input id="product-name" placeholder="เช่น โซฟาผ้า รุ่น Cozy" value={name} onChange={e => setName(e.target.value)} required style={inputStyle} />
                 </div>
-              )}
-            </label>
-          </div>
-
-          <div className="form-fields">
-            <div className="row">
-              <input placeholder="ชื่อสินค้า" value={name} onChange={e => setName(e.target.value)} required />
-              <input placeholder="ราคาเริ่มต้น" type="number" value={price} onChange={e => setPrice(e.target.value)} required />
-            </div>
-            <div className="row">
-              <select value={categoryId} onChange={e => setCategoryId(e.target.value)} className="dropdown-input" required>
-                <option value="">-- หมวดหมู่สินค้า --</option>
-                {categoriesList.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
-              </select>
-              <select value={roomId} onChange={e => setRoomId(e.target.value)} className="dropdown-input">
-                <option value="">-- หมวดหมู่ห้อง --</option>
-                {roomsList.map(room => <option key={room.id} value={room.name}>{room.name}</option>)}
-              </select>
-            </div>
-            
-            <div className="features-container" style={{background: '#f8f8f8', padding: '15px', borderRadius: '15px', marginTop: '10px'}}>
-              <label style={{fontWeight: 'bold', marginBottom: '10px', display: 'block', color: '#555'}}>คุณสมบัติพิเศษ:</label>
-              <div style={{display: 'flex', flexWrap: 'wrap', gap: '15px'}}>
-                {featuresList.map(feat => (
-                  <label key={feat.id} style={{display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', background: 'white', padding: '5px 10px', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)'}}>
-                    <input type="checkbox" checked={selectedFeatures.includes(feat.name)} onChange={() => toggleFeature(feat.name)} />
-                    <span style={{fontSize: '14px'}}>{feat.name}</span>
-                  </label>
-                ))}
+                <div style={{ flex: 1 }}>
+                  <label htmlFor="product-price" style={labelStyle}>ราคาเริ่มต้น (฿) <span style={{color: colors.danger}} aria-label="จำเป็น">*</span></label>
+                  <input id="product-price" placeholder="0.00" type="number" value={price} onChange={e => setPrice(e.target.value)} required style={inputStyle} />
+                </div>
               </div>
+
+              <div style={{ display: 'flex', gap: '16px' }}>
+                <div style={{ flex: 1 }}>
+                  <label htmlFor="product-category" style={labelStyle}>หมวดหมู่สินค้า <span style={{color: colors.danger}} aria-label="จำเป็น">*</span></label>
+                  <select id="product-category" value={categoryId} onChange={e => setCategoryId(e.target.value)} required style={{...inputStyle, cursor: 'pointer'}}>
+                    <option value="" disabled>-- เลือกหมวดหมู่ --</option>
+                    {categoriesList.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label htmlFor="product-room" style={labelStyle}>หมวดหมู่ห้อง</label>
+                  <select id="product-room" value={roomId} onChange={e => setRoomId(e.target.value)} style={{...inputStyle, cursor: 'pointer'}}>
+                    <option value="">-- เลือกห้อง --</option>
+                    {roomsList.map(room => <option key={room.id} value={room.name}>{room.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              
+              {/* 🚀 Semantic Fieldset สำหรับ Checkbox Group */}
+              <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
+                <legend style={labelStyle}>✨ คุณสมบัติพิเศษ</legend>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', padding: '12px', background: colors.bgLight, borderRadius: '10px', border: `1px solid ${colors.border}` }}>
+                  {featuresList.map(feat => {
+                    const isSelected = selectedFeatures.includes(feat.name);
+                    return (
+                      <label key={feat.id} style={{ 
+                        display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', 
+                        background: isSelected ? colors.primaryLight : colors.bgWhite, 
+                        color: isSelected ? colors.primary : colors.textMuted,
+                        border: `1px solid ${isSelected ? colors.primary : colors.border}`,
+                        padding: '6px 14px', borderRadius: '30px', fontSize: '13px', fontWeight: isSelected ? '600' : '400',
+                        transition: 'all 0.2s', userSelect: 'none'
+                      }}>
+                        <input type="checkbox" checked={isSelected} onChange={() => toggleFeature(feat.name)} style={{ display: 'none' }} />
+                        {isSelected && <span style={{ fontSize: '14px' }} aria-hidden="true">✓</span>}
+                        {feat.name}
+                      </label>
+                    );
+                  })}
+                  {featuresList.length === 0 && <span style={{color: '#999', fontSize: '13px'}}>ไม่มีข้อมูลคุณสมบัติในระบบ</span>}
+                </div>
+              </fieldset>
             </div>
           </div>
-        </div>
-
-        <div className="description-section">
-          <textarea className="full-textarea" placeholder="รายละเอียดสินค้า" value={description} onChange={e => setDescription(e.target.value)} />
-        </div>
-
-        <section className="variants-section" style={{ marginTop: '20px' }}>
-          <h3>ตัวเลือกสินค้า (สี, วัสดุ, ขนาด, รูปภาพ)</h3>
-          {variants.map((variant, index) => (
-            <article key={index} className="variant-row" style={{ display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'center' }}>
-              <div style={{ width: '100px', height: '100px', border: '1px dashed #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: '4px', backgroundColor: '#f9f9f9', flexShrink: 0 }}>
-                <input type="file" id={`variant-image-${index}`} accept="image/*" style={{ display: 'none' }} onChange={e => handleVariantImageUpload(index, e)} />
-                <label htmlFor={`variant-image-${index}`} style={{ cursor: 'pointer', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-                  {variant.imageUrl ? (
-                    <img src={variant.imageUrl} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <>
-                      <span style={{ fontSize: '20px' }}>🖼️</span>
-                      <span style={{ fontSize: '10px', color: '#888', marginTop: '4px', textAlign: 'center' }}>เพิ่มรูป</span>
-                    </>
-                  )}
-                </label>
-              </div>
-              <input placeholder="สี" value={variant.color} onChange={e => handleVariantChange(index, 'color', e.target.value)} style={{ flex: 1 }} />
-              <input placeholder="วัสดุ" value={variant.material} onChange={e => handleVariantChange(index, 'material', e.target.value)} style={{ flex: 1 }} />
-              <input placeholder="ขนาด" value={variant.size} onChange={e => handleVariantChange(index, 'size', e.target.value)} style={{ flex: 1 }} />
-              <input placeholder="ราคา" type="number" value={variant.price} onChange={e => handleVariantChange(index, 'price', e.target.value)} style={{ width: '80px' }} />
-              <input placeholder="จำนวน" type="number" value={variant.stock} onChange={e => handleVariantChange(index, 'stock', e.target.value)} style={{ width: '80px' }} />
-
-              {variants.length > 1 && (
-                <button type="button" onClick={() => removeVariant(index)} style={{ background: 'red', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '5px', width: '30px', height: '30px', flexShrink: 0 }}>X</button>
-              )}
-            </article>
-          ))}
-          <button type="button" onClick={addVariant} style={{ background: '#4CAF50', color: 'white', padding: '8px 15px', border: 'none', cursor: 'pointer', borderRadius: '5px', fontWeight: 'bold' }}>+ เพิ่มตัวเลือก</button>
         </section>
 
-        <div style={{ marginTop: "25px", textAlign: "center", display: "flex", justifyContent: "center", gap: "10px" }}>
+        {/* Section 2: รายละเอียด */}
+        <section style={cardStyle} aria-labelledby="details-heading">
+          <header style={{ marginBottom: '16px' }}>
+            <h3 id="details-heading" style={{ margin: 0, fontSize: '18px', color: colors.textMain }}>📝 รายละเอียดสินค้า</h3>
+          </header>
+          <label htmlFor="product-description" className="sr-only" style={{ display: 'none' }}>รายละเอียดสินค้า</label>
+          <textarea 
+            id="product-description"
+            placeholder="อธิบายจุดเด่น วัสดุ ขนาด หรือวิธีการดูแลรักษา..." 
+            value={description} 
+            onChange={e => setDescription(e.target.value)} 
+            style={{ ...inputStyle, minHeight: '120px', resize: 'vertical' }} 
+          />
+        </section>
+
+        {/* Section 3: ตัวเลือกสินค้า (Variants) */}
+        <section style={cardStyle} aria-labelledby="variants-heading">
+          <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${colors.border}`, paddingBottom: '12px', marginBottom: '20px' }}>
+            <h3 id="variants-heading" style={{ margin: 0, fontSize: '18px', color: colors.textMain }}>⚙️ จัดการตัวเลือกสินค้า (Variants)</h3>
+            <span style={{ fontSize: '13px', color: colors.textMuted, background: colors.bgLight, padding: '4px 10px', borderRadius: '20px' }}>
+              ทั้งหมด {variants.length} รายการ
+            </span>
+          </header>
+          
+          {/* 🚀 Semantic List สำหรับ Variants */}
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {variants.map((variant, index) => (
+              <li key={index} style={{ display: 'flex', gap: '16px', alignItems: 'center', background: colors.bgWhite, padding: '16px', borderRadius: '12px', border: `1px solid ${colors.border}`, position: 'relative', flexWrap: 'wrap' }}>
+                
+                {/* ลำดับตัวเลือก */}
+                <div style={{ position: 'absolute', top: '-10px', left: '16px', background: colors.textMain, color: 'white', fontSize: '11px', fontWeight: 'bold', padding: '2px 8px', borderRadius: '10px' }} aria-hidden="true">
+                  ตัวเลือกที่ {index + 1}
+                </div>
+
+                {/* อัปโหลดรูป Variant */}
+                <div style={{ width: '80px', height: '80px', flexShrink: 0 }}>
+                  <input type="file" id={`variant-image-${index}`} accept="image/*" style={{ display: 'none' }} onChange={e => handleVariantImageUpload(index, e)} />
+                  <label htmlFor={`variant-image-${index}`} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', borderRadius: '8px', border: variant.imageUrl ? 'none' : `1px dashed #CBD5E1`, backgroundColor: colors.bgLight, overflow: 'hidden' }}>
+                    {variant.imageUrl ? (
+                      <img src={variant.imageUrl} alt={`รูปตัวเลือกที่ ${index + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                        <span style={{ fontSize: '10px', color: '#94A3B8', marginTop: '4px' }}>เพิ่มรูป</span>
+                      </>
+                    )}
+                  </label>
+                </div>
+                
+                {/* กลุ่ม Dropdown */}
+                <div style={{ display: 'flex', flex: 1, gap: '12px', minWidth: '300px' }}>
+                  <div style={{ flex: 1 }}>
+                    <label htmlFor={`variant-color-${index}`} style={{...labelStyle, fontSize: '12px', color: colors.textMuted}}>สี</label>
+                    <select id={`variant-color-${index}`} value={variant.color} onChange={e => handleVariantChange(index, 'color', e.target.value)} style={{...inputStyle, padding: '10px'}}>
+                      <option value="">-- สี --</option>
+                      {colorsList.map(color => <option key={color.id} value={color.name}>{color.name}</option>)}
+                    </select>
+                  </div>
+
+                  <div style={{ flex: 1 }}>
+                    <label htmlFor={`variant-material-${index}`} style={{...labelStyle, fontSize: '12px', color: colors.textMuted}}>วัสดุ</label>
+                    <select id={`variant-material-${index}`} value={variant.material} onChange={e => handleVariantChange(index, 'material', e.target.value)} style={{...inputStyle, padding: '10px'}}>
+                      <option value="">-- วัสดุ --</option>
+                      {materialsList.map(material => <option key={material.id} value={material.name}>{material.name}</option>)}
+                    </select>
+                  </div>
+
+                  <div style={{ flex: 1 }}>
+                    <label htmlFor={`variant-size-${index}`} style={{...labelStyle, fontSize: '12px', color: colors.textMuted}}>ขนาด</label>
+                    <select id={`variant-size-${index}`} value={variant.size} onChange={e => handleVariantChange(index, 'size', e.target.value)} style={{...inputStyle, padding: '10px'}}>
+                      <option value="">-- ขนาด --</option>
+                      {sizesList.map(size => <option key={size.id} value={size.name}>{size.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {/* กลุ่ม ราคา/คลัง */}
+                <div style={{ display: 'flex', gap: '12px', width: '220px' }}>
+                  <div style={{ flex: 1 }}>
+                    <label htmlFor={`variant-price-${index}`} style={{...labelStyle, fontSize: '12px', color: colors.textMuted}}>ราคา (฿)</label>
+                    <input id={`variant-price-${index}`} placeholder="0" type="number" value={variant.price} onChange={e => handleVariantChange(index, 'price', e.target.value)} style={{...inputStyle, padding: '10px'}} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label htmlFor={`variant-stock-${index}`} style={{...labelStyle, fontSize: '12px', color: colors.textMuted}}>คลัง (ชิ้น)</label>
+                    <input id={`variant-stock-${index}`} placeholder="0" type="number" value={variant.stock} onChange={e => handleVariantChange(index, 'stock', e.target.value)} style={{...inputStyle, padding: '10px'}} />
+                  </div>
+                </div>
+
+                {/* ปุ่มลบ */}
+                {variants.length > 1 ? (
+                  <button type="button" onClick={() => removeVariant(index)} style={{ background: colors.dangerLight, color: colors.danger, border: 'none', cursor: 'pointer', borderRadius: '8px', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '22px' }} aria-label={`ลบตัวเลือกที่ ${index + 1}`} title="ลบตัวเลือกนี้">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                  </button>
+                ) : (
+                  <div style={{ width: '40px', marginTop: '22px' }} aria-hidden="true"></div>
+                )}
+              </li>
+            ))}
+          </ul>
+
+          <button type="button" onClick={addVariant} style={{ marginTop: '20px', width: '100%', background: '#F0F9FF', color: '#0284C7', border: '1px dashed #7DD3FC', padding: '14px', cursor: 'pointer', borderRadius: '10px', fontSize: '15px', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            เพิ่มตัวเลือกสินค้า
+          </button>
+        </section>
+
+        {/* 🚀 Semantic Footer (Action Buttons) */}
+        <footer style={{ display: "flex", justifyContent: "flex-end", gap: "16px", padding: '10px 0 40px 0' }}>
           {editingProductId && (
-            <button type="button" onClick={onCancel} style={{ padding: "10px 20px", background: "#aaa", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "16px", fontWeight: "bold" }}>
-              ยกเลิกการแก้ไข
+            <button type="button" onClick={onCancel} style={{ padding: "14px 28px", background: colors.bgWhite, color: colors.textMain, border: `1px solid ${colors.border}`, borderRadius: "10px", cursor: "pointer", fontSize: "15px", fontWeight: "600" }}>
+              ยกเลิก
             </button>
           )}
-          <button type="submit" className="confirm-btn" style={{ background: editingProductId ? '#3a9e9e' : undefined }}>
+          <button type="submit" style={{ padding: "14px 32px", background: editingProductId ? colors.primary : colors.secondary, color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: "16px", fontWeight: "600", boxShadow: '0 4px 12px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
             {editingProductId ? 'บันทึกการแก้ไข' : 'ยืนยันการเพิ่มสินค้า'}
           </button>
-        </div>
+        </footer>
+
       </form>
-    </>
+    </article>
   );
 };
 

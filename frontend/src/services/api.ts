@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// URL ของ Backend (NestJS รันที่ Port 3000)
+// URL ของ Backend (NestJS)
 const API_URL = 'http://localhost:3000';
 
 const api = axios.create({
@@ -19,32 +19,37 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// --- Interfaces ---
+// ---------------------------------------------------------
+// ✅ Interfaces
+// ---------------------------------------------------------
+
 export interface Product {
   id: string;
   name: string;
   description: string;
-  price: number | string; // รองรับทั้ง number และ string กันเหนียว
+  price: number | string;
   stock: number;
   category?: string; 
   room?: string;
   features?: string[];
-  image: string; // รับเป็น JSON string จาก Backend
+  image: string; 
 }
 
-export interface Category {
-  id: number;
-  name: string;
-}
+export interface Category { id: number; name: string; }
+export interface Room { id: number; name: string; }
+export interface Feature { id: number; name: string; }
+export interface Color { id: number; name: string; }
+export interface Material { id: number; name: string; }
+export interface Size { id: number; name: string; }
 
-export interface Room { 
-  id: number; 
-  name: string; 
-}
-
-export interface Feature { 
-  id: number; 
-  name: string; 
+export interface Variant {
+  color: string;
+  material: string;
+  size: string;
+  price: string;
+  stock: string;
+  imageUrl?: string;
+  imageFile?: File;
 }
 
 export interface OrderItem {
@@ -59,18 +64,27 @@ export interface Order {
   id: string;
   orderDate: string;
   totalAmount: number | string;
-  
-  // 👇 เพิ่ม 3 บรรทัดนี้เข้ามารองรับค่าใช้จ่ายย่อย
   totalAmountProduct: number | string; 
   totalAmountInstallation: number | string;
-  shippingFee?: number | string; // (อนาคต) เผื่อ Backend ส่งค่าจัดส่งมา
-  
+  shippingFee?: number | string;
   status: string;
   shippingAddress: string;
   items: OrderItem[];
+  paymentSlip?: string;
 }
 
-// --- API Functions ---
+export interface Review {
+  id?: string;
+  productId: string;
+  rating: number;
+  comment: string;
+  user?: { username: string };
+  createdAt?: string;
+}
+
+// ---------------------------------------------------------
+// ✅ API Functions
+// ---------------------------------------------------------
 
 // 1. Auth & User
 export const loginUser = async (credentials: { username: string; password: string }) => {
@@ -83,13 +97,11 @@ export const registerUser = async (userData: any) => {
   return response.data;
 };
 
-// ดึงข้อมูลโปรไฟล์ตัวเอง
 export const getProfile = async () => {
   const response = await api.get('/users/profile/me');
   return response.data;
 };
 
-// อัปเดตโปรไฟล์ (รองรับทั้งข้อมูล Text และรูปภาพ)
 export const updateProfile = async (formData: FormData) => {
   const response = await api.patch('/users/profile', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
@@ -97,24 +109,36 @@ export const updateProfile = async (formData: FormData) => {
   return response.data;
 };
 
-
 // 2. Products
 export const getAllProducts = async (): Promise<Product[]> => {
-    const response = await api.get('/products');
-    return response.data;
+  const response = await api.get('/products');
+  return response.data;
 };
 
-export const getProductById = async (id: string): Promise<Product> => { // แก้ Return type เป็น Product เดียว
-    const response = await api.get(`/products/${id}`);
-    return response.data;
+export const getProductById = async (id: string): Promise<Product> => {
+  const response = await api.get(`/products/${id}`);
+  return response.data;
 };
 
 export const createProduct = async (productData: any) => {
-    // ถ้ามีการส่งไฟล์รูปสินค้า ต้องใช้ FormData
-    const response = await api.post('/products', productData);
-    return response.data;
+  const isFormData = productData instanceof FormData;
+  const response = await api.post('/products', productData, {
+    headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : {},
+  });
+  return response.data;
 };
 
+export const updateProduct = async (id: string, productData: any) => {
+  const isFormData = productData instanceof FormData;
+  const response = await api.patch(`/products/${id}`, productData, {
+    headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : {},
+  });
+  return response.data;
+};
+
+export const deleteProduct = async (id: string) => {
+  return await api.delete(`/products/${id}`);
+};
 
 // 3. Categories
 export const getAllCategories = async (): Promise<Category[]> => {
@@ -159,14 +183,53 @@ export const deleteFeature = async (id: number) => {
   return await api.delete(`/features/${id}`);
 };
 
-// ---------------------------------------------------------
-// ✅ 6. Cart (ตะกร้าสินค้า) - เพิ่มส่วนนี้
-// ---------------------------------------------------------
+// 6. Colors
+export const getAllColors = async (): Promise<Color[]> => {
+  const response = await api.get('/colors');
+  return response.data;
+};
+
+export const createColor = async (name: string) => {
+  return await api.post('/colors', { name });
+};
+
+export const deleteColor = async (id: number) => {
+  return await api.delete(`/colors/${id}`);
+};
+
+// 7. Materials
+export const getAllMaterials = async (): Promise<Material[]> => {
+  const response = await api.get('/materials');
+  return response.data;
+};
+
+export const createMaterial = async (name: string) => {
+  return await api.post('/materials', { name });
+};
+
+export const deleteMaterial = async (id: number) => {
+  return await api.delete(`/materials/${id}`);
+};
+
+// 8. Sizes
+export const getAllSizes = async (): Promise<Size[]> => {
+  const response = await api.get('/sizes');
+  return response.data;
+};
+
+export const createSize = async (name: string) => {
+  return await api.post('/sizes', { name });
+};
+
+export const deleteSize = async (id: number) => {
+  return await api.delete(`/sizes/${id}`);
+};
+
+// 9. Cart
 export const getCart = async () => {
   return await api.get('/cart-items');
 };
 
-// ✅ เพิ่ม parameter ตัวที่ 3 และใส่ลงไปใน Body ที่ส่งไปหา Backend
 export const addToCart = async (productId: string | number, quantity: number, installationQty: number = 0) => {
   return await api.post('/cart-items', { productId, quantity, installationQty });
 };
@@ -180,15 +243,10 @@ export const removeCartItem = async (id: number) => {
 };
 
 export const clearCart = async () => {
-  // หมายเหตุ: ต้องมี Endpoint นี้ใน Backend หรือใช้ loop ลบเอา
-  // ถ้า Backend ไม่มี ให้แก้เป็น loop ลบทีละตัว หรือสร้าง Route เพิ่ม
   return await api.delete('/cart-items'); 
 };
 
-
-// ---------------------------------------------------------
-// ✅ 7. Orders (การสั่งซื้อ) - เพิ่มส่วนนี้
-// ---------------------------------------------------------
+// 10. Orders
 export const checkout = async (address: string) => {
   const response = await api.post('/orders/checkout', { address });
   return response.data;
@@ -199,34 +257,48 @@ export const getMyOrders = async () => {
   return response.data;
 };
 
-export const getOrderById = async (id: string) => {
-  const response = await api.get(`/orders/${id}`); // User ดูของตัวเอง หรือ Admin ดูของคนอื่น
+export const getOrderById = async (id: string): Promise<Order> => {
+  const response = await api.get(`/orders/${id}`); 
   return response.data;
 };
 
 export const uploadSlip = async (orderId: string, file: File) => {
   const formData = new FormData();
   formData.append('file', file);
-
   const response = await api.post(`/orders/upload-slip/${orderId}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return response.data;
 };
 
-// ยกเลิกออเดอร์ (User)
 export const cancelOrder = async (orderId: string) => {
   const response = await api.patch(`/orders/${orderId}/cancel`);
   return response.data;
 };
 
-// สำหรับ Admin เปลี่ยนสถานะ
 export const updateOrderStatus = async (orderId: string, status: string) => {
-  return await api.patch(`/orders/${orderId}/status`, { status });
+  const response = await api.patch(`/orders/${orderId}/status`, { status });
+  return response.data;
 };
 
 export const getAllOrders = async () => {
   const response = await api.get('/orders');
+  return response.data;
+};
+
+export const getOrderHistory = async () => {
+  const response = await api.get('/orders/user/history');
+  return response.data;
+};
+
+// 11. Reviews
+export const getReviewsByProduct = async (productId: string): Promise<Review[]> => {
+  const response = await api.get(`/reviews/product/${productId}`);
+  return response.data;
+};
+
+export const createReview = async (reviewData: Review) => {
+  const response = await api.post('/reviews', reviewData);
   return response.data;
 };
 
