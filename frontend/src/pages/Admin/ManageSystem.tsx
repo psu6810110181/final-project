@@ -6,7 +6,10 @@ import {
   getAllRooms, createRoom, type Room,
   getAllFeatures, createFeature, type Feature,
   getAllProducts, type Product,
-  deleteCategory, deleteRoom, deleteFeature
+  deleteCategory, deleteRoom, deleteFeature,
+  getAllColors, createColor, type Color, deleteColor,
+  getAllMaterials, createMaterial, type Material, deleteMaterial,
+  getAllSizes, createSize, type Size, deleteSize
 } from "../../services/api";
 
 interface ManageSystemProps {
@@ -17,10 +20,28 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
   const [categoriesList, setCategoriesList] = useState<Category[]>([]);
   const [roomsList, setRoomsList] = useState<Room[]>([]);       
   const [featuresList, setFeaturesList] = useState<Feature[]>([]);
+  const [colorsList, setColorsList] = useState<Color[]>([]);
+  const [materialsList, setMaterialsList] = useState<Material[]>([]);
+  const [sizesList, setSizesList] = useState<Size[]>([]);
   const [productsList, setProductsList] = useState<Product[]>([]);
   
   const [newItemName, setNewItemName] = useState("");
-  const [activeTab, setActiveTab] = useState<'category' | 'room' | 'feature'>('category'); 
+  const [activeTab, setActiveTab] = useState<'category' | 'room' | 'feature' | 'color' | 'material' | 'size'>('category'); 
+
+  // --- Design System Colors (อิงจาก ProductForm) ---
+  const colors = {
+    primary: '#148F96', 
+    primaryLight: '#E6F7F8',
+    secondary: '#D65A31', 
+    secondaryLight: '#FCE8E1',
+    textMain: '#1F2937',
+    textMuted: '#6B7280',
+    border: '#E5E7EB',
+    bgLight: '#F9FAFB',
+    bgWhite: '#FFFFFF',
+    danger: '#EF4444',
+    dangerLight: '#FEF2F2',
+  };
 
   useEffect(() => {
     fetchMasterData();
@@ -32,19 +53,26 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
       const [cats, rms, fts] = await Promise.all([
         getAllCategories(), getAllRooms(), getAllFeatures()
       ]);
-      setCategoriesList(cats); setRoomsList(rms); setFeaturesList(fts);
-    } catch (error) {
-      console.error("Failed to fetch master data", error);
-    }
+      setCategoriesList(cats || []); 
+      setRoomsList(rms || []); 
+      setFeaturesList(fts || []);
+    } catch (error) { console.error(error); }
+
+    try {
+      const cols = await getAllColors().catch(() => []);
+      const mats = await getAllMaterials().catch(() => []);
+      const szs = await getAllSizes().catch(() => []);
+      setColorsList(cols || []); 
+      setMaterialsList(mats || []); 
+      setSizesList(szs || []);
+    } catch (error) { console.error(error); }
   };
 
   const fetchProducts = async () => {
     try {
       const products = await getAllProducts();
       setProductsList(products);
-    } catch (error) {
-      console.error("Failed to fetch products", error);
-    }
+    } catch (error) { console.error(error); }
   };
 
   const handleAddMasterData = async () => {
@@ -53,110 +81,277 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
       if (activeTab === 'category') await createCategory(newItemName);
       else if (activeTab === 'room') await createRoom(newItemName);
       else if (activeTab === 'feature') await createFeature(newItemName);
+      else if (activeTab === 'color') await createColor(newItemName);
+      else if (activeTab === 'material') await createMaterial(newItemName);
+      else if (activeTab === 'size') await createSize(newItemName);
       
       setNewItemName(""); 
       fetchMasterData(); 
-      alert(`เพิ่ม ${activeTab} สำเร็จ!`);
-    } catch (error) {
-      console.error(error);
-      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
-    }
+      alert(`เพิ่มข้อมูลสำเร็จ!`);
+    } catch (error) { alert("เกิดข้อผิดพลาด"); }
   };
 
   const handleDeleteProduct = async (productId: string) => {
     if (!window.confirm("ยืนยันการลบสินค้านี้?")) return;
     try {
       await api.delete(`/products/${productId}`);
-      alert("ลบสินค้าเรียบร้อยแล้ว");
       fetchProducts();
-    } catch (error) {
-      console.error("Error deleting product:", error);
-      alert("เกิดข้อผิดพลาดในการลบสินค้า");
-    }
+    } catch (error) { alert("ลบไม่สำเร็จ"); }
   };
 
   const handleDeleteMasterData = async (id: number) => {
     if (window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?')) {
       try {
-        if (activeTab === 'category') {
-          await deleteCategory(id);
-          setCategoriesList(prev => prev.filter(item => item.id !== id));
-        } else if (activeTab === 'room') {
-          await deleteRoom(id);
-          setRoomsList(prev => prev.filter(item => item.id !== id));
-        } else if (activeTab === 'feature') {
-          await deleteFeature(id);
-          setFeaturesList(prev => prev.filter(item => item.id !== id));
-        }
-      } catch (error) {
-        console.error("Error deleting data:", error);
-        alert("ไม่สามารถลบได้ (อาจมีสินค้านำไปใช้งานอยู่)");
-      }
+        if (activeTab === 'category') await deleteCategory(id);
+        else if (activeTab === 'room') await deleteRoom(id);
+        else if (activeTab === 'feature') await deleteFeature(id);
+        else if (activeTab === 'color') await deleteColor(id);
+        else if (activeTab === 'material') await deleteMaterial(id);
+        else if (activeTab === 'size') await deleteSize(id);
+        fetchMasterData();
+      } catch (error) { alert("ไม่สามารถลบได้"); }
     }
   };
 
+  const getActiveList = () => {
+    if (activeTab === 'category') return categoriesList;
+    if (activeTab === 'room') return roomsList;
+    if (activeTab === 'feature') return featuresList;
+    if (activeTab === 'color') return colorsList;
+    if (activeTab === 'material') return materialsList;
+    return sizesList;
+  };
+
+  const getActiveIcon = () => {
+    const icons = { category: '📂', room: '🏠', feature: '✨', color: '🎨', material: '🪵', size: '📏' };
+    return icons[activeTab];
+  };
+
+  const getActiveNameTH = () => {
+    const names = { category: 'หมวดหมู่สินค้า', room: 'หมวดหมู่ห้อง', feature: 'คุณสมบัติพิเศษ', color: 'สี', material: 'วัสดุ', size: 'ขนาด' };
+    return names[activeTab];
+  };
+
   return (
-    <div className="manage-system-view">
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '10px 0', fontFamily: "'Prompt', sans-serif" }}>
       
-      {/*ใช้ <section> จัดกลุ่ม "จัดการสินค้า" */}
-      <section className="product-list-section" aria-labelledby="manage-products-heading">
-        <h2 id="manage-products-heading">แก้ไข / ลบสินค้า</h2>
+      {/* =========================================
+          ส่วนที่ 1: จัดการรายการสินค้า
+      ========================================= */}
+      <section style={{ marginBottom: '40px' }} aria-labelledby="manage-products-heading">
         
-        <div>
+        {/* Semantic Header แบบเดียวกับฟอร์ม */}
+        <header style={{ 
+          background: 'linear-gradient(to right, #ffffff, #f8fafc)',
+          padding: '24px 32px', borderRadius: '16px', boxShadow: '0 4px 20px -2px rgba(0, 0, 0, 0.04)',
+          border: `1px solid ${colors.border}`, borderLeft: `8px solid ${colors.primary}`,
+          marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '24px'
+        }}>
+          <div style={{
+            width: '64px', height: '64px', background: colors.primaryLight, borderRadius: '16px', 
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', 
+            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.04)', flexShrink: 0
+          }} aria-hidden="true">
+            📦
+          </div>
+          <div>
+            <h2 id="manage-products-heading" style={{ margin: 0, color: '#1E293B', fontSize: '24px', fontWeight: '700', letterSpacing: '-0.5px' }}>
+              จัดการรายการสินค้า
+            </h2>
+            <p style={{ margin: '6px 0 0 0', color: '#64748B', fontSize: '15px' }}>
+              ดูรายละเอียด แก้ไขข้อมูล หรือลบสินค้าที่มีอยู่ในระบบหน้าร้าน
+            </p>
+          </div>
+        </header>
+        
+        {/* Semantic List สำหรับแสดงสินค้า */}
+        <ul style={{ 
+          listStyle: 'none', padding: 0, margin: 0, 
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '20px' 
+        }}>
           {productsList.length === 0 ? (
-            <p style={{ color: '#888', textAlign: 'center', padding: '20px' }}>ยังไม่มีสินค้าในระบบ</p>
+            <li style={{ color: colors.textMuted, gridColumn: '1/-1', textAlign: 'center', padding: '50px', background: colors.bgWhite, borderRadius: '16px', border: `1px dashed ${colors.border}` }}>
+              ยังไม่มีสินค้าในระบบ
+            </li>
           ) : (
             productsList.map(product => (
-              // <div> เป็น <article> เพื่อบอกว่านี่คือ 1 รายการเนื้อหาที่จบในตัวเอง
-              <article key={product.id} className="product-list-item" style={{ display: 'flex', alignItems: 'center', gap: '15px', background: 'white', borderRadius: '12px', padding: '12px 16px', marginBottom: '10px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-                <div style={{ width: '70px', height: '70px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {product.image ? <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: '28px' }}>🖼️</span>}
-                </div>
+              <li key={product.id}>
+                <article className="product-card" style={{ 
+                  display: 'flex', alignItems: 'center', gap: '20px', background: colors.bgWhite, 
+                  borderRadius: '16px', padding: '20px', border: `1px solid ${colors.border}`,
+                  transition: 'all 0.2s ease', cursor: 'default'
+                }}>
+                  <div style={{ width: '90px', height: '90px', borderRadius: '12px', overflow: 'hidden', background: colors.bgLight, flexShrink: 0, border: `1px solid ${colors.border}` }}>
+                    {product.image ? (
+                      <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ fontSize: '30px', display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }} aria-hidden="true">🖼️</div>
+                    )}
+                  </div>
 
-                <div style={{ flex: 1 }}>
-                  <h3 style={{ fontWeight: 'bold', fontSize: '16px', color: '#333', margin: 0 }}>{product.name}</h3>
-                  <div style={{ fontSize: '14px', color: '#e07b39', marginTop: '3px' }}>฿{Number(product.price).toLocaleString()}</div>
-                  <div style={{ fontSize: '13px', color: '#888', marginTop: '2px' }}>In stock {product.stock ?? '-'} Each</div>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <button onClick={() => onEditProduct(product.id)} style={{ background: '#3a9e9e', color: 'white', border: 'none', borderRadius: '20px', padding: '7px 22px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', minWidth: '80px' }}>Edit</button>
-                  <button onClick={() => handleDeleteProduct(product.id)} style={{ background: '#d94f2e', color: 'white', border: 'none', borderRadius: '20px', padding: '7px 22px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', minWidth: '80px' }}>Delete</button>
-                </div>
-              </article>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 style={{ fontWeight: '600', fontSize: '16px', color: colors.textMain, margin: '0 0 6px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {product.name}
+                    </h3>
+                    <div style={{ fontSize: '18px', color: colors.secondary, fontWeight: '700' }}>
+                      ฿{Number(product.price).toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: '13px', color: colors.textMuted, marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: (product.stock || 0) > 0 ? '#10B981' : colors.danger }}></span>
+                      สต็อก: {product.stock ?? '0'} ชิ้น
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <button 
+                      onClick={() => onEditProduct(product.id)} 
+                      style={{ background: colors.primaryLight, color: colors.primary, border: `1px solid #CCFBF1`, borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', transition: 'background 0.2s' }}
+                      onMouseOver={(e) => e.currentTarget.style.background = '#CCFBF1'}
+                      onMouseOut={(e) => e.currentTarget.style.background = colors.primaryLight}
+                    >
+                      แก้ไข
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteProduct(product.id)} 
+                      style={{ background: colors.dangerLight, color: colors.danger, border: `1px solid #FEE2E2`, borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', transition: 'background 0.2s' }}
+                      onMouseOver={(e) => e.currentTarget.style.background = '#FEE2E2'}
+                      onMouseOut={(e) => e.currentTarget.style.background = colors.dangerLight}
+                    >
+                      ลบ
+                    </button>
+                  </div>
+                </article>
+              </li>
             ))
           )}
-        </div>
+        </ul>
       </section>
 
-      {/* ใช้ <section> จัดกลุ่ม "จัดการคุณสมบัติ" */}
-      <section style={{ marginTop: '30px' }} aria-labelledby="manage-features-heading">
-        <h2 id="manage-features-heading">แก้ไข / ลบคุณสมบัติ</h2>
+      {/* =========================================
+          ส่วนที่ 2: จัดการคุณสมบัติ (Master Data)
+      ========================================= */}
+      <section aria-labelledby="master-data-heading">
         
-        {/* ใช้ <nav> ครอบปุ่มสลับแท็บ เพราะมันทำหน้าที่นำทาง(สลับการแสดงผล) */}
-        <nav className="tab-control-bar" aria-label="Feature Management Tabs">
-          <button onClick={() => setActiveTab('category')} className={activeTab === 'category' ? 'active' : ''}>สินค้า</button>
-          <button onClick={() => setActiveTab('room')} className={activeTab === 'room' ? 'active' : ''}>ห้อง</button>
-          <button onClick={() => setActiveTab('feature')} className={activeTab === 'feature' ? 'active' : ''}>คุณสมบัติ</button>
-        </nav>
-
-        <div className="master-data-container">
-          <div className="category-list">
-            {(activeTab === 'category' ? categoriesList : activeTab === 'room' ? roomsList : featuresList).map(i => (
-              <div key={i.id} className="category-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>{activeTab === 'category' ? '📂' : activeTab === 'room' ? '🏠' : '✨'} {i.name}</span>
-                <button onClick={() => handleDeleteMasterData(i.id)} style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: '16px' }} title="ลบ">❌</button>
-              </div>
-            ))}
+        {/* Semantic Header */}
+        <header style={{ 
+          background: 'linear-gradient(to right, #ffffff, #f8fafc)',
+          padding: '24px 32px', borderRadius: '16px', boxShadow: '0 4px 20px -2px rgba(0, 0, 0, 0.04)',
+          border: `1px solid ${colors.border}`, borderLeft: `8px solid ${colors.secondary}`,
+          marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '24px'
+        }}>
+          <div style={{
+            width: '64px', height: '64px', background: colors.secondaryLight, borderRadius: '16px', 
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', 
+            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.04)', flexShrink: 0
+          }} aria-hidden="true">
+            ⚙️
           </div>
+          <div>
+            <h2 id="master-data-heading" style={{ margin: 0, color: '#1E293B', fontSize: '24px', fontWeight: '700', letterSpacing: '-0.5px' }}>
+              จัดการคุณสมบัติระบบ
+            </h2>
+            <p style={{ margin: '6px 0 0 0', color: '#64748B', fontSize: '15px' }}>
+              เพิ่มหรือลบตัวเลือกต่างๆ ที่จะนำไปใช้ในฟอร์มเพิ่มสินค้า เช่น หมวดหมู่ ขนาด สี และวัสดุ
+            </p>
+          </div>
+        </header>
+
+        <div style={{ background: colors.bgWhite, borderRadius: '16px', padding: '30px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', border: `1px solid ${colors.border}` }}>
           
-          <form className="add-category-box" onSubmit={(e) => { e.preventDefault(); handleAddMasterData(); }}>
-             <h4>เพิ่ม {activeTab === 'category' ? 'หมวดหมู่' : activeTab === 'room' ? 'ห้อง' : 'คุณสมบัติ'} ใหม่</h4>
-             <input placeholder={`ชื่อ...`} value={newItemName} onChange={(e) => setNewItemName(e.target.value)} required />
-             <button type="submit" className="orange-btn">บันทึกข้อมูล</button>
-          </form>
+          {/* Tab Navigation */}
+          <nav aria-label="Master Data Tabs" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '30px', padding: '6px', background: colors.bgLight, borderRadius: '12px', width: 'fit-content', border: `1px solid ${colors.border}` }}>
+            {[
+              { id: 'category', n: 'หมวดหมู่สินค้า' }, { id: 'room', n: 'ห้อง' }, { id: 'feature', n: 'คุณสมบัติพิเศษ' },
+              { id: 'color', n: 'สี' }, { id: 'material', n: 'วัสดุ' }, { id: 'size', n: 'ขนาด' }
+            ].map(tab => (
+              <button 
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)} 
+                aria-pressed={activeTab === tab.id}
+                style={{ 
+                  padding: '10px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '14px', transition: 'all 0.2s',
+                  background: activeTab === tab.id ? colors.bgWhite : 'transparent',
+                  color: activeTab === tab.id ? colors.secondary : colors.textMuted,
+                  boxShadow: activeTab === tab.id ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
+                }}
+              >
+                {tab.n}
+              </button>
+            ))}
+          </nav>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr minmax(300px, 350px)', gap: '40px', alignItems: 'start' }}>
+            
+            {/* List of Chips */}
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexWrap: 'wrap', gap: '12px', alignContent: 'flex-start' }}>
+              {getActiveList().length === 0 ? (
+                <li style={{ color: colors.textMuted, fontSize: '14px', fontStyle: 'italic' }}>ยังไม่มีข้อมูลในหมวดหมู่นี้</li>
+              ) : (
+                getActiveList().map(i => (
+                  <li key={i.id} style={{ 
+                    display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px 8px 16px', 
+                    background: colors.bgWhite, border: `1px solid ${colors.border}`, borderRadius: '30px', 
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.02)', fontSize: '14px', color: colors.textMain, fontWeight: '500'
+                  }}>
+                    <span aria-hidden="true">{getActiveIcon()}</span>
+                    <span>{i.name}</span>
+                    <button 
+                        onClick={() => handleDeleteMasterData(i.id)} 
+                        aria-label={`ลบ ${i.name}`}
+                        style={{ background: colors.dangerLight, color: colors.danger, border: 'none', width: '24px', height: '24px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s', marginLeft: '4px' }}
+                        onMouseOver={(e) => e.currentTarget.style.background = '#FEE2E2'}
+                        onMouseOut={(e) => e.currentTarget.style.background = colors.dangerLight}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
+
+            {/* Add Form Sidebox */}
+            <form 
+              onSubmit={(e) => { e.preventDefault(); handleAddMasterData(); }}
+              style={{ padding: '24px', background: colors.bgLight, borderRadius: '16px', border: `1px solid ${colors.border}` }}
+            >
+              <h4 style={{ margin: '0 0 16px 0', color: colors.textMain, fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span aria-hidden="true">✨</span> เพิ่ม{getActiveNameTH()}ใหม่
+              </h4>
+              <label htmlFor="new-master-item" className="sr-only" style={{ display: 'none' }}>ชื่อ{getActiveNameTH()}</label>
+              <input 
+                  id="new-master-item"
+                  placeholder={`กรอกชื่อ${getActiveNameTH()}...`} 
+                  value={newItemName} 
+                  onChange={(e) => setNewItemName(e.target.value)} 
+                  required 
+                  style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: `1px solid ${colors.border}`, marginBottom: '16px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s' }}
+                  onFocus={(e) => e.currentTarget.style.border = `1px solid ${colors.secondary}`}
+                  onBlur={(e) => e.currentTarget.style.border = `1px solid ${colors.border}`}
+              />
+              <button type="submit" style={{ 
+                  width: '100%', padding: '12px', background: colors.secondary, color: 'white', 
+                  border: 'none', borderRadius: '10px', fontWeight: '600', fontSize: '15px', cursor: 'pointer',
+                  boxShadow: '0 4px 6px rgba(214, 90, 49, 0.2)', transition: 'transform 0.1s'
+              }}
+              onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
+              onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                เพิ่มข้อมูล
+              </button>
+            </form>
+          </div>
         </div>
       </section>
 
+      {/* สไตล์เพิ่มเติมสำหรับ Hover Product Card */}
+      <style>{`
+        .product-card:hover {
+            transform: translateY(-4px) !important;
+            box-shadow: 0 12px 24px -4px rgba(0,0,0,0.08) !important;
+            border-color: #CBD5E1 !important;
+        }
+      `}</style>
     </div>
   );
 };

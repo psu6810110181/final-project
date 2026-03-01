@@ -4,6 +4,8 @@ import { Star, Minus, Plus, ChevronRight, Loader } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import * as api from '../services/api'; 
 import type { Product } from '../services/api'; 
+import PromotionBadge from '../components/PromotionBadge';
+import PriceDisplay from '../components/PriceDisplay'; 
 
 
 const ProductDetail = () => {
@@ -169,9 +171,20 @@ const averageRating = reviews.length > 0
           {/* RIGHT: Product Info */}
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-2">{product.name}</h1>
-            <div className="text-[#D65A31] text-3xl font-bold mb-1">
-              ฿ {Number(product.price).toLocaleString()} <span className="text-sm text-gray-500 font-normal">/ ชิ้น</span>
+            
+            {/* Promotion Badge */}
+            <div className="mb-3">
+              <PromotionBadge productId={product.id} />
             </div>
+            
+            {/* Price Display */}
+            <div className="mb-1">
+              <PriceDisplay 
+                productId={product.id} 
+                originalPrice={Number(product.price)} 
+              />
+            </div>
+            
             <p className="text-gray-400 text-xs mb-4">Stock: {product.stock} ชิ้น</p>
             
             {/* Rating จริงจาก Backend */}

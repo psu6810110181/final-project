@@ -1,9 +1,9 @@
 import React from "react";
 
 interface AdminSideBarProps {
-  activeView: 'addProduct' | 'manageSystem' | 'manageOrders';
+  activeView: 'addProduct' | 'manageSystem' | 'manageOrders' | 'managePromotions';
   editingProductId: string | null;
-  onChangeView: (view: 'manageSystem' | 'manageOrders') => void;
+  onChangeView: (view: 'manageSystem' | 'manageOrders' | 'managePromotions') => void;
   onAddProductClick: () => void;
 }
 
@@ -28,6 +28,12 @@ const AdminSideBar: React.FC<AdminSideBarProps> = ({ activeView, editingProductI
         onClick={() => onChangeView('manageOrders')}
       >
         📦 จัดการคำสั่งซื้อ
+      </button>
+      <button 
+        className={`nav-item-btn ${activeView === 'managePromotions' ? 'active' : ''}`}
+        onClick={() => onChangeView('managePromotions')}
+      >
+        🎯 จัดการโปรโมชั่น
       </button>
     </div>
   );

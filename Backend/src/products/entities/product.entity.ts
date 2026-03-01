@@ -1,7 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn, ManyToMany } from 'typeorm';
 import { CartItem } from '../../cart_items/entities/cart_item.entity';
 import { ProductVariant } from './product-variant.entity';
 import { Review } from '../../reviews/entities/review.entity';
+import { Promotion } from '../../promotions/promotion.entity';
 
 @Entity()
 export class Product {
@@ -23,11 +24,11 @@ export class Product {
   @Column({ default: 'General' })
   category: string; // หมวดหมู่สินค้า (Single Select)
 
-  // 👇 เพิ่มหมวดหมู่ห้อง (Single Select)
+  // เพิ่มหมวดหมู่ห้อง (Single Select)
   @Column({ nullable: true })
   room: string; 
 
-  // 👇 เพิ่มคุณสมบัติพิเศษ (Multi Select) - เก็บเป็น Array ของ String
+  // เพิ่มคุณสมบัติพิเศษ (Multi Select) - เก็บเป็น Array ของ String
   @Column("simple-array", { nullable: true }) 
   features: string[];
 
@@ -51,4 +52,7 @@ export class Product {
 
   @OneToMany(() => Review, (review) => review.product)
   reviews: Review[];
+
+  @ManyToMany(() => Promotion, promotion => promotion.products)
+  promotions: Promotion[];
 }

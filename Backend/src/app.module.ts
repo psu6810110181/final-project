@@ -1,3 +1,4 @@
+// app.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -17,6 +18,12 @@ import { CategoriesModule } from './categories/categories.module';
 import { RoomsModule } from './rooms/rooms.module';
 import { FeaturesModule } from './features/features.module';
 
+// 👇 เพิ่ม Import สำหรับ Colors, Materials, Sizes ที่เราเพิ่งสร้าง
+import { ColorsModule } from './colors/colors.module';
+import { MaterialsModule } from './materials/materials.module';
+import { SizesModule } from './sizes/sizes.module';
+import { PromotionsModule } from './promotions/promotions.module';
+
 @Module({
   imports: [
     // 1. โหลดไฟล์ .env
@@ -24,25 +31,39 @@ import { FeaturesModule } from './features/features.module';
       isGlobal: true,
     }),
 
-    // 👇 2. เพิ่มส่วนนี้: เปิดให้เข้าถึงโฟลเดอร์ uploads ผ่าน URL
+    // 2. เพิ่มส่วนนี้: เปิดให้เข้าถึงโฟลเดอร์ uploads ผ่าน URL
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'), // ชี้ไปที่โฟลเดอร์ uploads (อยู่นอก src)
       serveRoot: '/uploads', // เรียกผ่าน http://localhost:3000/uploads/...
     }),
 
-    // 3. เชื่อมต่อ Database
+    // 3. เชื่อมต่อ Database - รองรับทั้ง PostgreSQL และ SQLite
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get<string>('DB_HOST'),
-        port: configService.get<number>('DB_PORT'),
-        username: configService.get<string>('DB_USERNAME'),
-        password: configService.get<string>('DB_PASSWORD'),
-        database: configService.get<string>('DB_DATABASE'),
-        autoLoadEntities: true,
-        synchronize: true,
-      }),
+      useFactory: async (configService: ConfigService) => {
+        const dbType = configService.get<string>('DB_TYPE', 'postgres');
+        
+        if (dbType === 'postgres') {
+          return {
+            type: 'postgres',
+            host: configService.get<string>('DB_HOST'),
+            port: configService.get<number>('DB_PORT'),
+            username: configService.get<string>('DB_USERNAME'),
+            password: configService.get<string>('DB_PASSWORD'),
+            database: configService.get<string>('DB_DATABASE'),
+            autoLoadEntities: true,
+            synchronize: true,
+          };
+        } else {
+          // SQLite (default)
+          return {
+            type: 'sqlite',
+            database: configService.get<string>('DB_DATABASE', './data/finalproject.db'),
+            autoLoadEntities: true,
+            synchronize: true,
+          };
+        }
+      },
       inject: [ConfigService],
     }),
 
@@ -56,6 +77,12 @@ import { FeaturesModule } from './features/features.module';
     CategoriesModule,
     RoomsModule,
     FeaturesModule,
+    
+    // 👇 นำ Module ลงทะเบียนใช้งานในระบบ
+    ColorsModule,
+    MaterialsModule,
+    SizesModule,
+    PromotionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
