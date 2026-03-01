@@ -1,6 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn, ManyToMany } from 'typeorm';
 import { CartItem } from '../../cart_items/entities/cart_item.entity';
 import { ProductVariant } from './product-variant.entity';
+import { Promotion } from '../../promotions/promotion.entity';
 
 @Entity()
 export class Product {
@@ -47,4 +48,7 @@ export class Product {
 
   @OneToMany(() => CartItem, (cartItem) => cartItem.product)
   cartItems: CartItem[];
+
+  @ManyToMany(() => Promotion, promotion => promotion.products)
+  promotions: Promotion[];
 }

@@ -6,6 +6,7 @@ import * as api from '../services/api';
 import type { Product, Category, Room, Feature } from '../services/api';
 import toast from 'react-hot-toast';
 import { useCart } from '../contexts/CartContext';
+import FlashSale from '../components/FlashSale';
 
 const Home = () => {
   // --- STATE ข้อมูลตั้งต้น ---
@@ -327,6 +328,9 @@ const Home = () => {
           </button>
         </div>
       </div>
+
+      {/* --- FLASH SALE SECTION --- */}
+      <FlashSale products={products} />
 
       {/* --- MAIN CONTENT (Product Grid) --- */}
       <div className="container mx-auto px-4">

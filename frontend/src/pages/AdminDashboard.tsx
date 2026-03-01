@@ -778,10 +778,11 @@ import AdminSideBar from "./Admin/AdminSideBar";
 import ProductForm from "./Admin/ProductForm";
 import ManageSystem from "./Admin/ManageSystem";
 import ManageOrders from "./Admin/ManageOrders";
+import PromotionManager from "./Admin/Promotion";
 
 const AdminDashboard: React.FC = () => {
   // State ควบคุมหน้าหลัก และ ID สินค้าที่กำลังแก้ไข
-  const [activeView, setActiveView] = useState<'addProduct' | 'manageSystem' | 'manageOrders'>('addProduct');
+  const [activeView, setActiveView] = useState<'addProduct' | 'manageSystem' | 'manageOrders' | 'managePromotions'>('addProduct');
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
 
   // เมื่อกดปุ่มแก้ไขจากหน้า ManageSystem
@@ -822,6 +823,10 @@ const AdminDashboard: React.FC = () => {
 
           {activeView === 'manageOrders' && (
             <ManageOrders />
+          )}
+
+          {activeView === 'managePromotions' && (
+            <PromotionManager />
           )}
         </div>
         

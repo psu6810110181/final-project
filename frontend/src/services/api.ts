@@ -82,6 +82,21 @@ export interface Review {
   createdAt?: string;
 }
 
+export interface Promotion {
+  id: string;
+  title: string;
+  description: string;
+  discountType: 'PERCENTAGE' | 'FIXED_AMOUNT';
+  discountValue: number;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  isFlashSale: boolean;
+  products?: Product[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 // ---------------------------------------------------------
 // ✅ API Functions
 // ---------------------------------------------------------
@@ -288,6 +303,44 @@ export const getAllOrders = async () => {
 
 export const getOrderHistory = async () => {
   const response = await api.get('/orders/user/history');
+  return response.data;
+};
+
+// 12. Promotions
+export const getAllPromotions = async (): Promise<Promotion[]> => {
+  const response = await api.get('/promotions');
+  return response.data;
+};
+
+export const getActiveFlashSales = async (): Promise<Promotion[]> => {
+  const token = localStorage.getItem('token');
+  const response = await api.get('/promotions/flash-sales', {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+  return response.data;
+};
+
+export const getPromotionById = async (id: string): Promise<Promotion> => {
+  const response = await api.get(`/promotions/${id}`);
+  return response.data;
+};
+
+export const createPromotion = async (promotionData: Partial<Promotion>) => {
+  const response = await api.post('/promotions', promotionData);
+  return response.data;
+};
+
+export const updatePromotion = async (id: string, promotionData: Partial<Promotion>) => {
+  const response = await api.patch(`/promotions/${id}`, promotionData);
+  return response.data;
+};
+
+export const deletePromotion = async (id: string) => {
+  return await api.delete(`/promotions/${id}`);
+};
+
+export const togglePromotionStatus = async (id: string, isActive: boolean) => {
+  const response = await api.patch(`/promotions/${id}/toggle`, { isActive });
   return response.data;
 };
 
