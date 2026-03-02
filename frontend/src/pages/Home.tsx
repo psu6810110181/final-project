@@ -7,9 +7,8 @@ import type { Product, Category, Room, Feature, Color, Material, Size, Promotion
 import toast from 'react-hot-toast';
 import { useCart } from '../contexts/CartContext';
 import FlashSale from '../components/FlashSale';
-import TabBar from '../components/TabBar'; // ✅ นำเข้า TabBar
+import TabBar from '../components/TabBar';
 
-// ✅ สร้าง Type ใหม่ที่รวมเอาข้อมูลโปรโมชันเข้าไปใน Product ด้วย
 export type ProductWithPromo = Product & { promo?: Promotion };
 
 const getColorHex = (colorName: string) => {
@@ -29,17 +28,13 @@ const Home = () => {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [sizes, setSizes] = useState<Size[]>([]);
 
-  // Sections
   const [recommendedProducts, setRecommendedProducts] = useState<ProductWithPromo[]>([]);
   const [promoProducts, setPromoProducts] = useState<ProductWithPromo[]>([]);
   const [generalProducts, setGeneralProducts] = useState<ProductWithPromo[]>([]);
 
-  // State สำหรับ Bookmark
   const [bookmarks, setBookmarks] = useState<string[]>([]);
-  
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Filters
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
@@ -165,18 +160,29 @@ const Home = () => {
     }
     setBookmarks(updated);
     localStorage.setItem('bookmarks', JSON.stringify(updated));
-    // Trigger event เพื่อให้ TabBar อัปเดตตัวเลข
     window.dispatchEvent(new Event('bookmarksUpdated'));
   };
 
+  // ✅ ดึง Base URL จาก Environment (ถ้าไม่มีให้ใช้ localhost)
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+  // ✅ ปรับแก้ getImageUrl เพื่อดึงรูปจาก Backend
   const getImageUrl = (product: Product) => {
     try {
         const rawImages = product.image;
         let images: string[] = [];
-        if (Array.isArray(rawImages)) images = rawImages;
-        else if (typeof rawImages === 'string') images = rawImages.startsWith('[') ? JSON.parse(rawImages) : [rawImages];
-        if (images.length > 0) return images[0].startsWith('http') ? images[0] : `http://localhost:3000/uploads/products/${images[0]}`;
-    } catch (e) {}
+        if (Array.isArray(rawImages)) {
+            images = rawImages;
+        } else if (typeof rawImages === 'string') {
+            images = rawImages.startsWith('[') ? JSON.parse(rawImages) : [rawImages];
+        }
+        if (images.length > 0) {
+            const img = images[0];
+            return img.startsWith('http') ? img : `${API_BASE_URL}/uploads/products/${img}`;
+        }
+    } catch (e) {
+        console.error("Error parsing image:", e);
+    }
     return "https://placehold.co/400x300?text=No+Image";
   };
 
@@ -221,6 +227,7 @@ const Home = () => {
                     </button>
 
                     <div className="h-48 overflow-hidden bg-gray-100">
+                        {/* ✅ รูปภาพจะถูกดึงจาก Backend อย่างถูกต้อง */}
                         <img src={getImageUrl(product)} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                     </div>
                     <div className="p-4 flex flex-col flex-1">
@@ -265,7 +272,6 @@ const Home = () => {
   return (
     <div className="bg-gray-50 min-h-screen pb-10">
       
-      {/* ✅ เรียกใช้ TabBar Component */}
       <TabBar />
 
       {/* --- FILTER TAB BAR --- */}
