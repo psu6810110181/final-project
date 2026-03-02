@@ -1,68 +1,52 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom'; 
+import { useParams, Link, useNavigate } from 'react-router-dom'; 
 import { Star, Minus, Plus, ChevronRight, Loader } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
+import { useAuth } from '../contexts/AuthContext'; // ✅ Import useAuth
+import toast from 'react-hot-toast'; // ✅ Import toast สำหรับแจ้งเตือน
 import * as api from '../services/api'; 
 import type { Product } from '../services/api'; 
 import PromotionBadge from '../components/PromotionBadge';
 import PriceDisplay from '../components/PriceDisplay'; 
 
-
 const ProductDetail = () => {
   const { id } = useParams(); 
   const { addToCart } = useCart();
+  const { user } = useAuth(); // ✅ ดึงข้อมูล user
+  const navigate = useNavigate(); // ✅ ดึงฟังก์ชันนำทาง
 
   // --- STATE ---
   const [product, setProduct] = useState<Product | null>(null); 
   const [loading, setLoading] = useState(true); 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [installationQty, setInstallationQty] = useState(0); // ✅ เปลี่ยนเป็นตัวเลข
+  const [installationQty, setInstallationQty] = useState(0); 
   const [isAdding, setIsAdding] = useState(false); 
-  const [reviews, setReviews] = useState<any[]>([]); // ✅ เพิ่มเพื่อเก็บข้อมูลรีวิวจริง
-
-  // // --- Fetch Data ---
-  // useEffect(() => {
-  //   const fetchProduct = async () => {
-  //     if (!id) return;
-  //     try {
-  //       setLoading(true);
-  //       const data = await api.getProductById(id);
-  //       setProduct(data as any); 
-  //     } catch (error) {
-  //       console.error("Failed to load product", error);
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
-
-  //   fetchProduct();
-  // }, [id]);
+  const [reviews, setReviews] = useState<any[]>([]); 
 
   useEffect(() => {
-    const fetchProductAndReviews = async () => {
-      if (!id) return;
-      try {
-        setLoading(true);
-        
-        // ดึงทั้งข้อมูลสินค้าและรีวิวขนานกันไปเลยครับ
-        const [productData, reviewsData] = await Promise.all([
+    const fetchProductAndReviews = async () => {
+      if (!id) return;
+      try {
+        setLoading(true);
+        
+        // ดึงทั้งข้อมูลสินค้าและรีวิวขนานกัน
+        const [productData, reviewsData] = await Promise.all([
           api.getProductById(id),
-          api.getReviewsByProduct(id) // มั่นใจว่าใน api.ts มีฟังก์ชัน getReviewsByProduct นะครับ
+          api.getReviewsByProduct(id) 
         ]);
 
-        setProduct(productData as any); 
-        setReviews(reviewsData); // ✅ เซตค่ารีวิวที่ได้จาก Backend
-      } catch (error) {
-        console.error("Failed to load data", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+        setProduct(productData as any); 
+        setReviews(reviewsData); 
+      } catch (error) {
+        console.error("Failed to load data", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    fetchProductAndReviews();
-  }, [id]);
-
+    fetchProductAndReviews();
+  }, [id]);
 
   // --- Loading State ---
   if (loading) {
@@ -78,36 +62,41 @@ const ProductDetail = () => {
   const images: string[] = (() => {
     if (!product) return [];
     
-    // ดึงข้อมูลจาก image หรือ images
     const raw = (product as any).image || (product as any).images;
     if (!raw) return ["https://via.placeholder.com/600x400?text=No+Image"];
 
-    // ถ้าเป็น Array (เช่น ["p1.jpg", "p2.jpg", "p3.jpg"])
     if (Array.isArray(raw)) return raw;
 
-    // ถ้าเป็น String (เผื่อเป็น JSON string)
     if (typeof raw === 'string') {
       if (raw.startsWith('[') && raw.endsWith(']')) {
         try { return JSON.parse(raw); } catch (e) { return [raw]; }
       }
-      return [raw]; // ถ้าเป็น string ชื่อไฟล์เดียว ก็จะกลายเป็น ["sofa.jpg"]
+      return [raw]; 
     }
     return ["https://via.placeholder.com/600x400?text=Format+Error"];
   })();
 
+  // ✅ ปรับเปลี่ยนให้ดึง Base URL จาก Environment Variable แทนการ Hardcode (หากไม่มีให้ใช้ localhost)
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
   const getImageUrl = (img: string) => {
      if (!img) return "https://via.placeholder.com/600x400?text=No+Path";
      if (img.startsWith('http')) return img;
-     return `http://localhost:3000/uploads/products/${img}`;
+     return `${API_BASE_URL}/uploads/products/${img}`;
    };
 
   // --- ฟังก์ชันกดเพิ่มลงตะกร้า ---
   const handleAddToCart = async () => {
+    // ✅ เช็คว่าล็อกอินหรือยัง
+    if (!user) {
+       toast.error("กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้าลงตะกร้า");
+       navigate('/login');
+       return;
+    }
+
     if (!id) return; 
 
     try {
         setIsAdding(true);
-        // ✅ ส่งตัวเลขจำนวนที่ติดตั้งไปด้วย
         await addToCart(id, quantity, installationQty); 
     } catch (error) {
         console.error(error);
@@ -117,9 +106,9 @@ const ProductDetail = () => {
   }; 
 
   // คำนวณคะแนนเฉลี่ย
-const averageRating = reviews.length > 0 
-  ? (reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviews.length).toFixed(1)
-  : "0.0";
+  const averageRating = reviews.length > 0 
+    ? (reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviews.length).toFixed(1)
+    : "0.0";
 
   return (
     <div className="bg-gray-50 min-h-screen pb-10 font-sans">
@@ -145,7 +134,6 @@ const averageRating = reviews.length > 0
               {images.map((img, index) => (
                 <button 
                   key={index}
-                  // ✅ เปลี่ยนรูปหลักเมื่อเอาเมาส์วาง หรือ คลิก
                   onClick={() => setSelectedImageIndex(index)}
                   onMouseEnter={() => setSelectedImageIndex(index)}
                   className={`w-full aspect-square rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 
@@ -155,7 +143,6 @@ const averageRating = reviews.length > 0
                     src={getImageUrl(img)} 
                     alt={`preview-${index}`} 
                     className="w-full h-full object-cover" 
-                    // ✅ กันรูปพัง
                     onError={(e) => { (e.target as HTMLImageElement).src = "https://via.placeholder.com/150"; }}
                   />
                 </button>
@@ -193,7 +180,6 @@ const averageRating = reviews.length > 0
                 <Star 
                   key={i} 
                   size={16} 
-                  // ถ้า index น้อยกว่าคะแนนเฉลี่ย ให้ระบายสีเหลือง
                   className={i < Math.round(Number(averageRating)) 
                     ? "fill-yellow-400 text-yellow-400" 
                     : "text-gray-300"} 
@@ -207,7 +193,7 @@ const averageRating = reviews.length > 0
             {/* Options */}
             <div className="space-y-5 border-t border-gray-100 pt-5">
               
-               {/* ✅ Installation Option แบบตัวเลข */}
+               {/* Installation Option แบบตัวเลข */}
                <div>
                   <span className="font-bold text-gray-800 block mb-2">บริการเสริม</span>
                   <div className="flex items-center justify-between border border-gray-200 p-3 rounded-lg w-full sm:w-80">
@@ -236,7 +222,6 @@ const averageRating = reviews.length > 0
                         onClick={() => {
                           const newQty = Math.max(1, quantity - 1);
                           setQuantity(newQty);
-                          // ✅ ถ้าลดจำนวนสินค้าจนน้อยกว่าจำนวนติดตั้ง ให้ลดจำนวนติดตั้งลงมาให้เท่ากัน
                           if (installationQty > newQty) setInstallationQty(newQty);
                         }} 
                         className="p-3 hover:bg-gray-100 transition-colors"
