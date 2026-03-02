@@ -5,22 +5,23 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // ✅ 1. เพิ่ม { rawBody: true } ตรงนี้ครับ เพื่อให้ Stripe สามารถอ่านข้อมูลและอัปเดตสถานะเป็น PAID ได้
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
   
-  // 1. ✅ เปิดให้ Frontend ยิง API เข้ามาได้ (CORS)
+  // 2. เปิดให้ Frontend ยิง API เข้ามาได้ (CORS)
   app.enableCors({
-    origin: '*', // หรือระบุ 'http://localhost:5173' เพื่อความปลอดภัยสูงสุด
+    origin: '*', 
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
 
-  // 2. ✅ เปิดใช้งาน DTO Validation (สำคัญมาก!)
+  // 3. เปิดใช้งาน DTO Validation
   app.useGlobalPipes(new ValidationPipe({
-    whitelist: true, // ตัดตัวแปรขยะที่ไม่ได้อยู่ใน DTO ทิ้งอัตโนมัติ
-    transform: true, // แปลง Type อัตโนมัติ (เช่น string -> number)
+    whitelist: true, 
+    transform: true, 
   }));
 
-  // 3. ✅ ตั้งค่าให้เข้าถึงไฟล์รูปภาพได้ (ถ้าไม่ได้ใช้ ServeStaticModule ใน app.module)
+  // 4. ตั้งค่าให้เข้าถึงไฟล์รูปภาพได้
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/uploads/',
   });
