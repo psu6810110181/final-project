@@ -23,7 +23,7 @@ export class OrdersService {
 
   // ✅ ฟังก์ชันช่วยสร้างลิงก์จ่ายเงิน Stripe
   async createStripeSession(orderId: string, totalAmount: number, userId: string) {
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = process.env.FRONTEND_URL;
     return await this.stripe.checkout.sessions.create({
       payment_method_types: ['card', 'promptpay'], 
       line_items: [{
