@@ -104,7 +104,7 @@ const Policy = () => {
             <p className="text-gray-800 font-medium flex items-center gap-2">
               <span>📧 อีเมล:</span> 
               <a href="mailto:homealright@gmail.com" className="text-[#148F96] hover:text-[#0f6c72] hover:underline transition-colors">
-                homealright@gmail.com
+                homealright.official@gmail.com
               </a>
             </p>
           </div>

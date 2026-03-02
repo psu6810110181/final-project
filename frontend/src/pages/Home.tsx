@@ -323,9 +323,6 @@ const Home = () => {
           <span className="text-[#148F96] bg-white px-3 py-1 rounded-full text-xs font-bold w-fit mb-4">NEW COLLECTION</span>
           <h1 className="text-4xl md:text-6xl font-bold mb-4">แต่งบ้านในฝัน <br/>ให้เป็นจริง</h1>
           <p className="text-gray-200 mb-8 max-w-lg">พบกับเฟอร์นิเจอร์ดีไซน์สวย คุณภาพเยี่ยม ที่คัดสรรมาเพื่อคุณโดยเฉพาะ</p>
-          <button className="bg-[#D65A31] hover:bg-[#b54622] text-white px-8 py-3 rounded-full font-bold w-fit transition-transform hover:scale-105">
-            ช้อปเลย
-          </button>
         </div>
       </div>
 
