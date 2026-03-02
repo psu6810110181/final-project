@@ -81,7 +81,7 @@ const ProductDetail = () => {
   const getImageUrl = (img: string) => {
      if (!img) return "https://via.placeholder.com/600x400?text=No+Path";
      if (img.startsWith('http')) return img;
-     return `${API_BASE_URL}/uploads/products/${img}`;
+     return `${API_BASE_URL}/uploads/${img}`;
    };
 
   // --- ฟังก์ชันกดเพิ่มลงตะกร้า ---
