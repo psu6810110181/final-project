@@ -16,6 +16,7 @@ import ReviewPage from './pages/Review';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import ProtectedRoute from './components/ProtectedRoute';
+import HomepagePromotion from './pages/HomepagePromotion'; // นำเข้าหน้าใหม่
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
           <div className="min-h-screen bg-gray-50">
             <Routes>  
               <Route path="/home" element={<Home />} />
+              <Route path="/promotions" element={<HomepagePromotion />} />
               <Route path="/" element={<Home />} /> {/* เพิ่ม path ว่างไว้ด้วยกันหน้าขาวเวลาเข้าเว็บ */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
