@@ -26,22 +26,28 @@ const ReviewPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // --- FETCH DATA ---
-  useEffect(() => {
-    const fetchHistory = async () => {
-      try {
-        setLoading(true);
-        // ดึงข้อมูลออเดอร์ทั้งหมดของ User
-        const data = await (api as any).getMyOrders();
-        
-        if (data && Array.isArray(data)) {
-          // เอาออเดอร์ที่ไม่ถูก cancelled
-          const availableOrders = data.filter(
-            (order: any) => order.status?.toLowerCase() !== 'cancelled'
-          );
+  // แยกฟังก์ชันออกมาเพื่อให้เรียกซ้ำได้หลังจากรีวิวสำเร็จ
+  const fetchHistory = async () => {
+    try {
+      setLoading(true);
+      // ดึงข้อมูลออเดอร์ทั้งหมดของ User (รวมข้อมูลรีวิวที่ Backend ส่งมาด้วย)
+      const data = await (api as any).getMyOrders();
+      
+      if (data && Array.isArray(data)) {
+        // เอาออเดอร์ที่ไม่ถูก cancelled
+        const availableOrders = data.filter(
+          (order: any) => order.status?.toLowerCase() !== 'cancelled'
+        );
 
-          // แตกรายการ items ออกมาเป็นชิ้นๆ
-          const itemsToReview: ReviewItem[] = availableOrders.flatMap((order: any) => 
-            (order.items || []).map((item: any) => ({
+        // แตกรายการ items ออกมาเป็นชิ้นๆ และกรองตัวที่รีวิวแล้วออก
+        const itemsToReview: ReviewItem[] = availableOrders.flatMap((order: any) => {
+          // ดึงไอดีของสินค้าในออเดอร์นี้ที่ถูกรีวิวไปแล้ว
+          const reviewedProductIds = (order.reviews || []).map((r: any) => r.product?.id);
+
+          return (order.items || [])
+            // กรองเอาเฉพาะสินค้าที่ไอดียังไม่อยู่ใน reviewedProductIds
+            .filter((item: any) => !reviewedProductIds.includes(item.product?.id))
+            .map((item: any) => ({
               id: item.id,
               quantity: item.quantity,
               product: {
@@ -51,17 +57,19 @@ const ReviewPage = () => {
               },
               orderDate: order.orderDate || order.createdAt,
               orderId: order.id
-            }))
-          );
+            }));
+        });
 
-          setPurchasedItems(itemsToReview);
-        }
-      } catch (error) {
-        console.error("Failed to fetch history:", error);
-      } finally {
-        setLoading(false);
+        setPurchasedItems(itemsToReview);
       }
-    };
+    } catch (error) {
+      console.error("Failed to fetch history:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchHistory();
   }, []);
 
@@ -75,7 +83,6 @@ const ReviewPage = () => {
 
     try {
       setIsSubmitting(true);
-      // 🔥 แก้ไขตรงนี้: เพิ่มการส่ง orderId ไปด้วย เพื่อให้ตรงกับ Backend
       await (api as any).createReview({
         productId: selectedProduct.product.id,
         orderId: selectedProduct.orderId, 
@@ -87,6 +94,10 @@ const ReviewPage = () => {
       setSelectedProduct(null); // กลับหน้าเลือกสินค้า
       setRating(0);
       setComment("");
+      
+      // โหลดข้อมูลประวัติการสั่งซื้อใหม่ เพื่อให้สินค้าที่เพิ่งรีวิวหายไปจากรายการ
+      fetchHistory();
+      
     } catch (error: any) {
       console.error("Submit review failed", error);
       const errorMsg = error.response?.data?.message || "เกิดข้อผิดพลาดในการส่งรีวิว";
