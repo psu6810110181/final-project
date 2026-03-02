@@ -37,6 +37,12 @@ export class User {
   @Column({ length: 15, default: 'user' })
   role: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  resetPasswordToken: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  resetPasswordExpires: Date;
+
   @CreateDateColumn()
   createdAt: Date;
 

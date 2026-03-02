@@ -77,7 +77,7 @@ const Login = () => {
 
           <div className="mt-6 flex flex-col items-center gap-2 text-xs">
             <p className="text-gray-500">ยังไม่มีบัญชีผู้ใช้? <Link to="/register" className="text-blue-500 font-bold">สมัครสมาชิก</Link></p>
-            <p className="text-gray-400">ลืมรหัสผ่านใช่ไหม? <span className="text-blue-500 cursor-pointer">กดที่นี่</span></p>
+            <p className="text-gray-400">ลืมรหัสผ่านใช่ไหม? <Link to="/forgot-password" className="text-blue-500 cursor-pointer font-bold">กดที่นี่</Link></p>
           </div>
         </div>
       </div>

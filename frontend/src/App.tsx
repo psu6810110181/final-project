@@ -13,6 +13,8 @@ import { AuthProvider } from './contexts/AuthContext';
 import Policy from './pages/Policy';
 import { Toaster } from 'react-hot-toast';
 import ReviewPage from './pages/Review';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 function App() {
   return (
@@ -44,7 +46,8 @@ function App() {
               <Route path="/policy" element={<Policy />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/admin" element={<AdminDashboard />} />
-              
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password/:token" element={<ResetPassword />} />
               {/* ✅ เปลี่ยนมาใช้ ReviewPage ตามฝั่ง UX/UI */}
               <Route path="/review" element={<ReviewPage />} />
             </Routes>
