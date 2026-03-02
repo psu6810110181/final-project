@@ -21,47 +21,29 @@ const ProductDetail = () => {
   const [isAdding, setIsAdding] = useState(false); 
   const [reviews, setReviews] = useState<any[]>([]); // ✅ เพิ่มเพื่อเก็บข้อมูลรีวิวจริง
 
-  // // --- Fetch Data ---
-  // useEffect(() => {
-  //   const fetchProduct = async () => {
-  //     if (!id) return;
-  //     try {
-  //       setLoading(true);
-  //       const data = await api.getProductById(id);
-  //       setProduct(data as any); 
-  //     } catch (error) {
-  //       console.error("Failed to load product", error);
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
-
-  //   fetchProduct();
-  // }, [id]);
-
   useEffect(() => {
-    const fetchProductAndReviews = async () => {
-      if (!id) return;
-      try {
-        setLoading(true);
-        
+    const fetchProductAndReviews = async () => {
+      if (!id) return;
+      try {
+        setLoading(true);
+        
         // ดึงทั้งข้อมูลสินค้าและรีวิวขนานกันไปเลยครับ
-        const [productData, reviewsData] = await Promise.all([
+        const [productData, reviewsData] = await Promise.all([
           api.getProductById(id),
           api.getReviewsByProduct(id) // มั่นใจว่าใน api.ts มีฟังก์ชัน getReviewsByProduct นะครับ
         ]);
 
-        setProduct(productData as any); 
+        setProduct(productData as any); 
         setReviews(reviewsData); // ✅ เซตค่ารีวิวที่ได้จาก Backend
-      } catch (error) {
-        console.error("Failed to load data", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+      } catch (error) {
+        console.error("Failed to load data", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    fetchProductAndReviews();
-  }, [id]);
+    fetchProductAndReviews();
+  }, [id]);
 
 
   // --- Loading State ---
@@ -95,10 +77,13 @@ const ProductDetail = () => {
     return ["https://via.placeholder.com/600x400?text=Format+Error"];
   })();
 
+  // ✅ แก้ไขฟังก์ชัน getImageUrl ตรงนี้
   const getImageUrl = (img: string) => {
      if (!img) return "https://via.placeholder.com/600x400?text=No+Path";
      if (img.startsWith('http')) return img;
-     return `http://localhost:3000/uploads/products/${img}`;
+     
+     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+     return `${baseUrl}/uploads/products/${img}`;
    };
 
   // --- ฟังก์ชันกดเพิ่มลงตะกร้า ---
@@ -117,9 +102,9 @@ const ProductDetail = () => {
   }; 
 
   // คำนวณคะแนนเฉลี่ย
-const averageRating = reviews.length > 0 
-  ? (reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviews.length).toFixed(1)
-  : "0.0";
+  const averageRating = reviews.length > 0 
+    ? (reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviews.length).toFixed(1)
+    : "0.0";
 
   return (
     <div className="bg-gray-50 min-h-screen pb-10 font-sans">

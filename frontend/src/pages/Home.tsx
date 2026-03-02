@@ -135,7 +135,10 @@ const Home = () => {
         if (images.length > 0) {
             const img = images[0];
             if (img.startsWith('http')) return img;
-            return `http://localhost:3000/uploads/products/${img}`;
+            
+            // ✅ แก้ไขตรงนี้: ดึงค่า baseUrl จาก .env
+            const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+            return `${baseUrl}/uploads/products/${img}`;
         }
     } catch (e) {
         console.error(e);

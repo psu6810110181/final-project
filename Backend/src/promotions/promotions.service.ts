@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, LessThanOrEqual, MoreThanOrEqual } from 'typeorm'; // ✅ นำเข้า Operator ที่ถูกต้อง
 import { Promotion } from './promotion.entity';
 
 @Injectable()
@@ -23,8 +23,8 @@ export class PromotionsService {
       where: {
         isActive: true,
         isFlashSale: true,
-        startDate: { $lte: now } as any,
-        endDate: { $gte: now } as any,
+        startDate: LessThanOrEqual(now), // ✅ เปลี่ยนเป็น Syntax ของ TypeORM
+        endDate: MoreThanOrEqual(now),   // ✅ เปลี่ยนเป็น Syntax ของ TypeORM
       },
       relations: ['products'],
       order: { createdAt: 'DESC' },
@@ -79,11 +79,13 @@ export class PromotionsService {
     // อัปเดตความสัมพันธ์กับ products ถ้ามีการเปลี่ยนแปลง
     if (productIds !== undefined) {
       // ลบความสัมพันธ์เก่าทั้งหมด
-      await this.promotionsRepository
-        .createQueryBuilder()
-        .relation(Promotion, 'products')
-        .of(id)
-        .remove(promotion.products.map(p => p.id));
+      if (promotion.products && promotion.products.length > 0) {
+        await this.promotionsRepository
+          .createQueryBuilder()
+          .relation(Promotion, 'products')
+          .of(id)
+          .remove(promotion.products.map(p => p.id));
+      }
       
       // เพิ่มความสัมพันธ์ใหม่
       if (productIds.length > 0) {
