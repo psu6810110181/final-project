@@ -1,23 +1,4 @@
-import axios from 'axios';
-
-// URL ของ Backend (NestJS)
-const API_URL = 'http://localhost:3000';
-
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Interceptor: แนบ Token ไปกับทุก Request ถ้ามี Token ใน localStorage
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+import api from '../api/axios'; // ✅ ดึง Axios Instance ที่ถูกตั้งค่าไว้แล้วมาใช้งานแทน
 
 // ---------------------------------------------------------
 // ✅ Interfaces
