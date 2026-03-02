@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import * as api from '../services/api';
+import myQrCodeImg from '../assets/my-qrcode.jpg';
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -257,8 +258,9 @@ const Cart = () => {
             {/* กล่องซ้าย: QR Code */}
             <div className="bg-white flex-1 rounded-3xl p-10 flex flex-col items-center text-center shadow-2xl">
                <h3 className="text-xl font-bold text-gray-800 mb-8">สแกน QR เพื่อชำระเงิน</h3>
-               <div className="w-56 h-56 bg-white rounded-2xl flex items-center justify-center border-4 border-gray-50 mb-8 shadow-inner overflow-hidden">
-                  <QrCode size={180} className="text-gray-800" />
+               <div className="w-56 h-56 bg-white rounded-2xl flex items-center justify-center border-4 border-gray-50 mb-8 shadow-inner overflow-hidden p-2">
+                 {/* เปลี่ยนจาก Icon QrCode เป็น img tag */}
+                 <img src={myQrCodeImg} alt="Payment QR Code" className="w-full h-full object-contain" />
                </div>
                <div className="text-gray-400 text-sm mb-1 uppercase tracking-widest">ยอดชำระสุทธิ</div>
                <div className="text-4xl font-black text-[#D65A31]">฿{total.toLocaleString()}</div>
