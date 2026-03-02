@@ -6,6 +6,7 @@ import * as api from '../services/api';
 import type { Product, Promotion } from '../services/api';
 import { useCart } from '../contexts/CartContext';
 import toast from 'react-hot-toast';
+import TabBar from '../components/TabBar'; // ✅ Import TabBar
 
 const HomepagePromotion = () => {
   const [promoProducts, setPromoProducts] = useState<Product[]>([]);
@@ -17,10 +18,7 @@ const HomepagePromotion = () => {
     const fetchPromotions = async () => {
       try {
         setLoading(true);
-        // ดึงโปรโมชันที่เปิดใช้งานอยู่
         const promotions: Promotion[] = await api.getActiveFlashSales(); 
-        
-        // ดึงสินค้าทั้งหมดที่อยู่ในโปรโมชันออกมา
         let productsOnSale: Product[] = [];
         promotions.forEach(promo => {
           if (promo.products) {
@@ -28,7 +26,6 @@ const HomepagePromotion = () => {
           }
         });
 
-        // ลบสินค้าที่ซ้ำกันออก และจำกัดที่ 30 ชิ้น
         const uniqueProducts = Array.from(new Set(productsOnSale.map(p => p.id)))
           .map(id => productsOnSale.find(p => p.id === id)!)
           .slice(0, 30); 
@@ -74,14 +71,12 @@ const HomepagePromotion = () => {
   if (loading) return <div className="min-h-screen flex justify-center items-center"><Loader className="animate-spin text-[#148F96]" size={48} /></div>;
 
   return (
-    <div className="bg-gray-50 min-h-screen pb-10 pt-6">
-      <div className="container mx-auto px-4">
-        {/* Tab Bar */}
-        <div className="flex gap-4 mb-6 border-b pb-2">
-            <Link to="/" className="text-gray-500 font-medium hover:text-[#148F96] transition">สินค้าทั้งหมด</Link>
-            <div className="text-[#148F96] font-bold border-b-2 border-[#148F96] pb-2">สินค้าโปรโมชัน</div>
-        </div>
+    <div className="bg-gray-50 min-h-screen pb-10">
+      
+      {/* ✅ เรียกใช้ TabBar */}
+      <TabBar />
 
+      <div className="container mx-auto px-4 mt-6">
         <h1 className="text-3xl font-bold mb-6 text-gray-800">สินค้าโปรโมชัน (สูงสุด 30 รายการ)</h1>
         
         {promoProducts.length === 0 ? (

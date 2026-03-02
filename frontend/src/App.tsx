@@ -17,6 +17,8 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import ProtectedRoute from './components/ProtectedRoute';
 import HomepagePromotion from './pages/HomepagePromotion'; // นำเข้าหน้าใหม่
+import BookmarkPage from './pages/Bookmark';
+
 
 function App() {
   return (
@@ -40,6 +42,7 @@ function App() {
             <Routes>  
               <Route path="/home" element={<Home />} />
               <Route path="/promotions" element={<HomepagePromotion />} />
+              <Route path="/bookmarks" element={<BookmarkPage />} />
               <Route path="/" element={<Home />} /> {/* เพิ่ม path ว่างไว้ด้วยกันหน้าขาวเวลาเข้าเว็บ */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
