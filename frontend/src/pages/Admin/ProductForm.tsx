@@ -67,6 +67,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
     fetchDropdownData();
   }, []);
 
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
   useEffect(() => {
     if (editingProductId) {
       fetchProductDetails(editingProductId);
@@ -74,8 +76,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
       resetForm();
     }
   }, [editingProductId]);
-
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   const fetchProductDetails = async (id: string) => {
     try {
@@ -86,13 +86,20 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
       setPrice(String(productDetails.price || ""));
       setDescription(productDetails.description || "");
       
-      // จัดการ URL รูปภาพเก่าที่ดึงมาจาก Backend
+      // ✅ 1. จัดการ URL รูปภาพหลักให้โหลดได้ชัวร์ๆ (ดักจับเผื่อติดรูปแบบ Array มา)
       let fetchedImageUrl = "";
       if (productDetails.image) {
-         if (productDetails.image.startsWith('http')) {
-             fetchedImageUrl = productDetails.image;
-         } else if (!productDetails.image.startsWith('blob:')) {
-             fetchedImageUrl = `${API_BASE_URL}/uploads/${productDetails.image}`;
+         let imgStr = productDetails.image;
+         if (typeof imgStr === 'string' && imgStr.startsWith('[')) {
+             try { imgStr = JSON.parse(imgStr)[0]; } catch(e){}
+         } else if (Array.isArray(imgStr)) {
+             imgStr = imgStr[0];
+         }
+         
+         if (imgStr && imgStr.startsWith('http')) {
+             fetchedImageUrl = imgStr;
+         } else if (imgStr && !imgStr.startsWith('blob:')) {
+             fetchedImageUrl = `${API_BASE_URL}/uploads/${imgStr}`;
          }
       }
       setImageUrl(fetchedImageUrl);
@@ -101,11 +108,22 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
       setRoomId(productDetails.room || "");
       setSelectedFeatures(productDetails.features || []);
 
+      // ✅ 2. จัดการ URL รูปภาพของตัวเลือก (Variants) ให้มี Path /uploads/ 
       if (productDetails.variants && productDetails.variants.length > 0) {
-        setVariants(productDetails.variants.map((v: any) => ({
-          color: v.color || "", material: v.material || "", size: v.size || "",
-          price: String(v.price || ""), stock: String(v.stock || ""), imageUrl: v.image || "" 
-        })));
+        setVariants(productDetails.variants.map((v: any) => {
+          let vImageUrl = "";
+          if (v.image) {
+            if (v.image.startsWith('http') || v.image.startsWith('blob:')) {
+              vImageUrl = v.image;
+            } else {
+              vImageUrl = `${API_BASE_URL}/uploads/${v.image}`;
+            }
+          }
+          return {
+            color: v.color || "", material: v.material || "", size: v.size || "",
+            price: String(v.price || ""), stock: String(v.stock || ""), imageUrl: vImageUrl 
+          };
+        }));
       } else {
         setVariants([{ color: "", material: "", size: "", price: "", stock: "" }]);
       }
@@ -172,19 +190,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
       if (roomId) formData.append('room', roomId);
       if (description) formData.append('description', description);
 
-      // แนบไฟล์รูปหลัก
       if (imageFile) {
          formData.append('image', imageFile);
       }
 
-      // ✅ [เพิ่มใหม่] นำไฟล์ภาพของแต่ละ Variant ใส่เข้าไปใน FormData โดยใช้ key แบบมี index ต่อท้าย
       variants.forEach((variant, index) => {
           if (variant.imageFile) {
               formData.append(`variantImage_${index}`, variant.imageFile);
           }
       });
 
-      // สำหรับ Array/Object หากส่งผ่าน FormData ต้องแปลงเป็น JSON String
       if (selectedFeatures.length > 0) {
           formData.append('features', JSON.stringify(selectedFeatures)); 
       }
@@ -254,7 +269,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
   return (
     <article style={{ maxWidth: '1000px', margin: '0 auto', padding: '10px 0', fontFamily: "'Prompt', sans-serif" }}>
       
-      {/* 🚀 Semantic Header */}
       <header style={{ 
         background: 'linear-gradient(to right, #ffffff, #f8fafc)',
         padding: '24px 32px',
@@ -288,17 +302,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
         </div>
       </header>
 
-      {/* 🚀 Semantic Form */}
       <form onSubmit={handleConfirm} aria-labelledby="form-main-heading">
         
-        {/* Section 1: ข้อมูลทั่วไป & รูปภาพ */}
         <section style={cardStyle} aria-labelledby="general-info-heading">
           <header style={{ borderBottom: `1px solid ${colors.border}`, paddingBottom: '12px', marginBottom: '20px' }}>
             <h3 id="general-info-heading" style={{ margin: 0, fontSize: '18px', color: colors.textMain }}>📦 ข้อมูลทั่วไป</h3>
           </header>
           
           <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap' }}>
-            {/* อัปโหลดรูปภาพหลัก */}
             <div style={{ flex: '1 1 300px', maxWidth: '350px' }}>
               <label htmlFor="product-image" style={labelStyle}>รูปภาพหลักของสินค้า <span style={{color: colors.danger}} aria-label="จำเป็น">*</span></label>
               <input type="file" id="product-image" accept="image/*" style={{ display: 'none' }} onChange={handleImageChange} />
@@ -317,7 +328,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
               </label>
             </div>
 
-            {/* ฟิลด์ข้อมูล */}
             <div style={{ flex: '2 1 400px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'flex', gap: '16px' }}>
                 <div style={{ flex: 2 }}>
@@ -347,7 +357,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
                 </div>
               </div>
               
-              {/* 🚀 Semantic Fieldset สำหรับ Checkbox Group */}
               <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
                 <legend style={labelStyle}>✨ คุณสมบัติพิเศษ</legend>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', padding: '12px', background: colors.bgLight, borderRadius: '10px', border: `1px solid ${colors.border}` }}>
@@ -375,7 +384,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
           </div>
         </section>
 
-        {/* Section 2: รายละเอียด */}
         <section style={cardStyle} aria-labelledby="details-heading">
           <header style={{ marginBottom: '16px' }}>
             <h3 id="details-heading" style={{ margin: 0, fontSize: '18px', color: colors.textMain }}>📝 รายละเอียดสินค้า</h3>
@@ -390,7 +398,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
           />
         </section>
 
-        {/* Section 3: ตัวเลือกสินค้า (Variants) */}
         <section style={cardStyle} aria-labelledby="variants-heading">
           <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${colors.border}`, paddingBottom: '12px', marginBottom: '20px' }}>
             <h3 id="variants-heading" style={{ margin: 0, fontSize: '18px', color: colors.textMain }}>⚙️ จัดการตัวเลือกสินค้า (Variants)</h3>
@@ -475,7 +482,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
           </button>
         </section>
 
-        {/* 🚀 Semantic Footer (Action Buttons) */}
         <footer style={{ display: "flex", justifyContent: "flex-end", gap: "16px", padding: '10px 0 40px 0' }}>
           {editingProductId && (
             <button type="button" onClick={onCancel} style={{ padding: "14px 28px", background: colors.bgWhite, color: colors.textMain, border: `1px solid ${colors.border}`, borderRadius: "10px", cursor: "pointer", fontSize: "15px", fontWeight: "600" }}>
