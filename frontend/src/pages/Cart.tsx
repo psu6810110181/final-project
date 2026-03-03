@@ -1,15 +1,19 @@
 import { useState, useEffect } from 'react';
-import { Trash2, Minus, Plus, MapPin, X, CreditCard } from 'lucide-react'; 
+import { Trash2, Minus, Plus, MapPin, X, CreditCard, Upload, CheckCircle, QrCode } from 'lucide-react'; 
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import * as api from '../services/api';
 
+// ✅ นำเข้าไลบรารีสร้าง QR Code PromptPay ตามราคา
+import { QRCodeSVG } from 'qrcode.react';
+import generatePayload from 'promptpay-qr';
+
 // นำเข้า Stripe
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
-// โหลด Stripe Promise ด้วย Public Key ของคุณ (สามารถดึงจาก .env ได้)
+// โหลด Stripe Promise ด้วย Public Key
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_your_stripe_public_key');
 
 // Component สำหรับฟอร์มกรอกบัตร Stripe
@@ -24,12 +28,10 @@ const StripePaymentForm = ({ address, handlePaymentSuccess, total }: { address: 
 
     setIsProcessing(true);
     try {
-      // 1. เรียก Backend เพื่อทำการ Checkout และรับ clientSecret กลับมา (ต้องปรับ backend ให้รองรับ Stripe Intent)
       const checkoutRes = await api.checkout(address);
-      const clientSecret = checkoutRes.clientSecret; // สมมติว่า Backend ส่ง clientSecret กลับมา
+      const clientSecret = checkoutRes.clientSecret; 
 
       if (clientSecret) {
-        // 2. ให้ Stripe ประมวลผลการจ่ายเงิน
         const result = await stripe.confirmCardPayment(clientSecret, {
           payment_method: {
             card: elements.getElement(CardElement)!,
@@ -42,7 +44,6 @@ const StripePaymentForm = ({ address, handlePaymentSuccess, total }: { address: 
           handlePaymentSuccess();
         }
       } else {
-        // กรณีเชื่อมต่อแค่ Backend เพื่อบันทึก Order (Mock)
         handlePaymentSuccess();
       }
     } catch (error: any) {
@@ -70,6 +71,9 @@ const StripePaymentForm = ({ address, handlePaymentSuccess, total }: { address: 
         <CreditCard size={24} />
         {isProcessing ? "กำลังดำเนินการ..." : `ชำระเงิน ฿${total.toLocaleString()}`}
       </button>
+      <p className="mt-2 text-[11px] text-gray-400 leading-relaxed text-center">
+        *ข้อมูลบัตรของคุณถูกเข้ารหัสและส่งไปยัง Stripe โดยตรง <br/>เราไม่ทำการเก็บข้อมูลบัตรเครดิตใดๆ ของคุณไว้ในระบบ
+      </p>
     </form>
   );
 };
@@ -80,6 +84,11 @@ const Cart = () => {
   const [address, setAddress] = useState("");
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [tempAddress, setTempAddress] = useState("");
+  
+  // สถานะเพิ่มเติมสำหรับตัวเลือกการจ่ายเงิน
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'qr'>('card');
+  const [slipFile, setSlipFile] = useState<File | null>(null);
+  const [isProcessingQR, setIsProcessingQR] = useState(false);
 
   const { cartItems, removeFromCart, updateCartItem, cartTotal, fetchCart } = useCart();
   const { user } = useAuth();
@@ -87,7 +96,7 @@ const Cart = () => {
   // -- การคำนวณจำนวนชิ้นและค่าบริการ --
   const totalInstallQty = cartItems.reduce((sum: number, item: any) => sum + (item.installationQty || 0), 0);
   
-  // ✅ คำนวณจำนวนชิ้นสินค้าทั้งหมด เพื่อเช็คระยะเวลาจัดส่ง
+  // คำนวณจำนวนชิ้นสินค้าทั้งหมด เพื่อเช็คระยะเวลาจัดส่ง
   const totalProductQty = cartItems.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
   const deliveryEstimationText = totalProductQty >= 4 ? "5-7 วัน" : "3 วัน";
 
@@ -98,6 +107,10 @@ const Cart = () => {
 
   const shippingFee = cartItems.length > 0 ? 150 : 0; 
   const total = cartTotal + installationFee + shippingFee;
+
+  // ✅ สร้างข้อมูล QR Code Payload ตามราคาสุทธิ (total)
+  const promptPayID = "0812345678"; // 👈 เปลี่ยนเป็นเบอร์โทรศัพท์หรือเลขบัตรประชาชนพร้อมเพย์ของคุณ
+  const qrPayload = generatePayload(promptPayID, { amount: total });
 
   useEffect(() => {
     const savedAddress = localStorage.getItem('delivery_address');
@@ -146,8 +159,26 @@ const Cart = () => {
     alert("สั่งซื้อและชำระเงินเรียบร้อย!");
     setShowPaymentModal(false);
     localStorage.removeItem('delivery_address');
+    setSlipFile(null);
     await fetchCart();
     navigate('/orders');
+  };
+
+  // ฟังก์ชัน Checkout สำหรับอัปโหลดสลิป
+  const handleQRCheckout = async () => {
+    if (!slipFile) return alert("กรุณาอัปโหลดสลิปการโอนเงิน");
+    try {
+      setIsProcessingQR(true);
+      const checkoutRes = await api.checkout(address);
+      const orderId = checkoutRes.id || checkoutRes.orderId;
+      await api.uploadSlip(orderId, slipFile);
+      
+      handlePaymentSuccess();
+    } catch (error: any) {
+      alert(error.response?.data?.message || "เกิดข้อผิดพลาดในการสั่งซื้อ");
+    } finally {
+      setIsProcessingQR(false);
+    }
   };
 
   return (
@@ -269,7 +300,7 @@ const Cart = () => {
                 <span className="text-[#D65A31]">฿{total.toLocaleString()}</span>
               </div>
 
-              {/* ✅ ส่วนแจ้งเตือนระยะเวลาการจัดส่ง */}
+              {/* แจ้งเตือนระยะเวลาการจัดส่ง */}
               {cartItems.length > 0 && (
                 <div className="mb-6 p-4 bg-orange-50 border border-orange-100 rounded-xl text-xs text-[#D65A31] leading-relaxed">
                   <span className="font-bold text-sm block mb-1">🚚 ระยะเวลาจัดส่งโดยประมาณ:</span>
@@ -289,32 +320,77 @@ const Cart = () => {
         </div>
       </div>
 
-      {/* --- Modal ชำระเงินด้วย Stripe --- */}
+      {/* --- Modal ชำระเงิน --- */}
       {showPaymentModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#4A6365]/90 backdrop-blur-md overflow-y-auto">
           <div className="relative w-full max-w-lg bg-white rounded-3xl p-8 flex flex-col items-center shadow-2xl animate-in fade-in zoom-in duration-200">
             <button onClick={() => setShowPaymentModal(false)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-800 transition-colors"><X size={24}/></button>
             
-            <h3 className="text-2xl font-bold text-gray-800 mb-2">ชำระเงิน</h3>
-            <p className="text-sm text-gray-400 mb-8 text-center">ชำระเงินอย่างปลอดภัยด้วยระบบ Stripe</p>
+            <h3 className="text-2xl font-bold text-gray-800 mb-6">ชำระเงิน</h3>
             
+            {/* แท็บสลับวิธีชำระเงิน */}
+            <div className="w-full flex bg-gray-100 rounded-xl p-1 mb-6">
+              <button 
+                onClick={() => setPaymentMethod('card')}
+                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all flex justify-center items-center gap-2 ${paymentMethod === 'card' ? 'bg-white shadow-sm text-[#148F96]' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                <CreditCard size={18} /> บัตรเครดิต
+              </button>
+              <button 
+                onClick={() => setPaymentMethod('qr')}
+                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all flex justify-center items-center gap-2 ${paymentMethod === 'qr' ? 'bg-white shadow-sm text-[#148F96]' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                <QrCode size={18} /> สแกน QR Code
+              </button>
+            </div>
+
             <div className="text-center w-full mb-8">
                <div className="text-gray-400 text-sm mb-1 uppercase tracking-widest">ยอดชำระสุทธิ</div>
                <div className="text-4xl font-black text-[#D65A31]">฿{total.toLocaleString()}</div>
             </div>
 
-            {/* ✅ ครอบฟอร์มด้วย Elements ของ Stripe */}
-            <Elements stripe={stripePromise}>
-              <StripePaymentForm 
-                address={address} 
-                total={total} 
-                handlePaymentSuccess={handlePaymentSuccess} 
-              />
-            </Elements>
+            {/* แสดงตามตัวเลือกที่กด */}
+            {paymentMethod === 'card' ? (
+              <Elements stripe={stripePromise}>
+                <StripePaymentForm 
+                  address={address} 
+                  total={total} 
+                  handlePaymentSuccess={handlePaymentSuccess} 
+                />
+              </Elements>
+            ) : (
+              <div className="w-full flex flex-col items-center">
+                
+                {/* ✅ ส่วนของ QR Code ที่ Generate แบบไดนามิกตามราคา */}
+                <div className="w-56 h-56 bg-white rounded-2xl flex items-center justify-center border-4 border-gray-50 mb-6 shadow-inner overflow-hidden p-2">
+                  <QRCodeSVG value={qrPayload} size={200} />
+                </div>
+                
+                <label className="group border-2 border-dashed border-gray-200 rounded-xl w-full h-32 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 hover:border-[#148F96]/50 transition-all mb-6 relative overflow-hidden bg-gray-50/50">
+                   {slipFile ? (
+                     <div className="flex flex-col items-center p-2 text-center">
+                       <CheckCircle size={28} className="text-green-500 mb-2" />
+                       <span className="text-gray-700 font-bold text-sm truncate max-w-[200px]">{slipFile.name}</span>
+                       <span className="text-xs text-gray-400 mt-1">คลิกเพื่อเปลี่ยนรูป</span>
+                     </div>
+                   ) : (
+                     <>
+                       <Upload size={24} className="text-gray-400 mb-2 group-hover:scale-110 transition-transform duration-300" />
+                       <span className="text-sm font-bold text-gray-500">อัพโหลดสลิปการชำระเงิน</span>
+                     </>
+                   )}
+                   <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files && setSlipFile(e.target.files[0])} />
+                </label>
 
-            <p className="mt-6 text-[11px] text-gray-400 leading-relaxed text-center">
-              *ข้อมูลบัตรของคุณถูกเข้ารหัสและส่งไปยัง Stripe โดยตรง <br/>เราไม่ทำการเก็บข้อมูลบัตรเครดิตใดๆ ของคุณไว้ในระบบ
-            </p>
+                <button 
+                  onClick={handleQRCheckout} 
+                  disabled={!slipFile || isProcessingQR}
+                  className="w-full bg-[#148F96] text-white py-4 rounded-2xl font-bold text-lg hover:bg-[#0f6f75] hover:shadow-xl shadow-[#148F96]/20 disabled:opacity-50 transition-all active:scale-95 flex justify-center items-center"
+                >
+                   {isProcessingQR ? "กำลังดำเนินการ..." : "ยืนยันการชำระเงิน"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
