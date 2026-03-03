@@ -178,7 +178,13 @@ const Home = () => {
         }
         if (images.length > 0) {
             const img = images[0];
-            return img.startsWith('http') ? img : `${API_BASE_URL}/uploads/${img}`;
+
+            if (img.startsWith('http')) return img;
+            
+            // ✅ แก้ไขตรงนี้: ดึงค่า baseUrl จาก .env
+            const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+            return `${baseUrl}/uploads/products/${img}`;
+
         }
     } catch (e) {
         console.error("Error parsing image:", e);

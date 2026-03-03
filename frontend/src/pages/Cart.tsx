@@ -60,12 +60,12 @@ const Cart = () => {
   };
 
   // ฟังก์ชันดึงรูปภาพแบบ Safe (แก้ไขใหม่)
-  const getImageUrl = (product: any) => {
-    if (!product) return "https://via.placeholder.com/150";
-    
+  const getImageUrl = (product: any) => {
+    if (!product) return "https://via.placeholder.com/150";
+    
     // 1. ดึงค่าดิบออกมา
-    const raw = product.image || product.images;
-    if (!raw) return "https://via.placeholder.com/150";
+    const raw = product.image || product.images;
+    if (!raw) return "https://via.placeholder.com/150";
 
     let fileName = "";
 
@@ -88,8 +88,11 @@ const Cart = () => {
     }
 
     if (!fileName) return "https://via.placeholder.com/150";
-    return fileName.startsWith('http') ? fileName : `http://localhost:3000/uploads/products/${fileName}`;
-  };
+    
+    // ✅ แก้ไขตรงนี้: ดึงค่า baseUrl จาก .env
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    return fileName.startsWith('http') ? fileName : `${baseUrl}/uploads/products/${fileName}`;
+  };
 
   const handleCheckout = async () => {
     if (!slipFile) return alert("กรุณาอัปโหลดสลิปการโอนเงิน");

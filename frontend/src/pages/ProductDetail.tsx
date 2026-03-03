@@ -33,6 +33,7 @@ const ProductDetail = () => {
       if (!id) return;
       try {
         setLoading(true);
+
         const [productData, reviewsData] = await Promise.all([
           api.getProductById(id),
           api.getReviewsByProduct(id) 
