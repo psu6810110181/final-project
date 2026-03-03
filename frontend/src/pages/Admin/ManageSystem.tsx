@@ -11,6 +11,8 @@ import {
   getAllMaterials, createMaterial, type Material, deleteMaterial,
   getAllSizes, createSize, type Size, deleteSize
 } from "../../services/api";
+import Alert from "../../components/Alert";
+import Confirm from "../../components/Confirm";
 
 interface ManageSystemProps {
   onEditProduct: (productId: string) => void;
@@ -27,6 +29,16 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
   
   const [newItemName, setNewItemName] = useState("");
   const [activeTab, setActiveTab] = useState<'category' | 'room' | 'feature' | 'color' | 'material' | 'size'>('category'); 
+  
+  // Alert state
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | 'warning' | 'info' } | null>(null);
+  
+  // Confirm state
+  const [confirm, setConfirm] = useState<{ 
+    message: string; 
+    onConfirm: () => void; 
+    type?: 'danger' | 'warning' | 'info' 
+  } | null>(null); 
 
   // --- Design System Colors (อิงจาก ProductForm) ---
   const colors = {
@@ -87,30 +99,45 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
       
       setNewItemName(""); 
       fetchMasterData(); 
-      alert(`เพิ่มข้อมูลสำเร็จ!`);
-    } catch (error) { alert("เกิดข้อผิดพลาด"); }
+      setAlert({ message: "เพิ่มข้อมูลสำเร็จ!", type: "success" });
+    } catch (error) { setAlert({ message: "เกิดข้อผิดพลาด", type: "error" }); }
   };
 
-  const handleDeleteProduct = async (productId: string) => {
-    if (!window.confirm("ยืนยันการลบสินค้านี้?")) return;
-    try {
-      await api.delete(`/products/${productId}`);
-      fetchProducts();
-    } catch (error) { alert("ลบไม่สำเร็จ"); }
+  const handleDeleteProduct = async (productId: string, productName: string) => {
+    setConfirm({
+      message: `ยืนยันการลบสินค้า "${productName}" นี้?`,
+      onConfirm: async () => {
+        try {
+          await api.delete(`/products/${productId}`);
+          fetchProducts();
+          setAlert({ message: "ลบสินค้าสำเร็จ", type: "success" });
+        } catch (error) { 
+          setAlert({ message: "ลบไม่สำเร็จ", type: "error" }); 
+        }
+      },
+      type: 'danger'
+    });
   };
 
-  const handleDeleteMasterData = async (id: number) => {
-    if (window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?')) {
-      try {
-        if (activeTab === 'category') await deleteCategory(id);
-        else if (activeTab === 'room') await deleteRoom(id);
-        else if (activeTab === 'feature') await deleteFeature(id);
-        else if (activeTab === 'color') await deleteColor(id);
-        else if (activeTab === 'material') await deleteMaterial(id);
-        else if (activeTab === 'size') await deleteSize(id);
-        fetchMasterData();
-      } catch (error) { alert("ไม่สามารถลบได้"); }
-    }
+  const handleDeleteMasterData = async (id: number, itemName: string) => {
+    setConfirm({
+      message: `คุณแน่ใจหรือไม่ว่าต้องการลบรายการ "${itemName}" นี้?`,
+      onConfirm: async () => {
+        try {
+          if (activeTab === 'category') await deleteCategory(id);
+          else if (activeTab === 'room') await deleteRoom(id);
+          else if (activeTab === 'feature') await deleteFeature(id);
+          else if (activeTab === 'color') await deleteColor(id);
+          else if (activeTab === 'material') await deleteMaterial(id);
+          else if (activeTab === 'size') await deleteSize(id);
+          fetchMasterData();
+          setAlert({ message: "ลบข้อมูลสำเร็จ", type: "success" });
+        } catch (error) { 
+          setAlert({ message: "ไม่สามารถลบได้", type: "error" }); 
+        }
+      },
+      type: 'danger'
+    });
   };
 
   const getActiveList = () => {
@@ -221,7 +248,7 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
                       แก้ไข
                     </button>
                     <button 
-                      onClick={() => handleDeleteProduct(product.id)} 
+                      onClick={() => handleDeleteProduct(product.id, product.name)} 
                       style={{ background: colors.dangerLight, color: colors.danger, border: `1px solid #FEE2E2`, borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', transition: 'background 0.2s' }}
                       onMouseOver={(e) => e.currentTarget.style.background = '#FEE2E2'}
                       onMouseOut={(e) => e.currentTarget.style.background = colors.dangerLight}
@@ -305,7 +332,7 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
                     <span aria-hidden="true">{getActiveIcon()}</span>
                     <span>{i.name}</span>
                     <button 
-                        onClick={() => handleDeleteMasterData(i.id)} 
+                        onClick={() => handleDeleteMasterData(i.id, i.name)} 
                         aria-label={`ลบ ${i.name}`}
                         style={{ background: colors.dangerLight, color: colors.danger, border: 'none', width: '24px', height: '24px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s', marginLeft: '4px' }}
                         onMouseOver={(e) => e.currentTarget.style.background = '#FEE2E2'}
@@ -361,6 +388,25 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
             border-color: #CBD5E1 !important;
         }
       `}</style>
+      
+      {/* Custom Alert */}
+      {alert && (
+        <Alert
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert(null)}
+        />
+      )}
+      
+      {/* Custom Confirm */}
+      {confirm && (
+        <Confirm
+          message={confirm.message}
+          onConfirm={confirm.onConfirm}
+          onCancel={() => setConfirm(null)}
+          type={confirm.type}
+        />
+      )}
     </div>
   );
 };

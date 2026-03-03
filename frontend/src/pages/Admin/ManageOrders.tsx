@@ -1,10 +1,22 @@
 // ManageOrders.tsx
 import React, { useState, useEffect } from "react";
 import api from "../../services/api";
+import Alert from "../../components/Alert";
+import Confirm from "../../components/Confirm";
 
 const ManageOrders: React.FC = () => {
   const [allOrders, setAllOrders] = useState<any[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
+  // Alert state
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | 'warning' | 'info' } | null>(null);
+  
+  // Confirm state
+  const [confirm, setConfirm] = useState<{ 
+    message: string; 
+    onConfirm: () => void; 
+    type?: 'danger' | 'warning' | 'info' 
+  } | null>(null);
 
   // --- Design System Colors ---
   const colors = {
@@ -51,28 +63,38 @@ const ManageOrders: React.FC = () => {
   }, []);
 
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
-    if (!window.confirm(`คุณต้องการเปลี่ยนสถานะเป็น ${newStatus} ใช่หรือไม่?`)) return;
-    try {
-      await api.patch(`/orders/${orderId}/status`, { status: newStatus }, getAuthHeader());
-      alert("อัปเดตสถานะสำเร็จ!");
-      fetchAllOrders(); 
-    } catch (error) {
-      console.error("Error updating order status:", error);
-      alert("เกิดข้อผิดพลาดในการอัปเดตสถานะ");
-    }
-  };
+  setConfirm({
+    message: `คุณต้องการเปลี่ยนสถานะเป็น ${newStatus} ใช่หรือไม่?`,
+    onConfirm: async () => {
+      try {
+        await api.patch(`/orders/${orderId}/status`, { status: newStatus }, getAuthHeader());
+        setAlert({ message: "อัปเดตสถานะสำเร็จ!", type: "success" });
+        fetchAllOrders(); 
+      } catch (error) {
+        console.error("Error updating order status:", error);
+        setAlert({ message: "เกิดข้อผิดพลาดในการอัปเดตสถานะ", type: "error" });
+      }
+    },
+    type: 'warning'
+  });
+};
 
   const handleDeleteOrder = async (orderId: string) => {
-    if (!window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบคำสั่งซื้อ ID: ${orderId.substring(0, 8)}?\n(การกระทำนี้ไม่สามารถย้อนกลับได้)`)) return;
-    try {
-      await api.delete(`/orders/${orderId}`, getAuthHeader());
-      alert("ลบคำสั่งซื้อออกจากระบบเรียบร้อยแล้ว");
-      fetchAllOrders(); 
-    } catch (error) {
-      console.error("Error deleting order:", error);
-      alert("เกิดข้อผิดพลาดในการลบคำสั่งซื้อ");
-    }
-  };
+  setConfirm({
+    message: `คุณแน่ใจหรือไม่ว่าต้องการลบคำสั่งซื้อ ID: ${orderId.substring(0, 8)}?\n(การกระทำนี้ไม่สามารถย้อนกลับได้)`,
+    onConfirm: async () => {
+      try {
+        await api.delete(`/orders/${orderId}`, getAuthHeader());
+        setAlert({ message: "ลบคำสั่งซื้อออกจากระบบเรียบร้อยแล้ว", type: "success" });
+        fetchAllOrders(); 
+      } catch (error) {
+        console.error("Error deleting order:", error);
+        setAlert({ message: "เกิดข้อผิดพลาดในการลบคำสั่งซื้อ", type: "error" });
+      }
+    },
+    type: 'danger'
+  });
+};
 
   // Helper สำหรับสี Status
   const getStatusStyle = (status: string) => {
@@ -213,6 +235,23 @@ const ManageOrders: React.FC = () => {
           background-color: #F8FAFC !important;
         }
       `}</style>
+    {/* Custom Alert */}
+      {alert && (
+        <Alert
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert(null)}
+        />
+      )}
+    {/* Custom Confirm */}
+      {confirm && (
+        <Confirm
+          message={confirm.message}
+          onConfirm={confirm.onConfirm}
+          onCancel={() => setConfirm(null)}
+          type={confirm.type}
+        />
+      )}
     </article>
   );
 };

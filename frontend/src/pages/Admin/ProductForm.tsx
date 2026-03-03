@@ -11,6 +11,7 @@ import {
   getAllMaterials, type Material,
   getAllSizes, type Size
 } from "../../services/api"; 
+import Alert from "../../components/Alert"; 
 
 interface Variant {
   color: string;
@@ -50,6 +51,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
   const [colorsList, setColorsList] = useState<Color[]>([]);
   const [materialsList, setMaterialsList] = useState<Material[]>([]);
   const [sizesList, setSizesList] = useState<Size[]>([]);
+  
+  // Alert state
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | 'warning' | 'info' } | null>(null);
 
   useEffect(() => {
     const fetchDropdownData = async () => {
@@ -129,7 +133,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
       }
     } catch (error) {
       console.error("Error fetching product details:", error);
-      alert("ไม่สามารถโหลดข้อมูลสินค้าเพื่อแก้ไขได้");
+      setAlert({ message: "ไม่สามารถโหลดข้อมูลสินค้าเพื่อแก้ไขได้", type: "error" });
     }
   };
 
@@ -175,7 +179,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
     e.preventDefault(); 
     try {
       if (!name || !price || !categoryId) {
-        alert("กรุณากรอกชื่อสินค้า, ราคา และเลือกหมวดหมู่");
+        setAlert({ message: "กรุณากรอกชื่อสินค้า, ราคา และเลือกหมวดหมู่", type: "warning" });
         return;
       }
       
@@ -209,15 +213,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
 
       if (editingProductId) {
         await updateProduct(editingProductId, formData); 
-        alert("แก้ไขสินค้าเรียบร้อยแล้ว");
+        setAlert({ message: "แก้ไขสินค้าเรียบร้อยแล้ว", type: "success" });
       } else {
         await createProduct(formData); 
-        alert("บันทึกสินค้าเรียบร้อยแล้ว");
+        setAlert({ message: "บันทึกสินค้าเรียบร้อยแล้ว", type: "success" });
       }
-      onSuccess(); 
+      // Delay onSuccess to allow alert to show
+      setTimeout(() => {
+        onSuccess(); 
+      }, 1500); 
     } catch (error) {
       console.error("Error saving product:", error);
-      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+      setAlert({ message: "เกิดข้อผิดพลาดในการบันทึกข้อมูล", type: "error" });
     }
   };
 
@@ -495,6 +502,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
         </footer>
 
       </form>
+    {/* Custom Alert */}
+      {alert && (
+        <Alert
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert(null)}
+        />
+      )}
     </article>
   );
 };

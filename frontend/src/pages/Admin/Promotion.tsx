@@ -1,6 +1,7 @@
 // Promotion.tsx
 import React, { useState, useEffect } from "react";
 import api, { type Promotion, type Product } from "../../services/api";
+import Alert from "../../components/Alert";
 
 const PromotionManager: React.FC = () => {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
@@ -9,6 +10,9 @@ const PromotionManager: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
   const [editingPromotion, setEditingPromotion] = useState<Promotion | null>(null);
+  
+  // Alert state
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | 'warning' | 'info' } | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -125,7 +129,7 @@ const PromotionManager: React.FC = () => {
     e.preventDefault();
     
     if (!formData.title || !formData.discountValue || !formData.startDate || !formData.endDate) {
-      alert("กรุณากรอกข้อมูลที่จำเป็นทั้งหมด");
+      setAlert({ message: "กรุณากรอกข้อมูลที่จำเป็นทั้งหมด", type: "warning" });
       return;
     }
 
@@ -144,12 +148,12 @@ const PromotionManager: React.FC = () => {
       if (editingPromotion) {
         console.log("Updating promotion ID:", editingPromotion.id);
         await api.patch(`/promotions/${editingPromotion.id}`, promotionData, getAuthHeader());
-        alert("อัปเดตโปรโมชั่นสำเร็จ!");
+        setAlert({ message: "อัปเดตโปรโมชั่นสำเร็จ!", type: "success" });
       } else {
         console.log("Creating new promotion...");
         const response = await api.post('/promotions', promotionData, getAuthHeader());
         console.log("Create promotion response:", response);
-        alert("สร้างโปรโมชั่นสำเร็จ!");
+        setAlert({ message: "สร้างโปรโมชั่นสำเร็จ!", type: "success" });
       }
       
       resetForm();
@@ -162,13 +166,13 @@ const PromotionManager: React.FC = () => {
         console.error("Error response:", error.response);
         console.error("Error status:", error.response.status);
         console.error("Error data:", error.response.data);
-        alert(`เกิดข้อผิดพลาดในการบันทึกโปรโมชั่น: ${error.response.data?.message || error.response.statusText || 'Unknown error'}`);
+        setAlert({ message: `เกิดข้อผิดพลาดในการบันทึกโปรโมชั่น: ${error.response.data?.message || error.response.statusText || 'Unknown error'}`, type: "error" });
       } else if (error.request) {
         console.error("Error request:", error.request);
-        alert("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ - กรุณาตรวจสอบว่า Backend กำลังทำงานอยู่");
+        setAlert({ message: "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ - กรุณาตรวจสอบว่า Backend กำลังทำงานอยู่", type: "error" });
       } else {
         console.error("Error message:", error.message);
-        alert(`เกิดข้อผิดพลาด: ${error.message}`);
+        setAlert({ message: `เกิดข้อผิดพลาด: ${error.message}`, type: "error" });
       }
     }
   };
@@ -194,22 +198,22 @@ const PromotionManager: React.FC = () => {
     
     try {
       await api.delete(`/promotions/${id}`, getAuthHeader());
-      alert("ลบโปรโมชั่นสำเร็จ!");
+      setAlert({ message: "ลบโปรโมชั่นสำเร็จ!", type: "success" });
       fetchPromotions();
     } catch (error) {
       console.error("Error deleting promotion:", error);
-      alert("เกิดข้อผิดพลาดในการลบโปรโมชั่น");
+      setAlert({ message: "เกิดข้อผิดพลาดในการลบโปรโมชั่น", type: "error" });
     }
   };
 
   const handleToggleStatus = async (id: string, currentStatus: boolean) => {
     try {
       await api.patch(`/promotions/${id}/toggle`, { isActive: !currentStatus }, getAuthHeader());
-      alert(`${!currentStatus ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}โปรโมชั่นสำเร็จ!`);
+      setAlert({ message: `${!currentStatus ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}โปรโมชั่นสำเร็จ!`, type: "success" });
       fetchPromotions();
     } catch (error) {
       console.error("Error toggling promotion status:", error);
-      alert("เกิดข้อผิดพลาดในการเปลี่ยนสถานะโปรโมชั่น");
+      setAlert({ message: "เกิดข้อผิดพลาดในการเปลี่ยนสถานะโปรโมชั่น", type: "error" });
     }
   };
 
@@ -582,6 +586,15 @@ const PromotionManager: React.FC = () => {
           background-color: #F8FAFC !important;
         }
       `}</style>
+      
+      {/* Custom Alert */}
+      {alert && (
+        <Alert
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert(null)}
+        />
+      )}
     </article>
   );
 };
