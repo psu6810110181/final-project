@@ -132,6 +132,14 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
     return names[activeTab];
   };
 
+  // ✅ เพิ่มฟังก์ชันแปลง URL รูปภาพให้ดึงจาก Backend
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  const getImageUrl = (img: string) => {
+    if (!img) return "";
+    if (img.startsWith('http')) return img;
+    return `${API_BASE_URL}/uploads/${img}`;
+  };
+
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '10px 0', fontFamily: "'Prompt', sans-serif" }}>
       
@@ -182,8 +190,9 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
                   transition: 'all 0.2s ease', cursor: 'default'
                 }}>
                   <div style={{ width: '90px', height: '90px', borderRadius: '12px', overflow: 'hidden', background: colors.bgLight, flexShrink: 0, border: `1px solid ${colors.border}` }}>
+                    {/* ✅ ครอบ product.image ด้วยฟังก์ชัน getImageUrl() */}
                     {product.image ? (
-                      <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={getImageUrl(product.image)} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
                       <div style={{ fontSize: '30px', display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }} aria-hidden="true">🖼️</div>
                     )}

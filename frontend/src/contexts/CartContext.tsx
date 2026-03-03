@@ -1,30 +1,36 @@
+// frontend/src/contexts/CartContext.tsx
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import * as api from '../services/api'; 
+import type { Promotion } from '../services/api'; // ✅ นำเข้า Type Promotion
 import toast from 'react-hot-toast';
 
-// 1. แก้ Interface CartItem ให้รองรับ ID แบบ String และรองรับจำนวนชิ้นติดตั้ง
+// ✅ ฟังก์ชันคำนวณราคาส่วนลด (ใช้ร่วมกัน)
+export function calculateDiscountPrice(price: string | number, promo?: Promotion) {
+  const p = Number(price);
+  if (!promo) return p;
+  if (promo.discountType === 'PERCENTAGE') return p - (p * (promo.discountValue / 100));
+  return Math.max(0, p - promo.discountValue);
+}
+
 export interface CartItem {
-  id: number; // CartItem ID (มักจะเป็นตัวเลข 1, 2, 3...)
+  id: number; 
   quantity: number;
-  installationQty?: number; // ✅ เพิ่ม property นี้เพื่อเก็บจำนวนติดตั้ง
+  installationQty?: number; 
   product: {
-    id: string;   // ✅ แก้เป็น string (รองรับ UUID)
+    id: string;   
     name: string;
-    price: number | string; // รองรับทั้งคู่กันเหนียว
+    price: number | string; 
     description?: string;
-    images: string[] | string; // รองรับทั้ง Array หรือ JSON String
+    images: string[] | string; 
     stock: number;
+    promo?: Promotion; // ✅ เพิ่มเพื่อเก็บข้อมูลโปรโมชันของสินค้านั้นๆ
   };
 }
 
-// 2. แก้ Interface Context ให้ Type ตรงกับ Function ที่เราจะเขียน
 interface CartContextType {
   cartItems: CartItem[];
-  // ✅ addToCart รับ installationQty เป็น number
   addToCart: (productId: string, quantity: number, installationQty?: number) => Promise<void>;
-  // ✅ removeFromCart รับ id เป็น number (เพราะลบที่ CartItem ID)
   removeFromCart: (id: number) => Promise<void>;
-  // ✅ updateCartItem รับ id, quantity และ installationQty
   updateCartItem: (id: number, quantity?: number, installationQty?: number) => Promise<void>;
   clearCart: () => Promise<void>;
   fetchCart: () => Promise<void>;
@@ -49,26 +55,51 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       setIsLoading(true);
-      const res = await api.getCart();
+      // ✅ ดึงข้อมูลตะกร้า และ โปรโมชัน มาพร้อมๆ กัน
+      const [cartRes, promoData] = await Promise.all([
+          api.getCart(),
+          api.getAllPromotions().catch(() => []) // ดัก Error ไว้เผื่อดึงโปรโมชันไม่สำเร็จ
+      ]);
 
       let fetchedItems: CartItem[] = [];
 
-      // เช็คโครงสร้างข้อมูลที่ Backend ส่งมา
-      if (res.data && Array.isArray(res.data.items)) {
-         fetchedItems = res.data.items;
+      if (cartRes.data && Array.isArray(cartRes.data.items)) {
+         fetchedItems = cartRes.data.items;
       } 
-      else if (Array.isArray(res.data)) {
-         fetchedItems = res.data;
+      else if (Array.isArray(cartRes.data)) {
+         fetchedItems = cartRes.data;
       }
 
-      // ✅ เพิ่มส่วนนี้: สั่งเรียงลำดับตามชื่อ Product (ก-ฮ, A-Z) ก่อนเซ็ตค่า
-      const sortedItems = fetchedItems.sort((a, b) => {
-          const nameA = a.product?.name || '';
-          const nameB = b.product?.name || '';
-          return nameA.localeCompare(nameB, 'th'); // ใช้ 'th' เพื่อให้เรียงภาษาไทยได้ถูกต้อง
+      // ✅ Map ข้อมูลโปรโมชัน (ลอจิกเดียวกับหน้า Home)
+      const now = new Date();
+      const promoMap = new Map<string, Promotion>();
+      promoData.forEach((promo: Promotion) => {
+          const startDate = new Date(promo.startDate);
+          const endDate = new Date(promo.endDate);
+          const isCurrentlyActive = promo.isActive && now >= startDate && now <= endDate;
+          if (isCurrentlyActive) {
+              promo.products?.forEach((prod: any) => {
+                  if (!promoMap.has(prod.id)) promoMap.set(prod.id, promo);
+              });
+          }
       });
 
-      setCartItems(sortedItems); // เซ็ตข้อมูลที่เรียงลำดับแล้ว
+      // ✅ ยัดโปรโมชันใส่เข้าไปใน Product แต่ละตัวในตะกร้า
+      const mappedItems = fetchedItems.map(item => {
+          if (item.product) {
+              item.product.promo = promoMap.get(item.product.id);
+          }
+          return item;
+      });
+
+      // เรียงลำดับตามชื่อ
+      const sortedItems = mappedItems.sort((a, b) => {
+          const nameA = a.product?.name || '';
+          const nameB = b.product?.name || '';
+          return nameA.localeCompare(nameB, 'th'); 
+      });
+
+      setCartItems(sortedItems); 
 
     } catch (error) {
       console.error('Error fetching cart:', error);
@@ -82,22 +113,18 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     fetchCart();
   }, []);
 
-  // 3. แก้ Function Implementation ให้รับ Type ตรงกับ Interface ด้านบน
-
-  // ✅ รับ installationQty มาด้วย และส่งต่อไปให้ api
   const addToCart = async (productId: string, quantity: number, installationQty: number = 0) => {
     try {
       await api.addToCart(productId, quantity, installationQty);
-      toast.success('เพิ่มลงตะกร้าแล้ว!'); // ✅ เปลี่ยนจาก alert เป็น toast
+      toast.success('เพิ่มลงตะกร้าแล้ว!'); 
       await fetchCart(); 
     } catch (error) {
       console.error('Add to cart failed:', error);
-      toast.error('เกิดข้อผิดพลาดในการเพิ่มสินค้า'); // ✅ เปลี่ยนจาก alert เป็น toast
-      throw error; // ✅ (Optional) Throw error ให้เผื่อมีการเรียกใช้ try-catch ข้างนอก
+      toast.error('เกิดข้อผิดพลาดในการเพิ่มสินค้า'); 
+      throw error; 
     }
   };
 
-  // ✅ id: number (CartItem ID)
   const removeFromCart = async (id: number) => {
     try {
       await api.removeCartItem(id);
@@ -107,13 +134,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // ✅ id: number (CartItem ID) และรับค่าได้ทั้ง 2 แบบ
   const updateCartItem = async (id: number, newQuantity?: number, newInstallQty?: number) => {
     try {
       await api.updateCartItem(id, { quantity: newQuantity, installationQty: newInstallQty });
       await fetchCart();
     } catch (error) {
-      // ✅ ลบ ... ออก และใส่โค้ดจัดการ Error
       console.error('Update cart item failed:', error);
     }
   };
@@ -129,10 +154,15 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const safeCartItems = Array.isArray(cartItems) ? cartItems : [];
 
+  // ✅ คำนวณยอดรวม (cartTotal) โดยใช้ราคาที่หักส่วนลดแล้ว (ถ้ามี)
   const cartTotal = safeCartItems.reduce((total, item) => {
-    const price = Number(item?.product?.price || 0);
-    const quantity = Number(item?.quantity || 0);
-    return total + (price * quantity);
+    if (!item || !item.product) return total; 
+    
+    // ใช้ฟังก์ชันคำนวณส่วนลด
+    const finalPrice = calculateDiscountPrice(item.product.price, item.product.promo);
+    const quantity = Number(item.quantity) || 0;
+    
+    return total + (finalPrice * quantity);
   }, 0);
   
   const cartCount = safeCartItems.reduce((count, item) => {
@@ -140,7 +170,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   }, 0);
 
   const resetCart = () => {
-    setCartItems([]); // ล้างให้ว่างทันที
+    setCartItems([]); 
   };
 
   return (
@@ -148,7 +178,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       cartItems: safeCartItems,
       addToCart, 
       removeFromCart, 
-      updateCartItem, // <--- ✅ แก้จาก updateQuantity เป็น updateCartItem ตรงนี้
+      updateCartItem,
       clearCart, 
       fetchCart,
       resetCart,

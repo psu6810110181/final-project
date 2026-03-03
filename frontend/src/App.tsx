@@ -13,6 +13,12 @@ import { AuthProvider } from './contexts/AuthContext';
 import Policy from './pages/Policy';
 import { Toaster } from 'react-hot-toast';
 import ReviewPage from './pages/Review';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import ProtectedRoute from './components/ProtectedRoute';
+import HomepagePromotion from './pages/HomepagePromotion'; // นำเข้าหน้าใหม่
+import BookmarkPage from './pages/Bookmark';
+
 
 function App() {
   return (
@@ -35,18 +41,21 @@ function App() {
           <div className="min-h-screen bg-gray-50">
             <Routes>  
               <Route path="/home" element={<Home />} />
+              <Route path="/promotions" element={<HomepagePromotion />} />
+              <Route path="/bookmarks" element={<BookmarkPage />} />
               <Route path="/" element={<Home />} /> {/* เพิ่ม path ว่างไว้ด้วยกันหน้าขาวเวลาเข้าเว็บ */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/product/:id" element={<ProductDetail />} />
-              <Route path="/cart" element={<Cart />} />
-              <Route path="/orders" element={<OrderHistory />} />
+              <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
+              <Route path="/orders" element={<ProtectedRoute><OrderHistory /></ProtectedRoute>} />
               <Route path="/policy" element={<Policy />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/admin" element={<AdminDashboard />} />
-              
+              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password/:token" element={<ResetPassword />} />
               {/* ✅ เปลี่ยนมาใช้ ReviewPage ตามฝั่ง UX/UI */}
-              <Route path="/review" element={<ReviewPage />} />
+              <Route path="/review" element={<ProtectedRoute><ReviewPage /></ProtectedRoute>} />
             </Routes>
           </div>
         </CartProvider>

@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, On
 import { User } from '../../users/entities/user.entity'; 
 // 👇 ถอยไป 2 ขั้นเพื่อเข้าโฟลเดอร์ order_items
 import { OrderItem } from '../../order_items/entities/order_item.entity';
+import { Review } from '../../reviews/entities/review.entity';
 
 @Entity('orders')
 export class Order {
@@ -17,6 +18,9 @@ export class Order {
   // ความสัมพันธ์ไปหา OrderItem
   @OneToMany(() => OrderItem, (orderItem) => orderItem.order, { cascade: true })
   items: OrderItem[];
+
+  @OneToMany(() => Review, (review) => review.order)
+  reviews: Review[];
 
   // NOT_NULL: order_date
   @CreateDateColumn({ name: 'order_date', type: 'timestamp' })

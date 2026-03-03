@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import { Promotion } from './promotion.entity';
 
 @Injectable()
@@ -18,13 +18,15 @@ export class PromotionsService {
   }
 
   async findActiveFlashSales(): Promise<Promotion[]> {
-    const now = new Date();
+    // ✅ แก้ไขชื่อตัวแปรให้ตรงกับที่ใช้ใน Query
+    const currentDate = new Date(); 
+    
     return this.promotionsRepository.find({
       where: {
         isActive: true,
         isFlashSale: true,
-        startDate: { $lte: now } as any,
-        endDate: { $gte: now } as any,
+        startDate: LessThanOrEqual(currentDate), // เปรียบเทียบวันเริ่มต้น (ต้องน้อยกว่าหรือเท่ากับปัจจุบัน)
+        endDate: MoreThanOrEqual(currentDate)    // เปรียบเทียบวันสิ้นสุด (ต้องมากกว่าหรือเท่ากับปัจจุบัน)
       },
       relations: ['products'],
       order: { createdAt: 'DESC' },
@@ -55,13 +57,11 @@ export class PromotionsService {
       const result = Array.isArray(savedPromotion) ? savedPromotion[0] : savedPromotion;
       
       // อัปเดตความสัมพันธ์กับ products
-      if (productIds.length > 0) {
-        await this.promotionsRepository
-          .createQueryBuilder()
-          .relation(Promotion, 'products')
-          .of(result.id)
-          .add(productIds);
-      }
+      await this.promotionsRepository
+        .createQueryBuilder()
+        .relation(Promotion, 'products')
+        .of(result.id)
+        .add(productIds);
       
       return this.findOne(result.id);
     }
@@ -76,14 +76,18 @@ export class PromotionsService {
     const promotion = await this.findOne(id);
     Object.assign(promotion, promotionData);
     
+    await this.promotionsRepository.save(promotion);
+
     // อัปเดตความสัมพันธ์กับ products ถ้ามีการเปลี่ยนแปลง
     if (productIds !== undefined) {
       // ลบความสัมพันธ์เก่าทั้งหมด
-      await this.promotionsRepository
-        .createQueryBuilder()
-        .relation(Promotion, 'products')
-        .of(id)
-        .remove(promotion.products.map(p => p.id));
+      if (promotion.products && promotion.products.length > 0) {
+        await this.promotionsRepository
+          .createQueryBuilder()
+          .relation(Promotion, 'products')
+          .of(id)
+          .remove(promotion.products.map(p => p.id));
+      }
       
       // เพิ่มความสัมพันธ์ใหม่
       if (productIds.length > 0) {
@@ -95,7 +99,6 @@ export class PromotionsService {
       }
     }
     
-    const result = await this.promotionsRepository.save(promotion);
     return this.findOne(id);
   }
 

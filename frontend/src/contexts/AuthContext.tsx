@@ -117,14 +117,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  useEffect(() => {
+    useEffect(() => {
     const token = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user_data');
     if (token && savedUser) {
-      setUser(JSON.parse(savedUser));
+        try {
+        setUser(JSON.parse(savedUser));
+        } catch (error) {
+        console.error("Failed to parse user data", error);
+        localStorage.removeItem('user_data');
+        localStorage.removeItem('token');
+        }
     }
     setIsLoading(false);
-  }, []);
+    }, []);
 
   // --- ฟังก์ชัน Login ---
   const login = async (credentials: any) => {
