@@ -1,9 +1,9 @@
-// ProductForm.tsx
+// frontend/src/pages/Admin/ProductForm.tsx
 import React, { useState, useEffect } from "react";
 import api from "../../services/api"; 
 import { 
   createProduct, 
-  updateProduct, // ✅ Import updateProduct มาใช้ด้วย
+  updateProduct, 
   getAllCategories, type Category,
   getAllRooms, type Room,
   getAllFeatures, type Feature,
@@ -36,7 +36,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]); 
   const [description, setDescription] = useState("");
   
-  // ✅ เพิ่ม State สำหรับเก็บไฟล์ของจริง
+  // State สำหรับเก็บไฟล์ของจริง
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState(""); // ใช้สำหรับ Preview รูป
   
@@ -86,7 +86,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
       setPrice(String(productDetails.price || ""));
       setDescription(productDetails.description || "");
       
-      // ✅ จัดการ URL รูปภาพเก่าที่ดึงมาจาก Backend
+      // จัดการ URL รูปภาพเก่าที่ดึงมาจาก Backend
       let fetchedImageUrl = "";
       if (productDetails.image) {
          if (productDetails.image.startsWith('http')) {
@@ -117,7 +117,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
 
   const resetForm = () => {
     setName(""); setPrice(""); setDescription(""); 
-    setImageUrl(""); setImageFile(null); // ✅ Reset file
+    setImageUrl(""); setImageFile(null); 
     setCategoryId(""); setRoomId(""); setSelectedFeatures([]);
     setVariants([{ color: "", material: "", size: "", price: "", stock: "" }]);
   };
@@ -129,8 +129,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-        setImageFile(file); // ✅ เก็บไฟล์จริงไว้เตรียมส่ง Backend
-        setImageUrl(URL.createObjectURL(file)); // สร้าง Blob ไว้พรีวิวเฉยๆ
+        setImageFile(file); 
+        setImageUrl(URL.createObjectURL(file)); 
     }
   };
 
@@ -163,7 +163,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
       
       const totalStock = variants.reduce((sum, variant) => sum + (parseInt(variant.stock) || 0), 0);
       
-      // ✅ ใช้ FormData เพื่อให้สามารถแนบไฟล์อัปโหลดได้
       const formData = new FormData();
       formData.append('name', name);
       formData.append('price', price);
@@ -178,10 +177,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
          formData.append('image', imageFile);
       }
 
+      // ✅ [เพิ่มใหม่] นำไฟล์ภาพของแต่ละ Variant ใส่เข้าไปใน FormData โดยใช้ key แบบมี index ต่อท้าย
+      variants.forEach((variant, index) => {
+          if (variant.imageFile) {
+              formData.append(`variantImage_${index}`, variant.imageFile);
+          }
+      });
+
       // สำหรับ Array/Object หากส่งผ่าน FormData ต้องแปลงเป็น JSON String
-      // (Backend ต้องมีการทำ JSON.parse() รับค่าด้วย หากเกิด Error ให้เช็คที่ Backend เพิ่มเติม)
       if (selectedFeatures.length > 0) {
-          // หรืออาจจะใช้วิธี formData.append('features[]', f) ขึ้นอยู่กับที่ Backend รองรับ
           formData.append('features', JSON.stringify(selectedFeatures)); 
       }
 
@@ -189,10 +193,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
       formData.append('variants', JSON.stringify(formattedVariants));
 
       if (editingProductId) {
-        await updateProduct(editingProductId, formData); // ✅ ใช้ฟังก์ชันจาก api.ts ที่จัดการ Headers ให้แล้ว
+        await updateProduct(editingProductId, formData); 
         alert("แก้ไขสินค้าเรียบร้อยแล้ว");
       } else {
-        await createProduct(formData); // ✅
+        await createProduct(formData); 
         alert("บันทึกสินค้าเรียบร้อยแล้ว");
       }
       onSuccess(); 
