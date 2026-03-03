@@ -51,7 +51,7 @@ const HomepagePromotion = () => {
         }
         if (images.length > 0) {
             const img = images[0];
-            return img.startsWith('http') ? img : `http://localhost:3000/uploads/products/${img}`;
+            return img.startsWith('http') ? img : `http://localhost:3000/uploads/${img}`;
         }
     } catch (e) {}
     return "https://placehold.co/400x300?text=No+Image";

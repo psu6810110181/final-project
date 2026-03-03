@@ -178,7 +178,7 @@ const Home = () => {
         }
         if (images.length > 0) {
             const img = images[0];
-            return img.startsWith('http') ? img : `${API_BASE_URL}/uploads/products/${img}`;
+            return img.startsWith('http') ? img : `${API_BASE_URL}/uploads/${img}`;
         }
     } catch (e) {
         console.error("Error parsing image:", e);

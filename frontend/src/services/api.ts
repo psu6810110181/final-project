@@ -14,6 +14,7 @@ export interface Product {
   room?: string;
   features?: string[];
   image: string; 
+  variants?: Variant[];
 }
 
 export interface Category { id: number; name: string; }
@@ -29,6 +30,7 @@ export interface Variant {
   size: string;
   price: string;
   stock: string;
+  image?: string;
   imageUrl?: string;
   imageFile?: File;
 }

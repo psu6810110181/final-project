@@ -75,7 +75,7 @@ const BookmarkPage = () => {
         let images: string[] = [];
         if (Array.isArray(rawImages)) images = rawImages;
         else if (typeof rawImages === 'string') images = rawImages.startsWith('[') ? JSON.parse(rawImages) : [rawImages];
-        if (images.length > 0) return images[0].startsWith('http') ? images[0] : `http://localhost:3000/uploads/products/${images[0]}`;
+        if (images.length > 0) return images[0].startsWith('http') ? images[0] : `http://localhost:3000/uploads/${images[0]}`;
     } catch (e) {}
     return "https://placehold.co/400x300?text=No+Image";
   };
