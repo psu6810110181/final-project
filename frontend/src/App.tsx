@@ -55,7 +55,7 @@ function App() {
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password/:token" element={<ResetPassword />} />
               {/* ✅ เปลี่ยนมาใช้ ReviewPage ตามฝั่ง UX/UI */}
-              <Route path="/review" element={<ReviewPage />} />
+              <Route path="/review" element={<ProtectedRoute><ReviewPage /></ProtectedRoute>} />
             </Routes>
           </div>
         </CartProvider>
