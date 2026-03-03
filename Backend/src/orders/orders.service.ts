@@ -110,7 +110,9 @@ export class OrdersService {
   // 3. ดูประวัติการสั่งซื้อ
   async findMyOrders(userId: string) {
     return this.ordersRepository.find({
-      where: { user: { id: userId } }, relations: ['items', 'items.product'], order: { orderDate: 'DESC' }
+      where: { user: { id: userId } },
+      relations: ['items', 'items.product', 'reviews', 'reviews.product'],
+      order: { orderDate: 'DESC' }
     });
   }
 

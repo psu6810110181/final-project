@@ -113,7 +113,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       await api.updateCartItem(id, { quantity: newQuantity, installationQty: newInstallQty });
       await fetchCart();
     } catch (error) {
-      // ✅ ลบ ... ออก และใส่โค้ดจัดการ Error
       console.error('Update cart item failed:', error);
     }
   };
@@ -129,9 +128,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const safeCartItems = Array.isArray(cartItems) ? cartItems : [];
 
+  // ✅ อัปเดตการคำนวณยอดรวมโดยเพิ่มการตรวจสอบเพื่อป้องกัน Error
   const cartTotal = safeCartItems.reduce((total, item) => {
-    const price = Number(item?.product?.price || 0);
-    const quantity = Number(item?.quantity || 0);
+    if (!item || !item.product) return total; // ป้องกัน item เป็น null/undefined
+    const price = Number(item.product.price) || 0;
+    const quantity = Number(item.quantity) || 0;
     return total + (price * quantity);
   }, 0);
   
