@@ -7,12 +7,25 @@ interface ProtectedRouteProps {
   allowedRoles?: ('admin' | 'user')[]; // เผื่ออนาคตอยากแยกสิทธิ์ Admin
 }
 
-const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { user } = useAuth();
+const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
+  const { user, isLoading } = useAuth();
+  
+  // ✅ 1. ดึง Token มาเช็คเป็นด่านแรกสุด 
+  const token = localStorage.getItem('token'); 
 
-  if (!user) {
-    // ถ้าไม่มี User ให้ดีดกลับไปหน้า Login
+  // 🚪 2. ถ้าไม่มี Token เลย (แปลว่าไม่ได้ล็อกอินแน่ๆ) ให้เตะไปหน้า Login
+  if (!token) {
     return <Navigate to="/login" replace />;
+  }
+
+  // ⏳ 3. ถ้ามี Token แต่ระบบกำลังโหลด Context อยู่ ให้รอเงียบๆ (ไม่กระพริบไปหน้า Login)
+  if (isLoading) {
+    return null; 
+  }
+
+  // 🛡️ 4. [เผื่ออนาคต] ถ้าโหลดเสร็จแล้วเช็คสิทธิ์ Role 
+  if (user && allowedRoles && !allowedRoles.includes((user as any).role)) {
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

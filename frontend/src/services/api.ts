@@ -284,6 +284,12 @@ export const getAllOrders = async () => {
   return response.data;
 };
 
+// สำหรับปุ่มชำระเงินต่อ (Retry Payment)
+export const retryPayment = async (orderId: string) => {
+  const response = await api.post(`/orders/${orderId}/retry-payment`);
+  return response.data;
+};
+
 // 11. Promotions
 export const getAllPromotions = async (): Promise<Promotion[]> => {
   const response = await api.get('/promotions');

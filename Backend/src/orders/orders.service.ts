@@ -18,10 +18,11 @@ export class OrdersService {
     @InjectRepository(CartItem) private cartItemsRepository: Repository<CartItem>,
     private dataSource: DataSource,
   ) {
-    this.stripe = new Stripe(String(process.env.STRIPE_SECRET_KEY), { apiVersion: '2026-02-25.clover' });
+    // ✅ เติม as any เพื่อไม่ให้ TypeScript แจ้ง Error เรื่องเวอร์ชัน
+    this.stripe = new Stripe(String(process.env.STRIPE_SECRET_KEY), { apiVersion: '2026-02-25.clover' as any });
   }
 
-  // ✅ ฟังก์ชันช่วยสร้างลิงก์จ่ายเงิน Stripe
+  // ✅ ฟังก์ชันช่วยสร้างลิงก์จ่ายเงิน Stripe (ตั้งค่ากลับไปที่หน้า /orders เรียบร้อยแล้ว)
   async createStripeSession(orderId: string, totalAmount: number, userId: string) {
     const frontendUrl = process.env.FRONTEND_URL;
     return await this.stripe.checkout.sessions.create({
