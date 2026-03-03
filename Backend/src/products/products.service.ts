@@ -1,3 +1,4 @@
+// Backend/src/products/products.service.ts
 import { Injectable, NotAcceptableException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -18,11 +19,19 @@ export class ProductsService {
   }
 
   async findAll(): Promise<Product[]> {
-    return await this.productsRepository.find();
+    // ✅ เพิ่ม relations: ['variants'] เพื่อให้ดึงข้อมูลตัวเลือกสินค้าออกมาด้วย
+    return await this.productsRepository.find({
+      relations: ['variants']
+    });
   }
 
   async findOne(id: string): Promise<Product> {
-    const product = await this.productsRepository.findOne({ where: { id }});
+    // ✅ เพิ่ม relations: ['variants'] เพื่อให้ดึงข้อมูลตัวเลือกสินค้าออกมาด้วย
+    const product = await this.productsRepository.findOne({ 
+      where: { id },
+      relations: ['variants']
+    });
+    
     if (!product) {
       throw new NotAcceptableException(`Product with ID ${id} not found`)
     }

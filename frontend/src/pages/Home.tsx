@@ -19,12 +19,12 @@ const getColorHex = (colorName: string) => {
   return colorMap[colorName] || '#ccc';
 };
 
-// ✅ ย้ายฟังก์ชัน calculateDiscountPrice มาไว้นอกคอมโพเนนต์ Home เพื่อแก้ Error: Cannot access before initialization
-const calculateDiscountPrice = (price: string | number, promo: Promotion) => {
+// ✅ เปลี่ยนมาใช้ function ธรรมดา เพื่อให้เกิด Hoisting แก้ปัญหา Cannot access before initialization แน่นอน
+function calculateDiscountPrice(price: string | number, promo: Promotion) {
   const p = Number(price);
   if (promo.discountType === 'PERCENTAGE') return p - (p * (promo.discountValue / 100));
   return Math.max(0, p - promo.discountValue);
-};
+}
 
 const Home = () => {
   const [products, setProducts] = useState<ProductWithPromo[]>([]);
@@ -78,10 +78,10 @@ const Home = () => {
           api.getAllColors(),
           api.getAllMaterials(),
           api.getAllSizes(),
-          api.getAllPromotions() // ✅ ดึงข้อมูลโปรโมชันทั้งหมด
+          api.getAllPromotions() 
         ]);
         
-        // ✅ เปลี่ยนลอจิกในการแมปโปรโมชัน ให้เช็ค isActive และช่วงเวลา
+        // ลอจิกในการแมปโปรโมชัน ให้เช็ค isActive และช่วงเวลา
         let promoMap = new Map<string, Promotion>();
         const now = new Date();
 
@@ -135,7 +135,7 @@ const Home = () => {
     const searchLower = searchTerm.toLowerCase();
     const matchSearch = searchTerm === '' || product.name.toLowerCase().includes(searchLower) || (product.category && product.category.toLowerCase().includes(searchLower)) || (product.description && product.description.toLowerCase().includes(searchLower));
     
-    // ✅ ฟังก์ชัน calculateDiscountPrice จะถูกเรียกใช้ได้อย่างถูกต้องแล้ว
+    // ฟังก์ชัน calculateDiscountPrice จะถูกเรียกใช้ได้อย่างถูกต้องแล้ว
     const productPrice = product.promo ? calculateDiscountPrice(product.price, product.promo) : Number(product.price);
     const matchMinPrice = minPrice === '' || productPrice >= Number(minPrice);
     const matchMaxPrice = maxPrice === '' || productPrice <= Number(maxPrice);
@@ -180,10 +180,10 @@ const Home = () => {
     window.dispatchEvent(new Event('bookmarksUpdated'));
   };
 
-  // ✅ ดึง Base URL จาก Environment (ถ้าไม่มีให้ใช้ localhost)
+  // ดึง Base URL จาก Environment (ถ้าไม่มีให้ใช้ localhost)
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-  // ✅ ปรับแก้ getImageUrl เพื่อดึงรูปจาก Backend
+  // ปรับแก้ getImageUrl เพื่อดึงรูปจาก Backend
   const getImageUrl = (product: Product) => {
     try {
         const rawImages = product.image;
@@ -198,7 +198,7 @@ const Home = () => {
 
             if (img.startsWith('http')) return img;
             
-            // ✅ ดึงค่า baseUrl จาก .env
+            // ดึงค่า baseUrl จาก .env
             const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
             return `${baseUrl}/uploads/${img}`;
 
@@ -244,7 +244,7 @@ const Home = () => {
                     </button>
 
                     <div className="h-48 overflow-hidden bg-gray-100">
-                        {/* ✅ รูปภาพจะถูกดึงจาก Backend อย่างถูกต้อง */}
+                        {/* รูปภาพจะถูกดึงจาก Backend อย่างถูกต้อง */}
                         <img src={getImageUrl(product)} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                     </div>
                     <div className="p-4 flex flex-col flex-1">
