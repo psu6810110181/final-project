@@ -76,6 +76,8 @@ export class PromotionsService {
     const promotion = await this.findOne(id);
     Object.assign(promotion, promotionData);
     
+    await this.promotionsRepository.save(promotion);
+
     // อัปเดตความสัมพันธ์กับ products ถ้ามีการเปลี่ยนแปลง
     if (productIds !== undefined) {
       // ลบความสัมพันธ์เก่าทั้งหมด
@@ -97,7 +99,6 @@ export class PromotionsService {
       }
     }
     
-    await this.promotionsRepository.save(promotion);
     return this.findOne(id);
   }
 

@@ -133,7 +133,7 @@ const PromotionManager: React.FC = () => {
       const promotionData = {
         ...formData,
         discountValue: Number(formData.discountValue),
-        productIds: formData.productIds.length > 0 ? formData.productIds : undefined,
+        productIds: formData.productIds,
         startDate: new Date(formData.startDate).toISOString(),
         endDate: new Date(formData.endDate).toISOString()
       };
