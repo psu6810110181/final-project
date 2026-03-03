@@ -116,6 +116,12 @@ const [mainStock, setMainStock] = useState("");
       setCategoryId(productDetails.category || "");
       setRoomId(productDetails.room || "");
       setSelectedFeatures(productDetails.features || []);
+      
+      // ดึงข้อมูลสินค้าหลัก
+      setMainColor(productDetails.color || "");
+      setMainMaterial(productDetails.material || "");
+      setMainSize(productDetails.size || "");
+      setMainStock(String(productDetails.mainStock || productDetails.stock || ""));
 
       // ✅ 2. จัดการ URL รูปภาพของตัวเลือก (Variants) ให้มี Path /uploads/ 
       if (productDetails.variants && productDetails.variants.length > 0) {
@@ -198,6 +204,12 @@ const [mainStock, setMainStock] = useState("");
       
       if (roomId) formData.append('room', roomId);
       if (description) formData.append('description', description);
+      
+      // เพิ่มข้อมูลสินค้าหลัก
+      if (mainColor) formData.append('color', mainColor);
+      if (mainMaterial) formData.append('material', mainMaterial);
+      if (mainSize) formData.append('size', mainSize);
+      if (mainStock) formData.append('mainStock', mainStock);
 
       if (imageFile) {
          formData.append('image', imageFile);
