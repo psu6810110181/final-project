@@ -1,6 +1,7 @@
+// frontend/src/pages/OrderHistory.tsx
 import { useState, useEffect } from 'react';
 import * as api from '../services/api';
-import { Package, Calendar, ChevronRight, Clock, CheckCircle, XCircle, MapPin, X } from 'lucide-react';
+import { Package, Calendar, ChevronRight, Clock, CheckCircle, XCircle, MapPin, X, Truck } from 'lucide-react';
 
 const OrderHistory = () => {
   const [orders, setOrders] = useState<api.Order[]>([]);
@@ -8,7 +9,6 @@ const OrderHistory = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<api.Order | null>(null);
 
-  // ดึงข้อมูลแยกออกมาเป็นฟังก์ชัน เพื่อให้เรียกใช้ซ้ำตอนยกเลิกเสร็จได้
   const fetchOrders = async () => {
     try {
       setError(null);
@@ -26,16 +26,14 @@ const OrderHistory = () => {
     fetchOrders();
   }, []);
 
-  // 🔴 ฟังก์ชันกดยกเลิกออเดอร์
   const handleCancelOrder = async (orderId: string) => {
-    // เด้งถามความชัวร์ก่อน
     const confirmCancel = window.confirm("คุณแน่ใจหรือไม่ว่าต้องการยกเลิกคำสั่งซื้อนี้?");
     if (!confirmCancel) return;
 
     try {
       await api.cancelOrder(orderId);
       alert("ยกเลิกคำสั่งซื้อเรียบร้อยแล้ว");
-      fetchOrders(); // ดึงออเดอร์มาแสดงใหม่เพื่ออัปเดตสถานะทันที
+      fetchOrders(); 
     } catch (err: any) {
       console.error(err);
       alert(err.response?.data?.message || "เกิดข้อผิดพลาดในการยกเลิกคำสั่งซื้อ");
@@ -43,7 +41,6 @@ const OrderHistory = () => {
   };
 
   const getStatusInfo = (rawStatus: string) => {
-    // แปลงเป็นตัวพิมพ์เล็กเพื่อให้เปรียบเทียบง่าย (รองรับทั้ง 'PENDING' และ 'pending')
     const status = (rawStatus || '').toLowerCase();
     
     switch (status) {
@@ -56,11 +53,9 @@ const OrderHistory = () => {
       case 'shipped': 
         return { color: 'text-indigo-600', bg: 'bg-indigo-50', icon: <Package size={16} />, label: 'จัดส่งแล้ว' };
       
-      // ✅ สถานะเพิ่งกดสั่งซื้อ แต่ยังไม่ได้แนบสลิป (จาก Logic ของหน้า Cart)
       case 'pending': 
         return { color: 'text-amber-600', bg: 'bg-amber-50', icon: <Clock size={16} />, label: 'รอชำระเงิน/แนบสลิป' };
 
-      // ✅ สถานะอัปโหลดสลิปแล้ว (รอแอดมินตรวจสอบใน Backend)
       case 'waiting_for_verification': 
         return { color: 'text-amber-600', bg: 'bg-blue-50', icon: <Clock size={16} />, label: 'รอตรวจสอบยอดเงิน' };
       
@@ -73,6 +68,31 @@ const OrderHistory = () => {
     if (!dateString) return 'ไม่มีข้อมูลวันที่';
     const date = new Date(dateString);
     return isNaN(date.getTime()) ? 'รูปแบบวันที่ขัดข้อง' : date.toLocaleDateString('th-TH');
+  };
+
+  // ✅ ฟังก์ชันคำนวณวันที่คาดว่าจะได้รับสินค้า
+  const calculateDeliveryDate = (orderDateStr: string, items: any[] = []) => {
+    if (!orderDateStr) return null;
+    const date = new Date(orderDateStr);
+    if (isNaN(date.getTime())) return null;
+
+    // หาจำนวนสินค้าทั้งหมดในออเดอร์
+    const totalQty = items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+    
+    // คำนวณวันจัดส่ง (เริ่มต้น 3 วัน)
+    let deliveryDays = 3;
+    
+    // ถ้าเกิน 3 ชิ้น นับเพิ่มทีละ 3 ชิ้น แล้วบวก 1 วัน (Math.ceil จะช่วยปัดเศษขึ้น เช่น เกินมา 2 ชิ้นก็บวก 1 วัน)
+    if (totalQty > 3) {
+      deliveryDays += Math.ceil((totalQty - 3) / 3);
+    }
+    
+    // จำกัดให้บวกได้สูงสุดไม่เกิน 7 วัน
+    deliveryDays = Math.min(deliveryDays, 7);
+    
+    // นำวันที่สั่งซื้อมาบวกวันจัดส่ง
+    date.setDate(date.getDate() + deliveryDays);
+    return date.toISOString();
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">กำลังโหลดประวัติการสั่งซื้อ...</div>;
@@ -99,6 +119,8 @@ const OrderHistory = () => {
             {orders.map((order) => {
               const status = getStatusInfo(order.status);
               const itemCount = order.items?.length || 0; 
+              // ✅ คำนวณวันจัดส่งของออเดอร์นี้
+              const estimatedDeliveryDate = calculateDeliveryDate(order.orderDate, order.items);
 
               return (
                 <div key={order.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:border-[#148F96] transition-all group">
@@ -120,10 +142,20 @@ const OrderHistory = () => {
                      <p className="text-sm truncate">{order.shippingAddress || 'ไม่มีที่อยู่จัดส่ง'}</p>
                   </div>
                   
-                  <div className="mb-4">
-                     <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-md">
-                        รวม {itemCount} รายการ
-                     </span>
+                  <div className="mb-4 flex flex-col gap-2">
+                     <div>
+                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-md">
+                           รวม {itemCount} รายการ
+                        </span>
+                     </div>
+                     
+                     {/* ✅ แสดงวันที่คาดว่าจะได้รับสินค้า */}
+                     {estimatedDeliveryDate && order.status.toLowerCase() !== 'cancelled' && (
+                        <div className="text-sm font-medium text-[#148F96] flex items-center gap-1.5 bg-teal-50/50 w-fit px-3 py-1.5 rounded-lg">
+                           <Truck size={16} />
+                           คาดว่าจะได้รับสินค้าภายใน {formatDate(estimatedDeliveryDate)}
+                        </div>
+                     )}
                   </div>
 
                   <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
@@ -133,7 +165,6 @@ const OrderHistory = () => {
                     </div>
                     
                     <div className="flex items-center gap-3">
-                      {/* 🔴 ปุ่มยกเลิกออเดอร์ (จะแสดงก็ต่อเมื่อเป็น PENDING เท่านั้น) */}
                       {(order.status === 'PENDING' || order.status.toLowerCase() === 'pending') && (
                         <button 
                           onClick={() => handleCancelOrder(order.id)}
@@ -206,6 +237,14 @@ const OrderHistory = () => {
 
             <div className="p-6 border-t border-gray-100 bg-gray-50 space-y-3 flex-shrink-0">
               
+              {/* ✅ แสดงวันจัดส่งใน Modal บิลชำระเงินด้วย */}
+              {selectedOrder.status.toLowerCase() !== 'cancelled' && (
+                <div className="flex justify-between items-center text-sm font-medium text-[#148F96] bg-teal-50/70 p-2 rounded-lg mb-3">
+                  <span className="flex items-center gap-2"><Truck size={16}/> คาดว่าจะได้รับสินค้าภายใน</span>
+                  <span>{formatDate(calculateDeliveryDate(selectedOrder.orderDate, selectedOrder.items) || '')}</span>
+                </div>
+              )}
+
               <div className="flex justify-between items-center text-sm text-gray-600">
                 <span>รวมค่าสินค้า</span>
                 <span>฿{(Number(selectedOrder.totalAmountProduct) || 0).toLocaleString()}</span>

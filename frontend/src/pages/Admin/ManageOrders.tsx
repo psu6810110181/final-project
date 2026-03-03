@@ -27,7 +27,6 @@ const ManageOrders: React.FC = () => {
     infoLight: '#DBEAFE'
   };
 
-  // ฟังก์ชันดึง Token ป้องกัน Error 401
   const getAuthHeader = () => {
     const token = localStorage.getItem('token');
     return { headers: { Authorization: `Bearer ${token}` } };
@@ -74,7 +73,6 @@ const ManageOrders: React.FC = () => {
     }
   };
 
-  // Helper สำหรับสี Status
   const getStatusStyle = (status: string) => {
     switch(status) {
       case 'COMPLETED': return { bg: colors.successLight, color: colors.success };
@@ -84,10 +82,27 @@ const ManageOrders: React.FC = () => {
     }
   };
 
+  // ✅ เพิ่มฟังก์ชันคำนวณวันจัดส่ง (ใช้ Logic เดียวกับฝั่งลูกค้า)
+  const calculateDeliveryDate = (orderDateStr: string, items: any[] = []) => {
+    if (!orderDateStr) return null;
+    const date = new Date(orderDateStr);
+    if (isNaN(date.getTime())) return null;
+
+    const totalQty = items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+    let deliveryDays = 3;
+    
+    if (totalQty > 3) {
+      deliveryDays += Math.ceil((totalQty - 3) / 3);
+    }
+    deliveryDays = Math.min(deliveryDays, 7);
+    date.setDate(date.getDate() + deliveryDays);
+    
+    return date;
+  };
+
   return (
-    <article style={{ maxWidth: '1200px', margin: '0 auto', padding: '10px 0', fontFamily: "'Prompt', sans-serif" }}>
+    <article style={{ maxWidth: '1300px', margin: '0 auto', padding: '10px 0', fontFamily: "'Prompt', sans-serif" }}>
       
-      {/* 🚀 Semantic Header */}
       <header style={{ 
         background: 'linear-gradient(to right, #ffffff, #f8fafc)',
         padding: '24px 32px', borderRadius: '16px', boxShadow: '0 4px 20px -2px rgba(0, 0, 0, 0.04)',
@@ -106,30 +121,30 @@ const ManageOrders: React.FC = () => {
             จัดการคำสั่งซื้อ (Orders)
           </h2>
           <p style={{ margin: '6px 0 0 0', color: '#64748B', fontSize: '15px' }}>
-            ตรวจสอบรายการสั่งซื้อ อัปเดตสถานะการชำระเงิน และจัดการออเดอร์จากลูกค้า
+            ตรวจสอบรายการสั่งซื้อ อัปเดตสถานะการชำระเงิน และกำหนดการจัดส่ง
           </p>
         </div>
       </header>
 
-      {/* แจ้งเตือน Error */}
       {errorMessage && (
         <div style={{ background: colors.dangerLight, color: colors.danger, padding: '16px 20px', borderRadius: '12px', marginBottom: '24px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '10px', border: `1px solid #FECACA` }} role="alert">
           <span aria-hidden="true">⚠️</span> {errorMessage}
         </div>
       )}
 
-      {/* 🚀 Semantic Table Section */}
       <section aria-labelledby="manage-orders-heading" style={{ background: colors.bgWhite, borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', border: `1px solid ${colors.border}`, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto', padding: '1px' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '900px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '1000px' }}>
             
             <thead style={{ background: colors.bgLight, borderBottom: `2px solid ${colors.border}` }}>
               <tr>
                 <th scope="col" style={{ padding: '16px 20px', color: colors.textMuted, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Order ID</th>
                 <th scope="col" style={{ padding: '16px 20px', color: colors.textMuted, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>วันที่สั่งซื้อ</th>
-                <th scope="col" style={{ padding: '16px 20px', color: colors.textMuted, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ลูกค้า (Email)</th>
+                {/* ✅ เพิ่มคอลัมน์วันจัดส่ง */}
+                <th scope="col" style={{ padding: '16px 20px', color: colors.textMuted, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>วันจัดส่ง</th>
+                <th scope="col" style={{ padding: '16px 20px', color: colors.textMuted, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ลูกค้า</th>
                 <th scope="col" style={{ padding: '16px 20px', color: colors.textMuted, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ยอดรวม</th>
-                <th scope="col" style={{ padding: '16px 20px', color: colors.textMuted, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>สลิปโอนเงิน</th>
+                <th scope="col" style={{ padding: '16px 20px', color: colors.textMuted, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>สลิป</th>
                 <th scope="col" style={{ padding: '16px 20px', color: colors.textMuted, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>สถานะ</th>
                 <th scope="col" style={{ padding: '16px 20px', color: colors.textMuted, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'right' }}>จัดการ</th>
               </tr>
@@ -138,22 +153,41 @@ const ManageOrders: React.FC = () => {
             <tbody>
               {allOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: colors.textMuted, fontStyle: 'italic' }}>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: colors.textMuted, fontStyle: 'italic' }}>
                     ยังไม่มีคำสั่งซื้อในระบบ
                   </td>
                 </tr>
               ) : (
                 allOrders.map((order) => {
                   const statusStyle = getStatusStyle(order.status);
+                  // คำนวณวันส่งและยอดสินค้ารวม
+                  const deliveryDate = calculateDeliveryDate(order.orderDate, order.items);
+                  const itemCount = order.items?.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 0), 0) || 0;
                   
                   return (
                     <tr key={order.id} className="order-row" style={{ borderBottom: `1px solid ${colors.border}`, transition: 'background 0.2s' }}>
                       <td style={{ padding: '16px 20px', fontSize: '14px', fontFamily: 'monospace', color: colors.textMain, fontWeight: '500' }}>
                         #{order.id.substring(0, 8)}
+                        <div style={{ fontSize: '12px', color: colors.textMuted, marginTop: '4px', fontFamily: 'sans-serif' }}>
+                          {itemCount} ชิ้น
+                        </div>
                       </td>
                       <td style={{ padding: '16px 20px', fontSize: '14px', color: colors.textMain }}>
-                        {new Date(order.orderDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        {new Date(order.orderDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}
+                        <div style={{ fontSize: '12px', color: colors.textMuted }}>
+                          {new Date(order.orderDate).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                        </div>
                       </td>
+                      
+                      {/* ✅ แสดงวันจัดส่ง */}
+                      <td style={{ padding: '16px 20px', fontSize: '14px', color: colors.primary, fontWeight: '600' }}>
+                        {order.status === 'CANCELLED' ? (
+                          <span style={{ color: colors.textMuted }}>-</span>
+                        ) : (
+                          deliveryDate ? deliveryDate.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A'
+                        )}
+                      </td>
+
                       <td style={{ padding: '16px 20px', fontSize: '14px', color: colors.textMain }}>
                         {order.user?.email || 'N/A'}
                       </td>
@@ -207,7 +241,6 @@ const ManageOrders: React.FC = () => {
         </div>
       </section>
 
-      {/* สไตล์เพิ่มเติมสำหรับ Hover ตาราง */}
       <style>{`
         .order-row:hover {
           background-color: #F8FAFC !important;
