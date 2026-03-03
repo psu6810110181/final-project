@@ -36,6 +36,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
   const [roomId, setRoomId] = useState(""); 
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]); 
   const [description, setDescription] = useState("");
+  // Main product attributes
+const [mainColor, setMainColor] = useState("");
+const [mainMaterial, setMainMaterial] = useState("");
+const [mainSize, setMainSize] = useState("");
+const [mainStock, setMainStock] = useState("");
   
   // State สำหรับเก็บไฟล์ของจริง
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -341,6 +346,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
                   <label htmlFor="product-name" style={labelStyle}>ชื่อสินค้า <span style={{color: colors.danger}} aria-label="จำเป็น">*</span></label>
                   <input id="product-name" placeholder="เช่น โซฟาผ้า รุ่น Cozy" value={name} onChange={e => setName(e.target.value)} required style={inputStyle} />
                 </div>
+
                 <div style={{ flex: 1 }}>
                   <label htmlFor="product-price" style={labelStyle}>ราคาเริ่มต้น (฿) <span style={{color: colors.danger}} aria-label="จำเป็น">*</span></label>
                   <input id="product-price" placeholder="0.00" type="number" value={price} onChange={e => setPrice(e.target.value)} required style={inputStyle} />
@@ -363,7 +369,33 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
                   </select>
                 </div>
               </div>
-              
+              <div style={{ display: 'flex', gap: '16px' }}>
+  <div style={{ flex: 1 }}>
+    <label htmlFor="main-color" style={labelStyle}>สีหลัก</label>
+    <select id="main-color" value={mainColor} onChange={e => setMainColor(e.target.value)} style={inputStyle}>
+      <option value="">-- เลือกสี --</option>
+      {colorsList.map(color => <option key={color.id} value={color.name}>{color.name}</option>)}
+    </select>
+  </div>
+  <div style={{ flex: 1 }}>
+    <label htmlFor="main-material" style={labelStyle}>วัสดุหลัก</label>
+    <select id="main-material" value={mainMaterial} onChange={e => setMainMaterial(e.target.value)} style={inputStyle}>
+      <option value="">-- เลือกวัสดุ --</option>
+      {materialsList.map(material => <option key={material.id} value={material.name}>{material.name}</option>)}
+    </select>
+  </div>
+  <div style={{ flex: 1 }}>
+    <label htmlFor="main-size" style={labelStyle}>ขนาดหลัก</label>
+    <select id="main-size" value={mainSize} onChange={e => setMainSize(e.target.value)} style={inputStyle}>
+      <option value="">-- เลือกขนาด --</option>
+      {sizesList.map(size => <option key={size.id} value={size.name}>{size.name}</option>)}
+    </select>
+  </div>
+  <div style={{ flex: 1 }}>
+    <label htmlFor="main-stock" style={labelStyle}>คลังหลัก</label>
+    <input id="main-stock" placeholder="0" type="number" value={mainStock} onChange={e => setMainStock(e.target.value)} style={inputStyle} />
+  </div>
+</div>
               <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
                 <legend style={labelStyle}>✨ คุณสมบัติพิเศษ</legend>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', padding: '12px', background: colors.bgLight, borderRadius: '10px', border: `1px solid ${colors.border}` }}>
