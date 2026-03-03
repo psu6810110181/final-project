@@ -183,7 +183,7 @@ const Home = () => {
             
             // ✅ แก้ไขตรงนี้: ดึงค่า baseUrl จาก .env
             const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-            return `${baseUrl}/uploads/products/${img}`;
+            return `${baseUrl}/uploads/${img}`;
 
         }
     } catch (e) {
