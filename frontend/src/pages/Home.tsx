@@ -19,6 +19,13 @@ const getColorHex = (colorName: string) => {
   return colorMap[colorName] || '#ccc';
 };
 
+// ✅ ย้ายฟังก์ชัน calculateDiscountPrice มาไว้นอกคอมโพเนนต์ Home เพื่อแก้ Error: Cannot access before initialization
+const calculateDiscountPrice = (price: string | number, promo: Promotion) => {
+  const p = Number(price);
+  if (promo.discountType === 'PERCENTAGE') return p - (p * (promo.discountValue / 100));
+  return Math.max(0, p - promo.discountValue);
+};
+
 const Home = () => {
   const [products, setProducts] = useState<ProductWithPromo[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -71,14 +78,23 @@ const Home = () => {
           api.getAllColors(),
           api.getAllMaterials(),
           api.getAllSizes(),
-          api.getActiveFlashSales()
+          api.getAllPromotions() // ✅ ดึงข้อมูลโปรโมชันทั้งหมด
         ]);
         
+        // ✅ เปลี่ยนลอจิกในการแมปโปรโมชัน ให้เช็ค isActive และช่วงเวลา
         let promoMap = new Map<string, Promotion>();
+        const now = new Date();
+
         promoData.forEach((promo: Promotion) => {
-            promo.products?.forEach((prod: Product) => {
-                if (!promoMap.has(prod.id)) promoMap.set(prod.id, promo);
-            });
+            const startDate = new Date(promo.startDate);
+            const endDate = new Date(promo.endDate);
+            const isCurrentlyActive = promo.isActive && now >= startDate && now <= endDate;
+
+            if (isCurrentlyActive) {
+                promo.products?.forEach((prod: Product) => {
+                    if (!promoMap.has(prod.id)) promoMap.set(prod.id, promo);
+                });
+            }
         });
 
         const productsWithPromo: ProductWithPromo[] = productsData.map(p => ({
@@ -119,6 +135,7 @@ const Home = () => {
     const searchLower = searchTerm.toLowerCase();
     const matchSearch = searchTerm === '' || product.name.toLowerCase().includes(searchLower) || (product.category && product.category.toLowerCase().includes(searchLower)) || (product.description && product.description.toLowerCase().includes(searchLower));
     
+    // ✅ ฟังก์ชัน calculateDiscountPrice จะถูกเรียกใช้ได้อย่างถูกต้องแล้ว
     const productPrice = product.promo ? calculateDiscountPrice(product.price, product.promo) : Number(product.price);
     const matchMinPrice = minPrice === '' || productPrice >= Number(minPrice);
     const matchMaxPrice = maxPrice === '' || productPrice <= Number(maxPrice);
@@ -181,21 +198,15 @@ const Home = () => {
 
             if (img.startsWith('http')) return img;
             
-            // ✅ แก้ไขตรงนี้: ดึงค่า baseUrl จาก .env
+            // ✅ ดึงค่า baseUrl จาก .env
             const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-            return `${baseUrl}/uploads/products/${img}`;
+            return `${baseUrl}/uploads/${img}`;
 
         }
     } catch (e) {
         console.error("Error parsing image:", e);
     }
     return "https://placehold.co/400x300?text=No+Image";
-  };
-
-  const calculateDiscountPrice = (price: string | number, promo: Promotion) => {
-    const p = Number(price);
-    if (promo.discountType === 'PERCENTAGE') return p - (p * (promo.discountValue / 100));
-    return Math.max(0, p - promo.discountValue);
   };
 
   const handleAddToCart = async (e: React.MouseEvent, product: Product) => {

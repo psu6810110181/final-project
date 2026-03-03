@@ -111,7 +111,7 @@ const ReviewPage = () => {
   const getImageUrl = (img: string) => {
     if (!img) return "https://via.placeholder.com/150";
     if (img.startsWith('http')) return img;
-    return `http://localhost:3000/uploads/products/${img}`;
+    return `http://localhost:3000/uploads/${img}`;
   };
 
   if (loading) return (
