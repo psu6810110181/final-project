@@ -1,11 +1,13 @@
+// frontend/src/pages/Cart.tsx
 import { useState, useEffect } from 'react';
 import { Trash2, Minus, Plus, MapPin, X, CreditCard, Upload, CheckCircle, QrCode } from 'lucide-react'; 
 import { useNavigate } from 'react-router-dom';
-import { useCart } from '../contexts/CartContext';
+// ✅ Import calculateDiscountPrice เพิ่มเข้ามา
+import { useCart, calculateDiscountPrice } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import * as api from '../services/api';
 
-// ✅ นำเข้าไลบรารีสร้าง QR Code PromptPay ตามราคา
+// นำเข้าไลบรารีสร้าง QR Code PromptPay ตามราคา
 import { QRCodeSVG } from 'qrcode.react';
 import generatePayload from 'promptpay-qr';
 
@@ -108,7 +110,7 @@ const Cart = () => {
   const shippingFee = cartItems.length > 0 ? 150 : 0; 
   const total = cartTotal + installationFee + shippingFee;
 
-  // ✅ สร้างข้อมูล QR Code Payload ตามราคาสุทธิ (total)
+  // สร้างข้อมูล QR Code Payload ตามราคาสุทธิ (total)
   const promptPayID = "0812345678"; // 👈 เปลี่ยนเป็นเบอร์โทรศัพท์หรือเลขบัตรประชาชนพร้อมเพย์ของคุณ
   const qrPayload = generatePayload(promptPayID, { amount: total });
 
@@ -213,7 +215,21 @@ const Cart = () => {
                     <div className="flex-1 min-w-0">
                       <h3 className="font-bold text-gray-800 text-lg truncate">{item.product.name}</h3>
                       <p className="text-gray-400 text-sm mb-2">{(item.product as any).category || "ทั่วไป"}</p>
-                      <div className="font-bold text-[#D65A31] text-lg mb-2">฿{Number(item.product.price).toLocaleString()}</div>
+                      
+                      {/* ✅ แสดงราคาลดและป้ายโปรโมชัน */}
+                      {item.product.promo ? (
+                        <div className="mb-2 flex items-center flex-wrap gap-2">
+                           <span className="text-gray-400 line-through text-sm">฿{Number(item.product.price).toLocaleString()}</span>
+                           <span className="font-bold text-[#D65A31] text-lg">
+                               ฿{calculateDiscountPrice(item.product.price, item.product.promo).toLocaleString()}
+                           </span>
+                           <span className="text-[10px] text-red-600 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded font-bold">
+                               ลด {item.product.promo.discountType === 'PERCENTAGE' ? `${item.product.promo.discountValue}%` : `฿${item.product.promo.discountValue}`}
+                           </span>
+                        </div>
+                      ) : (
+                        <div className="font-bold text-[#D65A31] text-lg mb-2">฿{Number(item.product.price).toLocaleString()}</div>
+                      )}
                       
                       <div className="flex items-center gap-2 mt-2">
                           <span className="text-xs text-[#148F96] font-bold">🔧 บริการติดตั้ง:</span>
@@ -361,7 +377,7 @@ const Cart = () => {
             ) : (
               <div className="w-full flex flex-col items-center">
                 
-                {/* ✅ ส่วนของ QR Code ที่ Generate แบบไดนามิกตามราคา */}
+                {/* ส่วนของ QR Code ที่ Generate แบบไดนามิกตามราคา */}
                 <div className="w-56 h-56 bg-white rounded-2xl flex items-center justify-center border-4 border-gray-50 mb-6 shadow-inner overflow-hidden p-2">
                   <QRCodeSVG value={qrPayload} size={200} />
                 </div>
