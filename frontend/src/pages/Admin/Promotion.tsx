@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import api, { type Promotion, type Product } from "../../services/api";
 import Alert from "../../components/Alert";
+import Confirm from "../../components/Confirm";
 
 const PromotionManager: React.FC = () => {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
@@ -13,6 +14,13 @@ const PromotionManager: React.FC = () => {
   
   // Alert state
   const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | 'warning' | 'info' } | null>(null);
+  
+  // Confirm state
+  const [confirm, setConfirm] = useState<{ 
+    message: string; 
+    onConfirm: () => void; 
+    type?: 'danger' | 'warning' | 'info' 
+  } | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -194,16 +202,20 @@ const PromotionManager: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบโปรโมชั่นนี้?\n(การกระทำนี้ไม่สามารถย้อนกลับได้)`)) return;
-    
-    try {
-      await api.delete(`/promotions/${id}`, getAuthHeader());
-      setAlert({ message: "ลบโปรโมชั่นสำเร็จ!", type: "success" });
-      fetchPromotions();
-    } catch (error) {
-      console.error("Error deleting promotion:", error);
-      setAlert({ message: "เกิดข้อผิดพลาดในการลบโปรโมชั่น", type: "error" });
-    }
+    setConfirm({
+      message: `คุณแน่ใจหรือไม่ว่าต้องการลบโปรโมชั่นนี้?\n(การกระทำนี้ไม่สามารถย้อนกลับได้)`,
+      onConfirm: async () => {
+        try {
+          await api.delete(`/promotions/${id}`, getAuthHeader());
+          setAlert({ message: "ลบโปรโมชั่นสำเร็จ!", type: "success" });
+          fetchPromotions();
+        } catch (error) {
+          console.error("Error deleting promotion:", error);
+          setAlert({ message: "เกิดข้อผิดพลาดในการลบโปรโมชั่น", type: "error" });
+        }
+      },
+      type: 'danger'
+    });
   };
 
   const handleToggleStatus = async (id: string, currentStatus: boolean) => {
@@ -593,6 +605,16 @@ const PromotionManager: React.FC = () => {
           message={alert.message}
           type={alert.type}
           onClose={() => setAlert(null)}
+        />
+      )}
+      
+      {/* Custom Confirm */}
+      {confirm && (
+        <Confirm
+          message={confirm.message}
+          onConfirm={confirm.onConfirm}
+          onCancel={() => setConfirm(null)}
+          type={confirm.type}
         />
       )}
     </article>
