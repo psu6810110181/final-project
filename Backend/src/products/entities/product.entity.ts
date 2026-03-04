@@ -35,6 +35,19 @@ export class Product {
   @Column({ nullable: true })
   image: string;
 
+  // Main product attributes
+  @Column({ nullable: true })
+  color: string;
+
+  @Column({ nullable: true })
+  material: string;
+
+  @Column({ nullable: true })
+  size: string;
+
+  @Column('int', { nullable: true })
+  mainStock: number;
+
   @OneToMany(() => ProductVariant, (variant) => variant.product, { cascade: true })
   variants: ProductVariant[];
 

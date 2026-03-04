@@ -56,6 +56,24 @@ export class CreateProductDto {
   @IsOptional()
   image?: string;
 
+  // Main product attributes
+  @IsString()
+  @IsOptional()
+  color?: string;
+
+  @IsString()
+  @IsOptional()
+  material?: string;
+
+  @IsString()
+  @IsOptional()
+  size?: string;
+
+  @IsNumber()
+  @IsOptional()
+  @Type(() => Number)
+  mainStock?: number;
+
   // 👇 รับค่าเป็น Array ของ Variants
   @IsArray()
   @ValidateNested({ each: true })
