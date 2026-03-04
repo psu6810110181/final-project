@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import * as api from '../services/api';
 // ✅ นำเข้า Banknote (ไอคอนรูปเงิน) เพิ่มเข้ามา
 import { Package, Calendar, ChevronRight, Clock, CheckCircle, XCircle, MapPin, X, Truck, CreditCard, Banknote } from 'lucide-react';
@@ -35,6 +35,17 @@ const OrderHistory = () => {
     return () => {
       window.removeEventListener('pageshow', handlePageShow);
     };
+  }, []);
+
+  // ✅ Check for payment success URL parameter and refresh orders
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('success') === 'true') {
+      // Refresh orders to get updated status after payment
+      fetchOrders();
+      // Clean up the URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }, []);
 
   const handleCancelOrder = async (orderId: string) => {
@@ -327,3 +338,4 @@ const OrderHistory = () => {
 };
 
 export default OrderHistory;
+

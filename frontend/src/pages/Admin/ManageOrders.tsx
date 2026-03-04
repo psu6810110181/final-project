@@ -1,4 +1,4 @@
-// ManageOrders.tsx
+﻿// ManageOrders.tsx
 import React, { useState, useEffect } from "react";
 import api from "../../services/api";
 import Alert from "../../components/Alert";
@@ -206,7 +206,7 @@ const ManageOrders: React.FC = () => {
                         {order.status === 'CANCELLED' ? (
                           <span style={{ color: colors.textMuted }}>-</span>
                         ) : (
-                          deliveryDate ? deliveryDate.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A'
+                          order.status === 'PENDING' ? (<span style={{ color: colors.warning }}>รอการชำระเงิน</span>) : (<span style={{ color: colors.primary }}>{deliveryDate ? deliveryDate.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A'}</span>)
                         )}
                       </td>
 
