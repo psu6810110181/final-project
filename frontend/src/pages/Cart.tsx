@@ -71,7 +71,7 @@ const Cart = () => {
 
     if (!fileName) return "https://via.placeholder.com/150";
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    return fileName.startsWith('http') ? fileName : `${baseUrl}/uploads/products/${fileName}`; // อิง path ภาพสินค้า
+    return fileName.startsWith('http') ? fileName : `${baseUrl}/uploads/${fileName}`; // อิง path ภาพสินค้า
   };
 
   // ✅ เปลี่ยนมาใช้ handleCheckout เพื่อเด้งไป Stripe โดยตรง
