@@ -21,6 +21,7 @@ interface Variant {
   stock: string;
   imageUrl?: string;
   imageFile?: File; 
+  originalImage?: string; // เก็บชื่อไฟล์รูปเดิมไว้สำหรับส่งไป Backend
 }
 
 interface ProductFormProps {
@@ -45,6 +46,7 @@ const [mainStock, setMainStock] = useState("");
   // State สำหรับเก็บไฟล์ของจริง
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState(""); // ใช้สำหรับ Preview รูป
+  const [originalMainImage, setOriginalMainImage] = useState(""); // เก็บชื่อไฟล์รูปเดิมไว้สำหรับส่งไป Backend
   
   const [variants, setVariants] = useState<Variant[]>([
     { color: "", material: "", size: "", price: "", stock: "" }
@@ -97,6 +99,8 @@ const [mainStock, setMainStock] = useState("");
       
       // ✅ 1. จัดการ URL รูปภาพหลักให้โหลดได้ชัวร์ๆ (ดักจับเผื่อติดรูปแบบ Array มา)
       let fetchedImageUrl = "";
+      let originalImageName = "";
+      
       if (productDetails.image) {
          let imgStr = productDetails.image;
          if (typeof imgStr === 'string' && imgStr.startsWith('[')) {
@@ -105,6 +109,9 @@ const [mainStock, setMainStock] = useState("");
              imgStr = imgStr[0];
          }
          
+         // เก็บชื่อไฟล์เดิมไว้สำหรับส่งไป Backend
+         originalImageName = imgStr && !imgStr.startsWith('http') && !imgStr.startsWith('blob:') ? imgStr : "";
+         
          if (imgStr && imgStr.startsWith('http')) {
              fetchedImageUrl = imgStr;
          } else if (imgStr && !imgStr.startsWith('blob:')) {
@@ -112,6 +119,7 @@ const [mainStock, setMainStock] = useState("");
          }
       }
       setImageUrl(fetchedImageUrl);
+      setOriginalMainImage(originalImageName);
       
       setCategoryId(productDetails.category || "");
       setRoomId(productDetails.room || "");
@@ -127,16 +135,24 @@ const [mainStock, setMainStock] = useState("");
       if (productDetails.variants && productDetails.variants.length > 0) {
         setVariants(productDetails.variants.map((v: any) => {
           let vImageUrl = "";
+          let originalImage = "";
+          
           if (v.image) {
+            // เก็บชื่อไฟล์เดิมไว้สำหรับส่งไป Backend
+            originalImage = v.image.startsWith('http') || v.image.startsWith('blob:') ? "" : v.image;
+            
             if (v.image.startsWith('http') || v.image.startsWith('blob:')) {
               vImageUrl = v.image;
             } else {
               vImageUrl = `${API_BASE_URL}/uploads/${v.image}`;
             }
           }
+          
           return {
             color: v.color || "", material: v.material || "", size: v.size || "",
-            price: String(v.price || ""), stock: String(v.stock || ""), imageUrl: vImageUrl 
+            price: String(v.price || ""), stock: String(v.stock || ""), 
+            imageUrl: vImageUrl,
+            originalImage: originalImage
           };
         }));
       } else {
@@ -151,6 +167,7 @@ const [mainStock, setMainStock] = useState("");
   const resetForm = () => {
     setName(""); setPrice(""); setDescription(""); 
     setImageUrl(""); setImageFile(null); 
+    setOriginalMainImage(""); // ✅ เคลียร์รูปเดิมด้วย
     setCategoryId(""); setRoomId(""); setSelectedFeatures([]);
     setVariants([{ color: "", material: "", size: "", price: "", stock: "" }]);
   };
@@ -213,6 +230,9 @@ const [mainStock, setMainStock] = useState("");
 
       if (imageFile) {
          formData.append('image', imageFile);
+      } else if (editingProductId && originalMainImage) {
+         // ✅ ถ้าไม่มีการอัปโหลดรูปใหม่ ให้ใช้รูปเดิม
+         formData.append('existingImage', originalMainImage);
       }
 
       variants.forEach((variant, index) => {
@@ -225,7 +245,22 @@ const [mainStock, setMainStock] = useState("");
           formData.append('features', JSON.stringify(selectedFeatures)); 
       }
 
-      const formattedVariants = variants.map(v => ({ ...v, price: parseFloat(v.price), stock: parseInt(v.stock) }));
+      const formattedVariants = variants.map(v => {
+        const variantData: any = { 
+          color: v.color, 
+          material: v.material, 
+          size: v.size, 
+          price: parseFloat(v.price), 
+          stock: parseInt(v.stock) 
+        };
+        
+        // ✅ ถ้าไม่มีการอัปโหลดรูปใหม่ ให้ใช้รูปเดิม (originalImage)
+        if (!v.imageFile && v.originalImage) {
+          variantData.image = v.originalImage;
+        }
+        
+        return variantData;
+      });
       formData.append('variants', JSON.stringify(formattedVariants));
 
       if (editingProductId) {
