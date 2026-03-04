@@ -1,7 +1,6 @@
-// frontend/src/pages/OrderHistory.tsx
 import { useState, useEffect } from 'react';
 import * as api from '../services/api';
-import { Package, Calendar, ChevronRight, Clock, CheckCircle, XCircle, MapPin, X, Truck } from 'lucide-react';
+import { Package, Calendar, ChevronRight, Clock, CheckCircle, XCircle, MapPin, X, Truck, CreditCard } from 'lucide-react';
 
 const OrderHistory = () => {
   const [orders, setOrders] = useState<api.Order[]>([]);
@@ -24,6 +23,18 @@ const OrderHistory = () => {
 
   useEffect(() => {
     fetchOrders();
+
+    // ✅ ป้องกันปัญหา Browser Cache เวลากดย้อนกลับจาก Stripe
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        fetchOrders();
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow);
+    };
   }, []);
 
   const handleCancelOrder = async (orderId: string) => {
@@ -34,9 +45,25 @@ const OrderHistory = () => {
       await api.cancelOrder(orderId);
       alert("ยกเลิกคำสั่งซื้อเรียบร้อยแล้ว");
       fetchOrders(); 
+      if(selectedOrder?.id === orderId) {
+        setSelectedOrder(null); // ปิด modal ถ้ายกเลิกจากใน modal
+      }
     } catch (err: any) {
       console.error(err);
       alert(err.response?.data?.message || "เกิดข้อผิดพลาดในการยกเลิกคำสั่งซื้อ");
+    }
+  };
+
+  // ✅ ฟังก์ชันกดชำระเงินต่อ
+  const handleRetryPayment = async (orderId: string) => {
+    try {
+      const res = await api.retryPayment(orderId);
+      if (res.url) {
+        window.location.href = res.url; 
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || "ไม่สามารถเปิดหน้าชำระเงินได้ในขณะนี้");
     }
   };
 
@@ -44,21 +71,18 @@ const OrderHistory = () => {
     const status = (rawStatus || '').toLowerCase();
     
     switch (status) {
+      case 'paid': 
+        return { color: 'text-[#148F96]', bg: 'bg-[#F2FAFA]', icon: <CheckCircle size={16} />, label: 'ชำระเงินแล้ว' };
       case 'completed': 
         return { color: 'text-green-600', bg: 'bg-green-50', icon: <CheckCircle size={16} />, label: 'สำเร็จ' };
-      
       case 'cancelled': 
         return { color: 'text-red-600', bg: 'bg-red-50', icon: <XCircle size={16} />, label: 'ยกเลิก' };
-      
       case 'shipped': 
         return { color: 'text-indigo-600', bg: 'bg-indigo-50', icon: <Package size={16} />, label: 'จัดส่งแล้ว' };
-      
       case 'pending': 
-        return { color: 'text-amber-600', bg: 'bg-amber-50', icon: <Clock size={16} />, label: 'รอชำระเงิน/แนบสลิป' };
-
+        return { color: 'text-amber-600', bg: 'bg-amber-50', icon: <Clock size={16} />, label: 'รอชำระเงิน' };
       case 'waiting_for_verification': 
         return { color: 'text-amber-600', bg: 'bg-blue-50', icon: <Clock size={16} />, label: 'รอตรวจสอบยอดเงิน' };
-      
       default: 
         return { color: 'text-gray-600', bg: 'bg-gray-50', icon: <Clock size={16} />, label: status || 'ไม่ระบุ' };
     }
@@ -70,27 +94,19 @@ const OrderHistory = () => {
     return isNaN(date.getTime()) ? 'รูปแบบวันที่ขัดข้อง' : date.toLocaleDateString('th-TH');
   };
 
-  // ✅ ฟังก์ชันคำนวณวันที่คาดว่าจะได้รับสินค้า
   const calculateDeliveryDate = (orderDateStr: string, items: any[] = []) => {
     if (!orderDateStr) return null;
     const date = new Date(orderDateStr);
     if (isNaN(date.getTime())) return null;
 
-    // หาจำนวนสินค้าทั้งหมดในออเดอร์
     const totalQty = items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
-    
-    // คำนวณวันจัดส่ง (เริ่มต้น 3 วัน)
     let deliveryDays = 3;
     
-    // ถ้าเกิน 3 ชิ้น นับเพิ่มทีละ 3 ชิ้น แล้วบวก 1 วัน (Math.ceil จะช่วยปัดเศษขึ้น เช่น เกินมา 2 ชิ้นก็บวก 1 วัน)
     if (totalQty > 3) {
       deliveryDays += Math.ceil((totalQty - 3) / 3);
     }
-    
-    // จำกัดให้บวกได้สูงสุดไม่เกิน 7 วัน
     deliveryDays = Math.min(deliveryDays, 7);
     
-    // นำวันที่สั่งซื้อมาบวกวันจัดส่ง
     date.setDate(date.getDate() + deliveryDays);
     return date.toISOString();
   };
@@ -119,7 +135,6 @@ const OrderHistory = () => {
             {orders.map((order) => {
               const status = getStatusInfo(order.status);
               const itemCount = order.items?.length || 0; 
-              // ✅ คำนวณวันจัดส่งของออเดอร์นี้
               const estimatedDeliveryDate = calculateDeliveryDate(order.orderDate, order.items);
 
               return (
@@ -149,7 +164,6 @@ const OrderHistory = () => {
                         </span>
                      </div>
                      
-                     {/* ✅ แสดงวันที่คาดว่าจะได้รับสินค้า */}
                      {estimatedDeliveryDate && order.status.toLowerCase() !== 'cancelled' && (
                         <div className="text-sm font-medium text-[#148F96] flex items-center gap-1.5 bg-teal-50/50 w-fit px-3 py-1.5 rounded-lg">
                            <Truck size={16} />
@@ -164,19 +178,29 @@ const OrderHistory = () => {
                       <p className="text-lg font-bold text-[#D65A31]">฿{(Number(order.totalAmount) || 0).toLocaleString()}</p>
                     </div>
                     
+                    {/* ✅ จัดเรียงปุ่มใหม่: ยกเลิก -> ชำระเงินต่อ -> รายละเอียด */}
                     <div className="flex items-center gap-3">
                       {(order.status === 'PENDING' || order.status.toLowerCase() === 'pending') && (
-                        <button 
-                          onClick={() => handleCancelOrder(order.id)}
-                          className="text-sm font-bold text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors border border-transparent hover:border-red-100"
-                        >
-                          ยกเลิก
-                        </button>
+                        <div className="flex gap-2 mr-2">
+                          <button 
+                            onClick={() => handleCancelOrder(order.id)}
+                            className="text-sm font-bold text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors border border-transparent hover:border-red-100"
+                          >
+                            ยกเลิก
+                          </button>
+
+                          <button 
+                            onClick={() => handleRetryPayment(order.id)}
+                            className="text-sm font-bold bg-[#148F96] text-white hover:bg-[#0f6f75] px-4 py-1.5 rounded-lg transition-colors shadow-sm"
+                          >
+                            ชำระเงินต่อ
+                          </button>
+                        </div>
                       )}
 
                       <button 
                         onClick={() => setSelectedOrder(order)}
-                        className="flex items-center gap-1 text-sm font-bold text-[#148F96] group-hover:gap-2 transition-all cursor-pointer"
+                        className={`flex items-center gap-1 text-sm font-bold text-[#148F96] group-hover:gap-2 transition-all cursor-pointer ${(order.status === 'PENDING' || order.status.toLowerCase() === 'pending') ? 'border-l border-gray-200 pl-3' : ''}`}
                       >
                         รายละเอียด <ChevronRight size={18} />
                       </button>
@@ -237,7 +261,6 @@ const OrderHistory = () => {
 
             <div className="p-6 border-t border-gray-100 bg-gray-50 space-y-3 flex-shrink-0">
               
-              {/* ✅ แสดงวันจัดส่งใน Modal บิลชำระเงินด้วย */}
               {selectedOrder.status.toLowerCase() !== 'cancelled' && (
                 <div className="flex justify-between items-center text-sm font-medium text-[#148F96] bg-teal-50/70 p-2 rounded-lg mb-3">
                   <span className="flex items-center gap-2"><Truck size={16}/> คาดว่าจะได้รับสินค้าภายใน</span>
@@ -264,6 +287,18 @@ const OrderHistory = () => {
                   ฿{(Number(selectedOrder.totalAmount) || 0).toLocaleString()}
                 </span>
               </div>
+
+              {/* ✅ เพิ่มปุ่มชำระเงินต่อ ภายใน Modal สำหรับออเดอร์ที่ยังไม่ชำระเงิน */}
+              {(selectedOrder.status === 'PENDING' || selectedOrder.status.toLowerCase() === 'pending') && (
+                <div className="pt-4 mt-2 border-t border-gray-200">
+                   <button 
+                      onClick={() => handleRetryPayment(selectedOrder.id)}
+                      className="w-full flex justify-center items-center gap-2 bg-[#D65A31] text-white py-3 rounded-xl font-bold text-base hover:bg-[#bd4e2a] transition-all shadow-md active:scale-95"
+                    >
+                      <CreditCard size={20} /> ดำเนินการชำระเงิน
+                   </button>
+                </div>
+              )}
               
             </div>
 
