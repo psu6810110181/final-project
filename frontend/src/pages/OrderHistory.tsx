@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import * as api from '../services/api';
-import { Package, Calendar, ChevronRight, Clock, CheckCircle, XCircle, MapPin, X, Truck, CreditCard } from 'lucide-react';
+// ✅ นำเข้า Banknote (ไอคอนรูปเงิน) เพิ่มเข้ามา
+import { Package, Calendar, ChevronRight, Clock, CheckCircle, XCircle, MapPin, X, Truck, CreditCard, Banknote } from 'lucide-react';
 
 const OrderHistory = () => {
   const [orders, setOrders] = useState<api.Order[]>([]);
@@ -24,7 +25,6 @@ const OrderHistory = () => {
   useEffect(() => {
     fetchOrders();
 
-    // ✅ ป้องกันปัญหา Browser Cache เวลากดย้อนกลับจาก Stripe
     const handlePageShow = (event: PageTransitionEvent) => {
       if (event.persisted) {
         fetchOrders();
@@ -46,7 +46,7 @@ const OrderHistory = () => {
       alert("ยกเลิกคำสั่งซื้อเรียบร้อยแล้ว");
       fetchOrders(); 
       if(selectedOrder?.id === orderId) {
-        setSelectedOrder(null); // ปิด modal ถ้ายกเลิกจากใน modal
+        setSelectedOrder(null);
       }
     } catch (err: any) {
       console.error(err);
@@ -54,7 +54,6 @@ const OrderHistory = () => {
     }
   };
 
-  // ✅ ฟังก์ชันกดชำระเงินต่อ
   const handleRetryPayment = async (orderId: string) => {
     try {
       const res = await api.retryPayment(orderId);
@@ -80,7 +79,7 @@ const OrderHistory = () => {
       case 'shipped': 
         return { color: 'text-indigo-600', bg: 'bg-indigo-50', icon: <Package size={16} />, label: 'จัดส่งแล้ว' };
       case 'pending': 
-        return { color: 'text-amber-600', bg: 'bg-amber-50', icon: <Clock size={16} />, label: 'รอชำระเงิน' };
+        return { color: 'text-amber-600', bg: 'bg-amber-50', icon: <Clock size={16} />, label: 'รอการชำระเงิน' };
       case 'waiting_for_verification': 
         return { color: 'text-amber-600', bg: 'bg-blue-50', icon: <Clock size={16} />, label: 'รอตรวจสอบยอดเงิน' };
       default: 
@@ -133,8 +132,11 @@ const OrderHistory = () => {
         ) : (
           <div className="space-y-4">
             {orders.map((order) => {
+              const statusLower = (order.status || '').toLowerCase();
               const status = getStatusInfo(order.status);
               const itemCount = order.items?.length || 0; 
+              
+              const isPaidOrBeyond = ['paid', 'shipped', 'completed'].includes(statusLower);
               const estimatedDeliveryDate = calculateDeliveryDate(order.orderDate, order.items);
 
               return (
@@ -164,11 +166,19 @@ const OrderHistory = () => {
                         </span>
                      </div>
                      
-                     {estimatedDeliveryDate && order.status.toLowerCase() !== 'cancelled' && (
-                        <div className="text-sm font-medium text-[#148F96] flex items-center gap-1.5 bg-teal-50/50 w-fit px-3 py-1.5 rounded-lg">
-                           <Truck size={16} />
-                           คาดว่าจะได้รับสินค้าภายใน {formatDate(estimatedDeliveryDate)}
-                        </div>
+                     {/* ✅ ตรวจสอบสถานะ: ถ้าจ่ายแล้วโชว์รถบรรทุก ถ้ายังไม่จ่ายโชว์ไอคอนเงินรอชำระ */}
+                     {statusLower !== 'cancelled' && (
+                        isPaidOrBeyond ? (
+                          <div className="text-sm font-medium text-[#148F96] flex items-center gap-1.5 bg-teal-50/50 w-fit px-3 py-1.5 rounded-lg">
+                             <Truck size={16} />
+                             คาดว่าจะได้รับสินค้าภายใน {formatDate(estimatedDeliveryDate || '')}
+                          </div>
+                        ) : (
+                          <div className="text-sm font-medium text-amber-600 flex items-center gap-1.5 bg-amber-50 border border-amber-100 w-fit px-3 py-1.5 rounded-lg">
+                             <Banknote size={16} />
+                             รอการชำระเงิน
+                          </div>
+                        )
                      )}
                   </div>
 
@@ -178,9 +188,8 @@ const OrderHistory = () => {
                       <p className="text-lg font-bold text-[#D65A31]">฿{(Number(order.totalAmount) || 0).toLocaleString()}</p>
                     </div>
                     
-                    {/* ✅ จัดเรียงปุ่มใหม่: ยกเลิก -> ชำระเงินต่อ -> รายละเอียด */}
                     <div className="flex items-center gap-3">
-                      {(order.status === 'PENDING' || order.status.toLowerCase() === 'pending') && (
+                      {(statusLower === 'pending') && (
                         <div className="flex gap-2 mr-2">
                           <button 
                             onClick={() => handleCancelOrder(order.id)}
@@ -200,7 +209,7 @@ const OrderHistory = () => {
 
                       <button 
                         onClick={() => setSelectedOrder(order)}
-                        className={`flex items-center gap-1 text-sm font-bold text-[#148F96] group-hover:gap-2 transition-all cursor-pointer ${(order.status === 'PENDING' || order.status.toLowerCase() === 'pending') ? 'border-l border-gray-200 pl-3' : ''}`}
+                        className={`flex items-center gap-1 text-sm font-bold text-[#148F96] group-hover:gap-2 transition-all cursor-pointer ${(statusLower === 'pending') ? 'border-l border-gray-200 pl-3' : ''}`}
                       >
                         รายละเอียด <ChevronRight size={18} />
                       </button>
@@ -261,11 +270,19 @@ const OrderHistory = () => {
 
             <div className="p-6 border-t border-gray-100 bg-gray-50 space-y-3 flex-shrink-0">
               
+              {/* ✅ แสดงสถานะใน Modal ให้ตรงกันกับด้านนอก */}
               {selectedOrder.status.toLowerCase() !== 'cancelled' && (
-                <div className="flex justify-between items-center text-sm font-medium text-[#148F96] bg-teal-50/70 p-2 rounded-lg mb-3">
-                  <span className="flex items-center gap-2"><Truck size={16}/> คาดว่าจะได้รับสินค้าภายใน</span>
-                  <span>{formatDate(calculateDeliveryDate(selectedOrder.orderDate, selectedOrder.items) || '')}</span>
-                </div>
+                ['paid', 'shipped', 'completed'].includes(selectedOrder.status.toLowerCase()) ? (
+                  <div className="flex justify-between items-center text-sm font-medium text-[#148F96] bg-teal-50/70 p-2 rounded-lg mb-3">
+                    <span className="flex items-center gap-2"><Truck size={16}/> คาดว่าจะได้รับสินค้าภายใน</span>
+                    <span>{formatDate(calculateDeliveryDate(selectedOrder.orderDate, selectedOrder.items) || '')}</span>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-center text-sm font-medium text-amber-600 bg-amber-50 border border-amber-100 p-2 rounded-lg mb-3">
+                    <span className="flex items-center gap-2"><Banknote size={16}/> สถานะการจัดส่ง</span>
+                    <span>รอการชำระเงิน</span>
+                  </div>
+                )
               )}
 
               <div className="flex justify-between items-center text-sm text-gray-600">
@@ -288,7 +305,7 @@ const OrderHistory = () => {
                 </span>
               </div>
 
-              {/* ✅ เพิ่มปุ่มชำระเงินต่อ ภายใน Modal สำหรับออเดอร์ที่ยังไม่ชำระเงิน */}
+              {/* ปุ่มชำระเงินต่อ ภายใน Modal */}
               {(selectedOrder.status === 'PENDING' || selectedOrder.status.toLowerCase() === 'pending') && (
                 <div className="pt-4 mt-2 border-t border-gray-200">
                    <button 
