@@ -1,8 +1,8 @@
 // Promotion.tsx
 import React, { useState, useEffect } from "react";
 import api, { type Promotion, type Product } from "../../services/api";
-import Alert from "../../components/Alert";
 import Confirm from "../../components/Confirm";
+import toast from "react-hot-toast";
 
 const PromotionManager: React.FC = () => {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
@@ -11,9 +11,6 @@ const PromotionManager: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
   const [editingPromotion, setEditingPromotion] = useState<Promotion | null>(null);
-  
-  // Alert state
-  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | 'warning' | 'info' } | null>(null);
   
   // Confirm state
   const [confirm, setConfirm] = useState<{ 
@@ -137,7 +134,7 @@ const PromotionManager: React.FC = () => {
     e.preventDefault();
     
     if (!formData.title || !formData.discountValue || !formData.startDate || !formData.endDate) {
-      setAlert({ message: "กรุณากรอกข้อมูลที่จำเป็นทั้งหมด", type: "warning" });
+      toast.error("กรุณากรอกข้อมูลที่จำเป็นทั้งหมด");
       return;
     }
 
@@ -156,12 +153,12 @@ const PromotionManager: React.FC = () => {
       if (editingPromotion) {
         console.log("Updating promotion ID:", editingPromotion.id);
         await api.patch(`/promotions/${editingPromotion.id}`, promotionData, getAuthHeader());
-        setAlert({ message: "อัปเดตโปรโมชั่นสำเร็จ!", type: "success" });
+        toast.success("อัปเดตโปรโมชั่นสำเร็จ!");
       } else {
         console.log("Creating new promotion...");
         const response = await api.post('/promotions', promotionData, getAuthHeader());
         console.log("Create promotion response:", response);
-        setAlert({ message: "สร้างโปรโมชั่นสำเร็จ!", type: "success" });
+        toast.success("สร้างโปรโมชั่นสำเร็จ!");
       }
       
       resetForm();
@@ -174,13 +171,13 @@ const PromotionManager: React.FC = () => {
         console.error("Error response:", error.response);
         console.error("Error status:", error.response.status);
         console.error("Error data:", error.response.data);
-        setAlert({ message: `เกิดข้อผิดพลาดในการบันทึกโปรโมชั่น: ${error.response.data?.message || error.response.statusText || 'Unknown error'}`, type: "error" });
+        toast.error(`เกิดข้อผิดพลาดในการบันทึกโปรโมชั่น: ${error.response.data?.message || error.response.statusText || 'Unknown error'}`);
       } else if (error.request) {
         console.error("Error request:", error.request);
-        setAlert({ message: "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ - กรุณาตรวจสอบว่า Backend กำลังทำงานอยู่", type: "error" });
+        toast.error("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ - กรุณาตรวจสอบว่า Backend กำลังทำงานอยู่");
       } else {
         console.error("Error message:", error.message);
-        setAlert({ message: `เกิดข้อผิดพลาด: ${error.message}`, type: "error" });
+        toast.error(`เกิดข้อผิดพลาด: ${error.message}`);
       }
     }
   };
@@ -207,11 +204,11 @@ const PromotionManager: React.FC = () => {
       onConfirm: async () => {
         try {
           await api.delete(`/promotions/${id}`, getAuthHeader());
-          setAlert({ message: "ลบโปรโมชั่นสำเร็จ!", type: "success" });
+          toast.success("ลบโปรโมชั่นสำเร็จ!");
           fetchPromotions();
         } catch (error) {
           console.error("Error deleting promotion:", error);
-          setAlert({ message: "เกิดข้อผิดพลาดในการลบโปรโมชั่น", type: "error" });
+          toast.error("เกิดข้อผิดพลาดในการลบโปรโมชั่น");
         }
       },
       type: 'danger'
@@ -221,11 +218,11 @@ const PromotionManager: React.FC = () => {
   const handleToggleStatus = async (id: string, currentStatus: boolean) => {
     try {
       await api.patch(`/promotions/${id}/toggle`, { isActive: !currentStatus }, getAuthHeader());
-      setAlert({ message: `${!currentStatus ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}โปรโมชั่นสำเร็จ!`, type: "success" });
+      toast.success(`${!currentStatus ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}โปรโมชั่นสำเร็จ!`);
       fetchPromotions();
     } catch (error) {
       console.error("Error toggling promotion status:", error);
-      setAlert({ message: "เกิดข้อผิดพลาดในการเปลี่ยนสถานะโปรโมชั่น", type: "error" });
+      toast.error("เกิดข้อผิดพลาดในการเปลี่ยนสถานะโปรโมชั่น");
     }
   };
 
@@ -598,15 +595,6 @@ const PromotionManager: React.FC = () => {
           background-color: #F8FAFC !important;
         }
       `}</style>
-      
-      {/* Custom Alert */}
-      {alert && (
-        <Alert
-          message={alert.message}
-          type={alert.type}
-          onClose={() => setAlert(null)}
-        />
-      )}
       
       {/* Custom Confirm */}
       {confirm && (

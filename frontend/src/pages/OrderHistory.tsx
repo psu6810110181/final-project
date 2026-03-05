@@ -2,6 +2,7 @@
 import * as api from '../services/api';
 // ✅ นำเข้า Banknote (ไอคอนรูปเงิน) เพิ่มเข้ามา
 import { Package, Calendar, ChevronRight, Clock, CheckCircle, XCircle, MapPin, X, Truck, CreditCard, Banknote } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const OrderHistory = () => {
   const [orders, setOrders] = useState<api.Order[]>([]);
@@ -54,14 +55,14 @@ const OrderHistory = () => {
 
     try {
       await api.cancelOrder(orderId);
-      alert("ยกเลิกคำสั่งซื้อเรียบร้อยแล้ว");
+      toast.success("ยกเลิกคำสั่งซื้อเรียบร้อยแล้ว");
       fetchOrders(); 
       if(selectedOrder?.id === orderId) {
         setSelectedOrder(null);
       }
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.message || "เกิดข้อผิดพลาดในการยกเลิกคำสั่งซื้อ");
+      toast.error(err.response?.data?.message || "เกิดข้อผิดพลาดในการยกเลิกคำสั่งซื้อ");
     }
   };
 
@@ -73,7 +74,7 @@ const OrderHistory = () => {
       }
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.message || "ไม่สามารถเปิดหน้าชำระเงินได้ในขณะนี้");
+      toast.error(err.response?.data?.message || "ไม่สามารถเปิดหน้าชำระเงินได้ในขณะนี้");
     }
   };
 

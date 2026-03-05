@@ -12,8 +12,8 @@ import {
   getAllSizes, createSize, type Size, deleteSize,
   type Variant
 } from "../../services/api";
-import Alert from "../../components/Alert";
 import Confirm from "../../components/Confirm";
+import toast from "react-hot-toast";
 
 interface ManageSystemProps {
   onEditProduct: (productId: string) => void;
@@ -30,9 +30,6 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
   
   const [newItemName, setNewItemName] = useState("");
   const [activeTab, setActiveTab] = useState<'category' | 'room' | 'feature' | 'color' | 'material' | 'size'>('category'); 
-  
-  // Alert state
-  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | 'warning' | 'info' } | null>(null);
   
   // Confirm state
   const [confirm, setConfirm] = useState<{ 
@@ -138,8 +135,10 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
       
       setNewItemName(""); 
       fetchMasterData(); 
-      setAlert({ message: "เพิ่มข้อมูลสำเร็จ!", type: "success" });
-    } catch (error) { setAlert({ message: "เกิดข้อผิดพลาด", type: "error" }); }
+      toast.success("เพิ่มข้อมูลสำเร็จ!");
+    } catch (error) { 
+      toast.error("เกิดข้อผิดพลาด"); 
+    }
   };
 
   const handleDeleteProduct = async (productId: string, productName: string) => {
@@ -149,9 +148,9 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
         try {
           await api.delete(`/products/${productId}`);
           fetchProducts();
-          setAlert({ message: "ลบสินค้าสำเร็จ", type: "success" });
+          toast.success("ลบสินค้าสำเร็จ");
         } catch (error) { 
-          setAlert({ message: "ลบไม่สำเร็จ", type: "error" }); 
+          toast.error("ลบไม่สำเร็จ"); 
         }
       },
       type: 'danger'
@@ -170,9 +169,9 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
           else if (activeTab === 'material') await deleteMaterial(id);
           else if (activeTab === 'size') await deleteSize(id);
           fetchMasterData();
-          setAlert({ message: "ลบข้อมูลสำเร็จ", type: "success" });
+          toast.success("ลบข้อมูลสำเร็จ");
         } catch (error) { 
-          setAlert({ message: "ไม่สามารถลบได้", type: "error" }); 
+          toast.error("ไม่สามารถลบได้"); 
         }
       },
       type: 'danger'
@@ -528,15 +527,6 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
           50% { opacity: 0.5; }
         }
       `}</style>
-      
-      {/* Custom Alert */}
-      {alert && (
-        <Alert
-          message={alert.message}
-          type={alert.type}
-          onClose={() => setAlert(null)}
-        />
-      )}
       
       {/* Custom Confirm */}
       {confirm && (

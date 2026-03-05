@@ -1,15 +1,12 @@
 ﻿// ManageOrders.tsx
 import React, { useState, useEffect } from "react";
 import api from "../../services/api";
-import Alert from "../../components/Alert";
 import Confirm from "../../components/Confirm";
+import toast from "react-hot-toast";
 
 const ManageOrders: React.FC = () => {
   const [allOrders, setAllOrders] = useState<any[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  
-  // Alert state
-  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | 'warning' | 'info' } | null>(null);
   
   // Confirm state
   const [confirm, setConfirm] = useState<{ 
@@ -67,11 +64,11 @@ const ManageOrders: React.FC = () => {
     onConfirm: async () => {
       try {
         await api.patch(`/orders/${orderId}/status`, { status: newStatus }, getAuthHeader());
-        setAlert({ message: "อัปเดตสถานะสำเร็จ!", type: "success" });
+        toast.success("อัปเดตสถานะสำเร็จ!");
         fetchAllOrders(); 
       } catch (error) {
         console.error("Error updating order status:", error);
-        setAlert({ message: "เกิดข้อผิดพลาดในการอัปเดตสถานะ", type: "error" });
+        toast.error("เกิดข้อผิดพลาดในการอัปเดตสถานะ");
       }
     },
     type: 'warning'
@@ -84,11 +81,11 @@ const ManageOrders: React.FC = () => {
     onConfirm: async () => {
       try {
         await api.delete(`/orders/${orderId}`, getAuthHeader());
-        setAlert({ message: "ลบคำสั่งซื้อออกจากระบบเรียบร้อยแล้ว", type: "success" });
+        toast.success("ลบคำสั่งซื้อออกจากระบบเรียบร้อยแล้ว");
         fetchAllOrders(); 
       } catch (error) {
         console.error("Error deleting order:", error);
-        setAlert({ message: "เกิดข้อผิดพลาดในการลบคำสั่งซื้อ", type: "error" });
+        toast.error("เกิดข้อผิดพลาดในการลบคำสั่งซื้อ");
       }
     },
     type: 'danger'
@@ -268,14 +265,6 @@ const ManageOrders: React.FC = () => {
           background-color: #F8FAFC !important;
         }
       `}</style>
-    {/* Custom Alert */}
-      {alert && (
-        <Alert
-          message={alert.message}
-          type={alert.type}
-          onClose={() => setAlert(null)}
-        />
-      )}
     {/* Custom Confirm */}
       {confirm && (
         <Confirm

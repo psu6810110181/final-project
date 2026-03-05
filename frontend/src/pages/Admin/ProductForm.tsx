@@ -11,7 +11,7 @@ import {
   getAllMaterials, type Material,
   getAllSizes, type Size
 } from "../../services/api"; 
-import Alert from "../../components/Alert"; 
+import toast from "react-hot-toast"; 
 
 interface Variant {
   color: string;
@@ -59,9 +59,6 @@ const [mainStock, setMainStock] = useState("");
   const [materialsList, setMaterialsList] = useState<Material[]>([]);
   const [sizesList, setSizesList] = useState<Size[]>([]);
   
-  // Alert state
-  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' | 'warning' | 'info' } | null>(null);
-
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
@@ -160,7 +157,7 @@ const [mainStock, setMainStock] = useState("");
       }
     } catch (error) {
       console.error("Error fetching product details:", error);
-      setAlert({ message: "ไม่สามารถโหลดข้อมูลสินค้าเพื่อแก้ไขได้", type: "error" });
+      toast.error("ไม่สามารถโหลดข้อมูลสินค้าเพื่อแก้ไขได้");
     }
   };
 
@@ -207,7 +204,7 @@ const [mainStock, setMainStock] = useState("");
     e.preventDefault(); 
     try {
       if (!name || !price || !categoryId) {
-        setAlert({ message: "กรุณากรอกชื่อสินค้า, ราคา และเลือกหมวดหมู่", type: "warning" });
+        toast.error("กรุณากรอกชื่อสินค้า, ราคา และเลือกหมวดหมู่");
         return;
       }
       
@@ -265,18 +262,18 @@ const [mainStock, setMainStock] = useState("");
 
       if (editingProductId) {
         await updateProduct(editingProductId, formData); 
-        setAlert({ message: "แก้ไขสินค้าเรียบร้อยแล้ว", type: "success" });
+        toast.success("แก้ไขสินค้าเรียบร้อยแล้ว");
       } else {
         await createProduct(formData); 
-        setAlert({ message: "บันทึกสินค้าเรียบร้อยแล้ว", type: "success" });
+        toast.success("บันทึกสินค้าเรียบร้อยแล้ว");
       }
-      // Delay onSuccess to allow alert to show
+      // Delay onSuccess to allow toast to show
       setTimeout(() => {
         onSuccess(); 
       }, 1500); 
     } catch (error) {
       console.error("Error saving product:", error);
-      setAlert({ message: "เกิดข้อผิดพลาดในการบันทึกข้อมูล", type: "error" });
+      toast.error("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
     }
   };
 
@@ -581,14 +578,6 @@ const [mainStock, setMainStock] = useState("");
         </footer>
 
       </form>
-    {/* Custom Alert */}
-      {alert && (
-        <Alert
-          message={alert.message}
-          type={alert.type}
-          onClose={() => setAlert(null)}
-        />
-      )}
     </article>
   );
 };
