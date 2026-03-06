@@ -97,18 +97,12 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
     }> = [];
 
     productsList.forEach(product => {
-      // ตรวจสอบสต็อกหลัก
-      if (product.stock < 20) {
-        lowStockItems.push({
-          product,
-          lowStockType: 'main',
-          stockLevel: product.stock
-        });
-      }
-
-      // ตรวจสองสต็อกของ variants
-      if (product.variants && product.variants.length > 0) {
-        product.variants.forEach(variant => {
+      // ตรวจสอบว่ามี variants หรือไม่
+      const hasVariants = product.variants && product.variants.length > 0;
+      
+      if (hasVariants) {
+        // ถ้ามี variants ให้ตรวจสอบเฉพาะ variants
+        product.variants!.forEach(variant => {
           const variantStock = parseInt(variant.stock) || 0;
           if (variantStock < 20) {
             lowStockItems.push({
@@ -119,6 +113,15 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
             });
           }
         });
+      } else {
+        // ถ้าไม่มี variants ให้ตรวจสอบเฉพาะสต็อกหลัก
+        if (product.stock < 20) {
+          lowStockItems.push({
+            product,
+            lowStockType: 'main',
+            stockLevel: product.stock
+          });
+        }
       }
     });
 
