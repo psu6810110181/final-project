@@ -138,7 +138,46 @@ const PromotionManager: React.FC = () => {
     fetchProducts();
   }, []);
 
-  const handleProductToggle = (productId: string) => {
+  const validateSelectedProducts = (discountType: string, discountValue: string) => {
+    if (discountType === 'FIXED_AMOUNT' && discountValue) {
+      const discountAmount = Number(discountValue);
+      const invalidProducts: string[] = [];
+      
+      formData.productIds.forEach(productId => {
+        const product = products.find(p => p.id === productId);
+        if (product) {
+          const productPrice = typeof product.price === 'string' ? Number(product.price) : product.price;
+          if (productPrice < discountAmount) {
+            invalidProducts.push(product.name);
+          }
+        }
+      });
+      
+      if (invalidProducts.length > 0) {
+        toast.error(`สินค้าต่อไปนี้มีราคาต่ำกว่าจำนวนเงินที่ลด: ${invalidProducts.join(', ')}`);
+        return false;
+      }
+    }
+    return true;
+  };
+
+const handleProductToggle = (productId: string) => {
+    // Check if this is a fixed amount discount and validate product price
+    if (formData.discountType === 'FIXED_AMOUNT' && formData.discountValue) {
+      const discountAmount = Number(formData.discountValue);
+      const product = products.find(p => p.id === productId);
+      
+      if (product) {
+        const productPrice = typeof product.price === 'string' ? Number(product.price) : product.price;
+        
+        // If trying to add a product and its price is less than discount amount
+        if (productPrice < discountAmount && !formData.productIds.includes(productId)) {
+          toast.error(`ไม่สามารถเพิ่มสินค้า "${product.name}" ได้เนื่องจากราคาสินค้า (฿${productPrice.toLocaleString()}) ต่ำกว่าจำนวนเงินที่ลด (฿${discountAmount.toLocaleString()})`);
+          return;
+        }
+      }
+    }
+    
     setFormData(prev => ({
       ...prev,
       productIds: prev.productIds.includes(productId)
@@ -317,7 +356,14 @@ const PromotionManager: React.FC = () => {
               </label>
               <select
                 value={formData.discountType}
-                onChange={(e) => setFormData({...formData, discountType: e.target.value as 'PERCENTAGE' | 'FIXED_AMOUNT'})}
+                onChange={(e) => {
+                  const newType = e.target.value as 'PERCENTAGE' | 'FIXED_AMOUNT';
+                  // Validate selected products when changing discount type
+                  if (!validateSelectedProducts(newType, formData.discountValue)) {
+                    return;
+                  }
+                  setFormData({...formData, discountType: newType});
+                }}
                 style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px' }}
               >
                 <option value="PERCENTAGE">เปอร์เซ็นต์ (%)</option>
@@ -341,10 +387,14 @@ const PromotionManager: React.FC = () => {
                       return;
                     }
                   }
+                  // Validate selected products when changing discount value
+                  if (!validateSelectedProducts(formData.discountType, value)) {
+                    return;
+                  }
                   setFormData({...formData, discountValue: value});
                 }}
                 style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px' }}
-                placeholder={formData.discountType === 'PERCENTAGE' ? 'เช่น 20 (สูงสุด 90%)' : 'เช่น 100'}
+                placeholder={formData.discountType === 'PERCENTAGE' ? 'เช่น 20 (สูงสุด 90%)' : 'เช่น 100 (ไม่มีขีดจำกัด)'}
                 min="0"
                 max={formData.discountType === 'PERCENTAGE' ? 90 : undefined}
                 step={formData.discountType === 'PERCENTAGE' ? '0.01' : '1'}
