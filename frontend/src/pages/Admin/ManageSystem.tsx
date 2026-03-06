@@ -81,6 +81,8 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
   const fetchProducts = async () => {
     try {
       const products = await getAllProducts();
+      console.log('Fetched products:', products);
+      console.log('First product structure:', products[0]);
       setProductsList(products);
     } catch (error) { console.error(error); }
   };
@@ -321,22 +323,58 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
                   </div>
 
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <h3 style={{ fontWeight: '600', fontSize: '16px', color: colors.textMain, margin: '0 0 6px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {product.name}
-                    </h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <h3 style={{ fontWeight: '600', fontSize: '16px', color: colors.textMain, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {product.name}
+                      </h3>
+                      <span style={{
+                        background: colors.primaryLight,
+                        color: colors.primary,
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        flexShrink: 0
+                      }}>
+                        สินค้าหลัก
+                      </span>
+                    </div>
+                    
                     <div style={{ fontSize: '18px', color: colors.secondary, fontWeight: '700' }}>
                       ฿{Number(product.price).toLocaleString()}
                     </div>
+                    
+                    {/* Show main product attributes */}
+                    {(product.mainColor || product.mainMaterial || product.mainSize) && (
+                      <div style={{ fontSize: '12px', color: colors.textMuted, marginTop: '4px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {product.mainColor && (
+                          <span style={{ background: colors.bgLight, padding: '2px 6px', borderRadius: '4px' }}>
+                            สี: {product.mainColor}
+                          </span>
+                        )}
+                        {product.mainMaterial && (
+                          <span style={{ background: colors.bgLight, padding: '2px 6px', borderRadius: '4px' }}>
+                            วัสดุ: {product.mainMaterial}
+                          </span>
+                        )}
+                        {product.mainSize && (
+                          <span style={{ background: colors.bgLight, padding: '2px 6px', borderRadius: '4px' }}>
+                            ขนาด: {product.mainSize}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    
                     <div style={{ fontSize: '13px', color: colors.textMuted, marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <span style={{ 
                         display: 'inline-block', 
                         width: '8px', 
                         height: '8px', 
                         borderRadius: '50%', 
-                        background: (product.stock || 0) > 20 ? '#10B981' : (product.stock || 0) > 0 ? '#F59E0B' : colors.danger 
+                        background: (product.mainStock || product.stock || 0) > 20 ? '#10B981' : (product.mainStock || product.stock || 0) > 0 ? '#F59E0B' : colors.danger 
                       }}></span>
-                      สต็อก: {product.stock ?? '0'} ชิ้น
-                      {(product.stock ?? 0) < 20 && (product.stock ?? 0) > 0 && (
+                      สต็อก: {product.mainStock ?? product.stock ?? '0'} ชิ้น
+                      {(product.mainStock ?? product.stock ?? 0) < 20 && (product.mainStock ?? product.stock ?? 0) > 0 && (
                         <span style={{ 
                           background: '#FEF3C7', 
                           color: '#92400E', 
@@ -349,7 +387,7 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
                           ใกล้หมด
                         </span>
                       )}
-                      {(product.stock ?? 0) === 0 && (
+                      {(product.mainStock ?? product.stock ?? 0) === 0 && (
                         <span style={{ 
                           background: colors.dangerLight, 
                           color: colors.danger, 
@@ -364,10 +402,17 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
                       )}
                     </div>
                     
-                    {/* ✅ Show variant stock alerts if any variant is low */}
-                    {product.variants && product.variants.some(v => (parseInt(v.stock) || 0) < 20) && (
-                      <div style={{ fontSize: '12px', color: '#92400E', marginTop: '4px' }}>
-                        ⚠️ มี variant ใกล้หมด
+                    {/* Show variant count if exists */}
+                    {product.variants && product.variants.length > 0 && (
+                      <div style={{ fontSize: '12px', color: colors.textMuted, marginTop: '4px' }}>
+                        <span style={{ color: colors.primary, fontWeight: '600' }}>
+                          {product.variants.length} ตัวเลือก (Variants)
+                        </span>
+                        {product.variants.some(v => (parseInt(v.stock) || 0) < 20) && (
+                          <span style={{ color: '#92400E', marginLeft: '8px' }}>
+                            ⚠️ มี variant ใกล้หมด
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
