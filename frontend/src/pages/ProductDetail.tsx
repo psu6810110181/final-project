@@ -51,11 +51,11 @@ const ProductDetail = () => {
         setProduct(productData as any); 
         setReviews(reviewsData); 
 
-        if (productData.variants && productData.variants.length > 0) {
-            setSelectedColor(productData.variants[0].color);
-            setSelectedMaterial(productData.variants[0].material);
-            setSelectedSize(productData.variants[0].size);
-        }
+        // ✅ ตั้งค่าเริ่มต้นให้ Select ข้อมูลของสินค้าหลักทันทีที่โหลดหน้าจอ
+        const p = productData as any;
+        setSelectedColor(p.color || p.mainColor || '');
+        setSelectedMaterial(p.material || p.mainMaterial || '');
+        setSelectedSize(p.size || p.mainSize || '');
 
       } catch (error) {
         console.error("Failed to load data", error);
@@ -71,7 +71,7 @@ const ProductDetail = () => {
      if (!img) return "https://via.placeholder.com/600x400?text=No+Path";
      if (img.startsWith('http')) return img;
      return `${API_BASE_URL}/uploads/${img}`;
-   };
+  };
 
   const currentVariant = useMemo(() => {
     if (!product || !product.variants) return null;
@@ -112,6 +112,40 @@ const ProductDetail = () => {
     return allImages;
   }, [product]);
 
+  // ✅ ดึงค่าข้อมูลหลักออกมาใช้งาน ป้องกันชื่อ Field คลาดเคลื่อน
+  const mainColor = (product as any)?.color || (product as any)?.mainColor || '';
+  const mainMaterial = (product as any)?.material || (product as any)?.mainMaterial || '';
+  const mainSize = (product as any)?.size || (product as any)?.mainSize || '';
+
+  // ✅ Debug: ตรวจสอบค่าที่ได้
+  console.log('Product Debug:', {
+    product,
+    mainColor,
+    mainMaterial,
+    mainSize,
+    hasColor: !!(product as any)?.color || !!(product as any)?.mainColor,
+    hasMaterial: !!(product as any)?.material || !!(product as any)?.mainMaterial,
+    hasSize: !!(product as any)?.size || !!(product as any)?.mainSize
+  });
+
+  const handleImageInteract = (index: number) => {
+      setSelectedImageIndex(index);
+      const selectedImg = images[index];
+      
+      const matchedVariant = product?.variants?.find((v: any) => v.image === selectedImg);
+      
+      if (matchedVariant) {
+          setSelectedColor(matchedVariant.color || '');
+          setSelectedMaterial(matchedVariant.material || '');
+          setSelectedSize(matchedVariant.size || '');
+      } else {
+          // ✅ ถ้าชี้รูปหลัก ให้เคลียร์ค่ากลับเป็น Option ของสินค้าหลัก
+          setSelectedColor(mainColor);
+          setSelectedMaterial(mainMaterial);
+          setSelectedSize(mainSize);
+      }
+  };
+
   useEffect(() => {
       if (currentVariant && currentVariant.image) {
           const index = images.findIndex(img => img === currentVariant.image);
@@ -121,9 +155,14 @@ const ProductDetail = () => {
       }
   }, [currentVariant, images]);
 
+  // ✅ เช็คว่าตอนนี้ User กำลังดูหรือกดเลือก "สินค้าหลัก" อยู่ใช่หรือไม่
+  const isMainProductSelected = 
+      selectedColor === mainColor && 
+      selectedMaterial === mainMaterial && 
+      selectedSize === mainSize;
 
   const handleAddToCart = async () => {
-    if (!product || !id) return; // ✅ แก้ไข error 'product' is possibly 'null'
+    if (!product || !id) return;
     
     if (!user) {
        toast.error("กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้าลงตะกร้า");
@@ -131,14 +170,13 @@ const ProductDetail = () => {
        return;
     }
 
-    if (product.variants && product.variants.length > 0 && !currentVariant) {
+    if (product.variants && product.variants.length > 0 && !currentVariant && !isMainProductSelected) {
         toast.error("กรุณาเลือกรูปแบบสินค้าให้ครบถ้วน หรือ สินค้ารูปแบบนี้ไม่มีในระบบ");
         return;
     }
 
     try {
         setIsAdding(true);
-        // ✅ แก้ไข Expected 2-3 arguments (ลบ variantId ออกไปก่อนเพื่อให้ตรงกับ Context เดิม)
         await addToCart(id, quantity, installationQty); 
     } catch (error) {
         console.error(error);
@@ -147,12 +185,18 @@ const ProductDetail = () => {
     }
   }; 
 
-  const availableColors = Array.from(new Set(product?.variants?.map(v => v.color))).filter(Boolean) as string[];
-  const availableMaterials = Array.from(new Set(product?.variants?.map(v => v.material))).filter(Boolean) as string[];
-  const availableSizes = Array.from(new Set(product?.variants?.map(v => v.size))).filter(Boolean) as string[];
+  // ✅ รวมตัวเลือกของสินค้าหลักและ Variant เข้าด้วยกัน เพื่อสร้างปุ่มให้ครอบคลุม
+  const availableColors = Array.from(new Set([mainColor, ...(product?.variants?.map(v => v.color) || [])])).filter(Boolean) as string[];
+  const availableMaterials = Array.from(new Set([mainMaterial, ...(product?.variants?.map(v => v.material) || [])])).filter(Boolean) as string[];
+  const availableSizes = Array.from(new Set([mainSize, ...(product?.variants?.map(v => v.size) || [])])).filter(Boolean) as string[];
 
+  // ✅ ตัดสินใจว่าจะโชว์ข้อมูลของใครระหว่าง Variant หรือ สินค้าหลัก
   const displayPrice = currentVariant ? currentVariant.price : product?.price;
-  const displayStock = currentVariant ? currentVariant.stock : product?.stock;
+  const displayStock = currentVariant ? currentVariant.stock : ((product as any)?.mainStock ?? product?.stock);
+  
+  const displayColorAttr = currentVariant ? currentVariant.color : mainColor;
+  const displayMaterialAttr = currentVariant ? currentVariant.material : mainMaterial;
+  const displaySizeAttr = currentVariant ? currentVariant.size : mainSize;
 
   const averageRating = reviews.length > 0 
     ? (reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviews.length).toFixed(1)
@@ -188,8 +232,8 @@ const ProductDetail = () => {
               {images.map((img, index) => (
                 <button 
                   key={index}
-                  onClick={() => setSelectedImageIndex(index)}
-                  onMouseEnter={() => setSelectedImageIndex(index)}
+                  onClick={() => handleImageInteract(index)}
+                  onMouseEnter={() => handleImageInteract(index)}
                   className={`w-full aspect-square rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 
                    ${selectedImageIndex === index ? 'border-[#D65A31] shadow-md' : 'border-gray-200 hover:border-gray-300'}`}
                 >
@@ -222,20 +266,39 @@ const ProductDetail = () => {
               ))}
               <span className="text-gray-500 text-sm ml-2">{averageRating} ({reviews.length} รีวิว)</span>
               <span className="text-gray-300 mx-2">|</span>
-              {/* ✅ แก้ไข Type ของ cartItems */}
               <span className="text-sm text-gray-500">ขายแล้ว {(product as any).cartItems?.length || 0} ชิ้น</span>
             </div>
 
             <div className="mb-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
                <div className="mb-2"><PromotionBadge productId={product.id} /></div>
                <PriceDisplay productId={product.id} originalPrice={Number(displayPrice)} />
+               
+               <div className="mt-3 pt-3 border-t border-gray-200 flex flex-wrap gap-4 text-sm text-gray-700">
+                   <div className="flex items-center gap-1.5">
+                       <span className="font-bold text-gray-500">สี:</span> 
+                       {displayColorAttr ? (
+                           <span className="flex items-center gap-1">
+                               <div className="w-3 h-3 rounded-full border border-gray-300 shadow-inner" style={{ backgroundColor: getColorHex(displayColorAttr) }}></div>
+                               {displayColorAttr}
+                           </span>
+                       ) : (
+                           <span className="text-gray-400">-</span>
+                       )}
+                   </div>
+                   <div>
+                       <span className="font-bold text-gray-500">วัสดุ:</span> <span className={!displayMaterialAttr ? "text-gray-400" : ""}>{displayMaterialAttr || '-'}</span>
+                   </div>
+                   <div>
+                       <span className="font-bold text-gray-500">ขนาด:</span> <span className={!displaySizeAttr ? "text-gray-400" : ""}>{displaySizeAttr || '-'}</span>
+                   </div>
+               </div>
             </div>
 
             {product.variants && product.variants.length > 0 && (
                 <div className="space-y-4 mb-6">
                     {availableColors.length > 0 && (
                         <div>
-                            <span className="text-sm font-bold text-gray-700 block mb-2">สี (Color)</span>
+                            <span className="text-sm font-bold text-gray-700 block mb-2">ตัวเลือกสี (Color)</span>
                             <div className="flex flex-wrap gap-2">
                                 {availableColors.map(color => (
                                     <button 
@@ -253,7 +316,7 @@ const ProductDetail = () => {
 
                     {availableMaterials.length > 0 && (
                         <div>
-                            <span className="text-sm font-bold text-gray-700 block mb-2">วัสดุ (Material)</span>
+                            <span className="text-sm font-bold text-gray-700 block mb-2">ตัวเลือกวัสดุ (Material)</span>
                             <div className="flex flex-wrap gap-2">
                                 {availableMaterials.map(mat => (
                                     <button 
@@ -271,7 +334,7 @@ const ProductDetail = () => {
 
                     {availableSizes.length > 0 && (
                         <div>
-                            <span className="text-sm font-bold text-gray-700 block mb-2">ขนาด (Size)</span>
+                            <span className="text-sm font-bold text-gray-700 block mb-2">ตัวเลือกขนาด (Size)</span>
                             <div className="flex flex-wrap gap-2">
                                 {availableSizes.map(size => (
                                     <button 
@@ -289,13 +352,13 @@ const ProductDetail = () => {
             )}
 
             <div className="mb-4">
-                {displayStock === 0 ? (
+                {Number(displayStock) <= 0 ? (
                     <span className="text-red-500 font-bold bg-red-50 px-3 py-1 rounded-full text-sm">สินค้าหมด</span>
                 ) : (
                     <span className="text-gray-500 text-sm">มีสินค้าทั้งหมด: <span className="font-bold text-gray-800">{displayStock}</span> ชิ้น</span>
                 )}
                 
-                {product.variants && product.variants.length > 0 && !currentVariant && (
+                {product.variants && product.variants.length > 0 && !currentVariant && !isMainProductSelected && (
                     <span className="text-red-500 text-sm ml-3 block mt-1">*ไม่มีสินค้ารูปแบบนี้ กรุณาเลือกตัวเลือกใหม่</span>
                 )}
             </div>
@@ -326,17 +389,17 @@ const ProductDetail = () => {
 
                 <button 
                     onClick={handleAddToCart}
-                    // ✅ แก้ไข error 'product.variants.length' is possibly 'undefined'.
-                    disabled={isAdding || displayStock === 0 || ((product.variants?.length ?? 0) > 0 && !currentVariant)}
+                    disabled={isAdding || Number(displayStock) <= 0 || ((product.variants?.length ?? 0) > 0 && !currentVariant && !isMainProductSelected)}
                     className="flex-1 bg-[#D65A31] hover:bg-[#b54622] text-white py-3 px-8 rounded-lg font-bold text-lg shadow-lg shadow-orange-100 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                 >
-                  {isAdding ? <><Loader className="animate-spin" size={20}/> กำลังเพิ่ม...</> : displayStock === 0 ? "สินค้าหมด" : "เพิ่มลงตะกร้า"}
+                  {isAdding ? <><Loader className="animate-spin" size={20}/> กำลังเพิ่ม...</> : Number(displayStock) <= 0 ? "สินค้าหมด" : "เพิ่มลงตะกร้า"}
                 </button>
               </div>
             </div>
           </div>
         </div>
 
+        {/* ส่วนรายละเอียดสินค้าและรีวิว */}
         <div className="bg-white rounded-xl shadow-sm p-6 space-y-8">
              <div>
                 <h2 className="text-xl font-bold text-gray-800 mb-4 border-l-4 border-[#148F96] pl-3">รายละเอียดสินค้า</h2>

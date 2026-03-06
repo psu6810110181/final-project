@@ -9,8 +9,11 @@ import {
   deleteCategory, deleteRoom, deleteFeature,
   getAllColors, createColor, type Color, deleteColor,
   getAllMaterials, createMaterial, type Material, deleteMaterial,
-  getAllSizes, createSize, type Size, deleteSize
+  getAllSizes, createSize, type Size, deleteSize,
+  type Variant
 } from "../../services/api";
+import Confirm from "../../components/Confirm";
+import toast from "react-hot-toast";
 
 interface ManageSystemProps {
   onEditProduct: (productId: string) => void;
@@ -27,6 +30,13 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
   
   const [newItemName, setNewItemName] = useState("");
   const [activeTab, setActiveTab] = useState<'category' | 'room' | 'feature' | 'color' | 'material' | 'size'>('category'); 
+  
+  // Confirm state
+  const [confirm, setConfirm] = useState<{ 
+    message: string; 
+    onConfirm: () => void; 
+    type?: 'danger' | 'warning' | 'info' 
+  } | null>(null); 
 
   // --- Design System Colors (อิงจาก ProductForm) ---
   const colors = {
@@ -75,6 +85,44 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
     } catch (error) { console.error(error); }
   };
 
+  // ✅ ฟังก์ชันตรวจสอบสินค้าที่มีสต็อกต่ำกว่า 20 ชิ้น
+  const getLowStockProducts = () => {
+    const lowStockItems: Array<{
+      product: Product;
+      lowStockType: 'main' | 'variant';
+      stockLevel: number;
+      variantInfo?: Variant;
+    }> = [];
+
+    productsList.forEach(product => {
+      // ตรวจสอบสต็อกหลัก
+      if (product.stock < 20) {
+        lowStockItems.push({
+          product,
+          lowStockType: 'main',
+          stockLevel: product.stock
+        });
+      }
+
+      // ตรวจสองสต็อกของ variants
+      if (product.variants && product.variants.length > 0) {
+        product.variants.forEach(variant => {
+          const variantStock = parseInt(variant.stock) || 0;
+          if (variantStock < 20) {
+            lowStockItems.push({
+              product,
+              lowStockType: 'variant',
+              stockLevel: variantStock,
+              variantInfo: variant
+            });
+          }
+        });
+      }
+    });
+
+    return lowStockItems;
+  };
+
   const handleAddMasterData = async () => {
     if (!newItemName.trim()) return;
     try {
@@ -87,30 +135,47 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
       
       setNewItemName(""); 
       fetchMasterData(); 
-      alert(`เพิ่มข้อมูลสำเร็จ!`);
-    } catch (error) { alert("เกิดข้อผิดพลาด"); }
-  };
-
-  const handleDeleteProduct = async (productId: string) => {
-    if (!window.confirm("ยืนยันการลบสินค้านี้?")) return;
-    try {
-      await api.delete(`/products/${productId}`);
-      fetchProducts();
-    } catch (error) { alert("ลบไม่สำเร็จ"); }
-  };
-
-  const handleDeleteMasterData = async (id: number) => {
-    if (window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?')) {
-      try {
-        if (activeTab === 'category') await deleteCategory(id);
-        else if (activeTab === 'room') await deleteRoom(id);
-        else if (activeTab === 'feature') await deleteFeature(id);
-        else if (activeTab === 'color') await deleteColor(id);
-        else if (activeTab === 'material') await deleteMaterial(id);
-        else if (activeTab === 'size') await deleteSize(id);
-        fetchMasterData();
-      } catch (error) { alert("ไม่สามารถลบได้"); }
+      toast.success("เพิ่มข้อมูลสำเร็จ!");
+    } catch (error) { 
+      toast.error("เกิดข้อผิดพลาด"); 
     }
+  };
+
+  const handleDeleteProduct = async (productId: string, productName: string) => {
+    setConfirm({
+      message: `ยืนยันการลบสินค้า "${productName}" นี้?`,
+      onConfirm: async () => {
+        try {
+          await api.delete(`/products/${productId}`);
+          fetchProducts();
+          toast.success("ลบสินค้าสำเร็จ");
+        } catch (error) { 
+          toast.error("ลบไม่สำเร็จ"); 
+        }
+      },
+      type: 'danger'
+    });
+  };
+
+  const handleDeleteMasterData = async (id: number, itemName: string) => {
+    setConfirm({
+      message: `คุณแน่ใจหรือไม่ว่าต้องการลบรายการ "${itemName}" นี้?`,
+      onConfirm: async () => {
+        try {
+          if (activeTab === 'category') await deleteCategory(id);
+          else if (activeTab === 'room') await deleteRoom(id);
+          else if (activeTab === 'feature') await deleteFeature(id);
+          else if (activeTab === 'color') await deleteColor(id);
+          else if (activeTab === 'material') await deleteMaterial(id);
+          else if (activeTab === 'size') await deleteSize(id);
+          fetchMasterData();
+          toast.success("ลบข้อมูลสำเร็จ");
+        } catch (error) { 
+          toast.error("ไม่สามารถลบได้"); 
+        }
+      },
+      type: 'danger'
+    });
   };
 
   const getActiveList = () => {
@@ -171,6 +236,63 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
             </p>
           </div>
         </header>
+
+        {/* ✅ Stock Alert Section */}
+        {(() => {
+          const lowStockItems = getLowStockProducts();
+          if (lowStockItems.length === 0) return null;
+          
+          return (
+            <div style={{
+              background: colors.dangerLight,
+              border: `1px solid ${colors.danger}`,
+              borderRadius: '12px',
+              padding: '16px 20px',
+              marginBottom: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <div style={{
+                fontSize: '24px',
+                animation: 'pulse 2s infinite'
+              }}>⚠️</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ 
+                  fontWeight: '700', 
+                  color: colors.danger, 
+                  fontSize: '16px',
+                  marginBottom: '4px'
+                }}>
+                  แจ้งเตือนสต็อกสินค้าใกล้หมด ({lowStockItems.length} รายการ)
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#991B1B',
+                  lineHeight: '1.4'
+                }}>
+                  {lowStockItems.slice(0, 3).map((item, index) => (
+                    <span key={index}>
+                      {item.product.name}
+                      {item.lowStockType === 'variant' && item.variantInfo && (
+                        <span style={{ fontSize: '12px', opacity: 0.8 }}>
+                          ({item.variantInfo.color}/{item.variantInfo.size})
+                        </span>
+                      )}
+                      <span style={{ fontWeight: '700' }}> คงเหลือ {item.stockLevel} ชิ้น</span>
+                      {index < Math.min(lowStockItems.length - 1, 2) && ', '}
+                    </span>
+                  ))}
+                  {lowStockItems.length > 3 && (
+                    <span style={{ fontStyle: 'italic' }}>
+                      {' '}และอีก {lowStockItems.length - 3} รายการ
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
         
         {/* Semantic List สำหรับแสดงสินค้า */}
         <ul style={{ 
@@ -206,9 +328,48 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
                       ฿{Number(product.price).toLocaleString()}
                     </div>
                     <div style={{ fontSize: '13px', color: colors.textMuted, marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: (product.stock || 0) > 0 ? '#10B981' : colors.danger }}></span>
+                      <span style={{ 
+                        display: 'inline-block', 
+                        width: '8px', 
+                        height: '8px', 
+                        borderRadius: '50%', 
+                        background: (product.stock || 0) > 20 ? '#10B981' : (product.stock || 0) > 0 ? '#F59E0B' : colors.danger 
+                      }}></span>
                       สต็อก: {product.stock ?? '0'} ชิ้น
+                      {(product.stock ?? 0) < 20 && (product.stock ?? 0) > 0 && (
+                        <span style={{ 
+                          background: '#FEF3C7', 
+                          color: '#92400E', 
+                          padding: '2px 6px', 
+                          borderRadius: '4px', 
+                          fontSize: '11px', 
+                          fontWeight: '600',
+                          marginLeft: '4px'
+                        }}>
+                          ใกล้หมด
+                        </span>
+                      )}
+                      {(product.stock ?? 0) === 0 && (
+                        <span style={{ 
+                          background: colors.dangerLight, 
+                          color: colors.danger, 
+                          padding: '2px 6px', 
+                          borderRadius: '4px', 
+                          fontSize: '11px', 
+                          fontWeight: '600',
+                          marginLeft: '4px'
+                        }}>
+                          หมด
+                        </span>
+                      )}
                     </div>
+                    
+                    {/* ✅ Show variant stock alerts if any variant is low */}
+                    {product.variants && product.variants.some(v => (parseInt(v.stock) || 0) < 20) && (
+                      <div style={{ fontSize: '12px', color: '#92400E', marginTop: '4px' }}>
+                        ⚠️ มี variant ใกล้หมด
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -221,7 +382,7 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
                       แก้ไข
                     </button>
                     <button 
-                      onClick={() => handleDeleteProduct(product.id)} 
+                      onClick={() => handleDeleteProduct(product.id, product.name)} 
                       style={{ background: colors.dangerLight, color: colors.danger, border: `1px solid #FEE2E2`, borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', transition: 'background 0.2s' }}
                       onMouseOver={(e) => e.currentTarget.style.background = '#FEE2E2'}
                       onMouseOut={(e) => e.currentTarget.style.background = colors.dangerLight}
@@ -305,7 +466,7 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
                     <span aria-hidden="true">{getActiveIcon()}</span>
                     <span>{i.name}</span>
                     <button 
-                        onClick={() => handleDeleteMasterData(i.id)} 
+                        onClick={() => handleDeleteMasterData(i.id, i.name)} 
                         aria-label={`ลบ ${i.name}`}
                         style={{ background: colors.dangerLight, color: colors.danger, border: 'none', width: '24px', height: '24px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s', marginLeft: '4px' }}
                         onMouseOver={(e) => e.currentTarget.style.background = '#FEE2E2'}
@@ -360,7 +521,22 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
             box-shadow: 0 12px 24px -4px rgba(0,0,0,0.08) !important;
             border-color: #CBD5E1 !important;
         }
+        
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
       `}</style>
+      
+      {/* Custom Confirm */}
+      {confirm && (
+        <Confirm
+          message={confirm.message}
+          onConfirm={confirm.onConfirm}
+          onCancel={() => setConfirm(null)}
+          type={confirm.type}
+        />
+      )}
     </div>
   );
 };

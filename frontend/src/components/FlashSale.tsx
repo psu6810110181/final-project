@@ -95,7 +95,7 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
 
   return (
     <div style={{
-      background: 'linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%)',
+      background: 'linear-gradient(135deg, #ff8e53 0%, #148f96 100%)',
       borderRadius: '16px',
       padding: '24px',
       margin: '20px 0',
@@ -161,19 +161,43 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
               border: '1px solid rgba(255,255,255,0.2)'
             }}>
               {/* Product Image */}
-              {product.image && (
-                <img 
-                  src={product.image} 
-                  alt={product.name}
-                  style={{ 
-                    width: '100%', 
-                    height: '150px', 
-                    objectFit: 'cover', 
-                    borderRadius: '8px', 
-                    marginBottom: '12px' 
-                  }}
-                />
-              )}
+              <div style={{ 
+                width: '100%', 
+                height: '150px', 
+                borderRadius: '8px', 
+                marginBottom: '12px',
+                overflow: 'hidden',
+                background: 'rgba(255,255,255,0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                {product.image ? (
+                  <img 
+                    src={product.image.startsWith('http') 
+                      ? product.image 
+                      : `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/uploads/${product.image}`
+                    } 
+                    alt={product.name}
+                    style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      objectFit: 'cover' 
+                    }}
+                    onError={(e) => {
+                      e.currentTarget.src = '/placeholder-product.png';
+                    }}
+                  />
+                ) : (
+                  <div style={{ 
+                    color: 'rgba(255,255,255,0.6)', 
+                    fontSize: '48px',
+                    textAlign: 'center'
+                  }}>
+                    📦
+                  </div>
+                )}
+              </div>
               
               {/* Product Info */}
               <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '600' }}>
@@ -193,7 +217,7 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
                 <span style={{ 
                   fontSize: '24px', 
                   fontWeight: '700',
-                  color: '#ffff00'
+                  color: '#d32f2f'
                 }}>
                   ฿{discountedPrice.toLocaleString()}
                 </span>
@@ -201,7 +225,7 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
               
               {/* Discount Badge */}
               <div style={{
-                background: '#ffff00',
+                background: '#ffffff',
                 color: '#d32f2f',
                 padding: '4px 8px',
                 borderRadius: '20px',

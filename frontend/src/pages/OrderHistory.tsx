@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import * as api from '../services/api';
 // ✅ นำเข้า Banknote (ไอคอนรูปเงิน) เพิ่มเข้ามา
 import { Package, Calendar, ChevronRight, Clock, CheckCircle, XCircle, MapPin, X, Truck, CreditCard, Banknote } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const OrderHistory = () => {
   const [orders, setOrders] = useState<api.Order[]>([]);
@@ -37,20 +38,31 @@ const OrderHistory = () => {
     };
   }, []);
 
+  // ✅ Check for payment success URL parameter and refresh orders
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('success') === 'true') {
+      // Refresh orders to get updated status after payment
+      fetchOrders();
+      // Clean up the URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
   const handleCancelOrder = async (orderId: string) => {
     const confirmCancel = window.confirm("คุณแน่ใจหรือไม่ว่าต้องการยกเลิกคำสั่งซื้อนี้?");
     if (!confirmCancel) return;
 
     try {
       await api.cancelOrder(orderId);
-      alert("ยกเลิกคำสั่งซื้อเรียบร้อยแล้ว");
+      toast.success("ยกเลิกคำสั่งซื้อเรียบร้อยแล้ว");
       fetchOrders(); 
       if(selectedOrder?.id === orderId) {
         setSelectedOrder(null);
       }
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.message || "เกิดข้อผิดพลาดในการยกเลิกคำสั่งซื้อ");
+      toast.error(err.response?.data?.message || "เกิดข้อผิดพลาดในการยกเลิกคำสั่งซื้อ");
     }
   };
 
@@ -62,7 +74,7 @@ const OrderHistory = () => {
       }
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.message || "ไม่สามารถเปิดหน้าชำระเงินได้ในขณะนี้");
+      toast.error(err.response?.data?.message || "ไม่สามารถเปิดหน้าชำระเงินได้ในขณะนี้");
     }
   };
 
@@ -327,3 +339,4 @@ const OrderHistory = () => {
 };
 
 export default OrderHistory;
+

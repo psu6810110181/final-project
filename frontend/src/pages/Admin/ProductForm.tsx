@@ -11,6 +11,7 @@ import {
   getAllMaterials, type Material,
   getAllSizes, type Size
 } from "../../services/api"; 
+import toast from "react-hot-toast"; 
 
 interface Variant {
   color: string;
@@ -20,6 +21,7 @@ interface Variant {
   stock: string;
   imageUrl?: string;
   imageFile?: File; 
+  originalImage?: string; // เก็บชื่อไฟล์รูปเดิมไว้สำหรับส่งไป Backend
 }
 
 interface ProductFormProps {
@@ -35,10 +37,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
   const [roomId, setRoomId] = useState(""); 
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]); 
   const [description, setDescription] = useState("");
+  // Main product attributes
+const [mainColor, setMainColor] = useState("");
+const [mainMaterial, setMainMaterial] = useState("");
+const [mainSize, setMainSize] = useState("");
+const [mainStock, setMainStock] = useState("");
   
   // State สำหรับเก็บไฟล์ของจริง
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState(""); // ใช้สำหรับ Preview รูป
+  const [originalMainImage, setOriginalMainImage] = useState(""); // เก็บชื่อไฟล์รูปเดิมไว้สำหรับส่งไป Backend
   
   const [variants, setVariants] = useState<Variant[]>([
     { color: "", material: "", size: "", price: "", stock: "" }
@@ -50,7 +58,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
   const [colorsList, setColorsList] = useState<Color[]>([]);
   const [materialsList, setMaterialsList] = useState<Material[]>([]);
   const [sizesList, setSizesList] = useState<Size[]>([]);
-
+  
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
@@ -88,6 +96,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
       
       // ✅ 1. จัดการ URL รูปภาพหลักให้โหลดได้ชัวร์ๆ (ดักจับเผื่อติดรูปแบบ Array มา)
       let fetchedImageUrl = "";
+      let originalImageName = "";
+      
       if (productDetails.image) {
          let imgStr = productDetails.image;
          if (typeof imgStr === 'string' && imgStr.startsWith('[')) {
@@ -96,6 +106,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
              imgStr = imgStr[0];
          }
          
+         // เก็บชื่อไฟล์เดิมไว้สำหรับส่งไป Backend
+         originalImageName = imgStr && !imgStr.startsWith('http') && !imgStr.startsWith('blob:') ? imgStr : "";
+         
          if (imgStr && imgStr.startsWith('http')) {
              fetchedImageUrl = imgStr;
          } else if (imgStr && !imgStr.startsWith('blob:')) {
@@ -103,25 +116,40 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
          }
       }
       setImageUrl(fetchedImageUrl);
+      setOriginalMainImage(originalImageName);
       
       setCategoryId(productDetails.category || "");
       setRoomId(productDetails.room || "");
       setSelectedFeatures(productDetails.features || []);
+      
+      // ดึงข้อมูลสินค้าหลัก
+      setMainColor(productDetails.color || "");
+      setMainMaterial(productDetails.material || "");
+      setMainSize(productDetails.size || "");
+      setMainStock(String(productDetails.mainStock || productDetails.stock || ""));
 
       // ✅ 2. จัดการ URL รูปภาพของตัวเลือก (Variants) ให้มี Path /uploads/ 
       if (productDetails.variants && productDetails.variants.length > 0) {
         setVariants(productDetails.variants.map((v: any) => {
           let vImageUrl = "";
+          let originalImage = "";
+          
           if (v.image) {
+            // เก็บชื่อไฟล์เดิมไว้สำหรับส่งไป Backend
+            originalImage = v.image.startsWith('http') || v.image.startsWith('blob:') ? "" : v.image;
+            
             if (v.image.startsWith('http') || v.image.startsWith('blob:')) {
               vImageUrl = v.image;
             } else {
               vImageUrl = `${API_BASE_URL}/uploads/${v.image}`;
             }
           }
+          
           return {
             color: v.color || "", material: v.material || "", size: v.size || "",
-            price: String(v.price || ""), stock: String(v.stock || ""), imageUrl: vImageUrl 
+            price: String(v.price || ""), stock: String(v.stock || ""), 
+            imageUrl: vImageUrl,
+            originalImage: originalImage
           };
         }));
       } else {
@@ -129,13 +157,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
       }
     } catch (error) {
       console.error("Error fetching product details:", error);
-      alert("ไม่สามารถโหลดข้อมูลสินค้าเพื่อแก้ไขได้");
+      toast.error("ไม่สามารถโหลดข้อมูลสินค้าเพื่อแก้ไขได้");
     }
   };
 
   const resetForm = () => {
     setName(""); setPrice(""); setDescription(""); 
     setImageUrl(""); setImageFile(null); 
+    setOriginalMainImage(""); // ✅ เคลียร์รูปเดิมด้วย
     setCategoryId(""); setRoomId(""); setSelectedFeatures([]);
     setVariants([{ color: "", material: "", size: "", price: "", stock: "" }]);
   };
@@ -175,7 +204,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
     e.preventDefault(); 
     try {
       if (!name || !price || !categoryId) {
-        alert("กรุณากรอกชื่อสินค้า, ราคา และเลือกหมวดหมู่");
+        toast.error("กรุณากรอกชื่อสินค้า, ราคา และเลือกหมวดหมู่");
         return;
       }
       
@@ -189,9 +218,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
       
       if (roomId) formData.append('room', roomId);
       if (description) formData.append('description', description);
+      
+      // เพิ่มข้อมูลสินค้าหลัก
+      if (mainColor) formData.append('color', mainColor);
+      if (mainMaterial) formData.append('material', mainMaterial);
+      if (mainSize) formData.append('size', mainSize);
+      if (mainStock) formData.append('mainStock', mainStock);
 
       if (imageFile) {
          formData.append('image', imageFile);
+      } else if (editingProductId && originalMainImage) {
+         // ✅ ถ้าไม่มีการอัปโหลดรูปใหม่ ให้ใช้รูปเดิม
+         formData.append('existingImage', originalMainImage);
       }
 
       variants.forEach((variant, index) => {
@@ -204,20 +242,38 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
           formData.append('features', JSON.stringify(selectedFeatures)); 
       }
 
-      const formattedVariants = variants.map(v => ({ ...v, price: parseFloat(v.price), stock: parseInt(v.stock) }));
+      const formattedVariants = variants.map(v => {
+        const variantData: any = { 
+          color: v.color, 
+          material: v.material, 
+          size: v.size, 
+          price: parseFloat(v.price), 
+          stock: parseInt(v.stock) 
+        };
+        
+        // ✅ ถ้าไม่มีการอัปโหลดรูปใหม่ ให้ใช้รูปเดิม (originalImage)
+        if (!v.imageFile && v.originalImage) {
+          variantData.image = v.originalImage;
+        }
+        
+        return variantData;
+      });
       formData.append('variants', JSON.stringify(formattedVariants));
 
       if (editingProductId) {
         await updateProduct(editingProductId, formData); 
-        alert("แก้ไขสินค้าเรียบร้อยแล้ว");
+        toast.success("แก้ไขสินค้าเรียบร้อยแล้ว");
       } else {
         await createProduct(formData); 
-        alert("บันทึกสินค้าเรียบร้อยแล้ว");
+        toast.success("บันทึกสินค้าเรียบร้อยแล้ว");
       }
-      onSuccess(); 
+      // Delay onSuccess to allow toast to show
+      setTimeout(() => {
+        onSuccess(); 
+      }, 1500); 
     } catch (error) {
       console.error("Error saving product:", error);
-      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+      toast.error("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
     }
   };
 
@@ -334,6 +390,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
                   <label htmlFor="product-name" style={labelStyle}>ชื่อสินค้า <span style={{color: colors.danger}} aria-label="จำเป็น">*</span></label>
                   <input id="product-name" placeholder="เช่น โซฟาผ้า รุ่น Cozy" value={name} onChange={e => setName(e.target.value)} required style={inputStyle} />
                 </div>
+
                 <div style={{ flex: 1 }}>
                   <label htmlFor="product-price" style={labelStyle}>ราคาเริ่มต้น (฿) <span style={{color: colors.danger}} aria-label="จำเป็น">*</span></label>
                   <input id="product-price" placeholder="0.00" type="number" value={price} onChange={e => setPrice(e.target.value)} required style={inputStyle} />
@@ -356,7 +413,33 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
                   </select>
                 </div>
               </div>
-              
+              <div style={{ display: 'flex', gap: '16px' }}>
+  <div style={{ flex: 1 }}>
+    <label htmlFor="main-color" style={labelStyle}>สีหลัก</label>
+    <select id="main-color" value={mainColor} onChange={e => setMainColor(e.target.value)} style={inputStyle}>
+      <option value="">-- เลือกสี --</option>
+      {colorsList.map(color => <option key={color.id} value={color.name}>{color.name}</option>)}
+    </select>
+  </div>
+  <div style={{ flex: 1 }}>
+    <label htmlFor="main-material" style={labelStyle}>วัสดุหลัก</label>
+    <select id="main-material" value={mainMaterial} onChange={e => setMainMaterial(e.target.value)} style={inputStyle}>
+      <option value="">-- เลือกวัสดุ --</option>
+      {materialsList.map(material => <option key={material.id} value={material.name}>{material.name}</option>)}
+    </select>
+  </div>
+  <div style={{ flex: 1 }}>
+    <label htmlFor="main-size" style={labelStyle}>ขนาดหลัก</label>
+    <select id="main-size" value={mainSize} onChange={e => setMainSize(e.target.value)} style={inputStyle}>
+      <option value="">-- เลือกขนาด --</option>
+      {sizesList.map(size => <option key={size.id} value={size.name}>{size.name}</option>)}
+    </select>
+  </div>
+  <div style={{ flex: 1 }}>
+    <label htmlFor="main-stock" style={labelStyle}>คลังหลัก</label>
+    <input id="main-stock" placeholder="0" type="number" value={mainStock} onChange={e => setMainStock(e.target.value)} style={inputStyle} />
+  </div>
+</div>
               <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
                 <legend style={labelStyle}>✨ คุณสมบัติพิเศษ</legend>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', padding: '12px', background: colors.bgLight, borderRadius: '10px', border: `1px solid ${colors.border}` }}>

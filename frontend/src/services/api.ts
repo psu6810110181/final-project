@@ -15,6 +15,14 @@ export interface Product {
   features?: string[];
   image: string; 
   variants?: Variant[];
+  // ✅ Main product attributes
+  color?: string;
+  material?: string;
+  size?: string;
+  mainColor?: string;
+  mainMaterial?: string;
+  mainSize?: string;
+  mainStock?: number;
 }
 
 export interface Category { id: number; name: string; }
