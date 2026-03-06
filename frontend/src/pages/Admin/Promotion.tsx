@@ -4,6 +4,39 @@ import api, { type Promotion, type Product } from "../../services/api";
 import Confirm from "../../components/Confirm";
 import toast from "react-hot-toast";
 
+// Helper function to safely format datetime-local value
+const formatDateTimeLocal = (dateString: string | undefined) => {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  } catch {
+    return '';
+  }
+};
+
+// Helper function to get minimum datetime for start date input
+const getMinDateTimeLocal = (dateString: string) => {
+  const selectedDate = new Date(dateString);
+  const now = new Date();
+  
+  // If selected date is today, set min to current time
+  if (selectedDate.toDateString() === now.toDateString()) {
+    return formatDateTimeLocal(now.toISOString());
+  } else {
+    // If selected date is in future, set min to beginning of that day
+    return formatDateTimeLocal(selectedDate.toISOString());
+  }
+};
+
 const PromotionManager: React.FC = () => {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -189,8 +222,8 @@ const PromotionManager: React.FC = () => {
       description: promotion.description,
       discountType: promotion.discountType,
       discountValue: promotion.discountValue.toString(),
-      startDate: promotion.startDate.split('T')[0],
-      endDate: promotion.endDate.split('T')[0],
+      startDate: formatDateTimeLocal(promotion.startDate),
+      endDate: formatDateTimeLocal(promotion.endDate),
       isFlashSale: promotion.isFlashSale,
       productIds: promotion.products?.map(p => p.id) || [],
       isActive: promotion.isActive
@@ -410,26 +443,33 @@ const PromotionManager: React.FC = () => {
 
             <div>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: colors.textMain }}>
-                วันที่เริ่มต้น *
+                วันที่และเวลาเริ่มต้น *
               </label>
               <input
-                type="date"
-                value={formData.startDate}
-                onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+                type="datetime-local"
+                value={formatDateTimeLocal(formData.startDate)}
+                onChange={(e) => {
+                  console.log('Start date changed:', e.target.value);
+                  setFormData({...formData, startDate: e.target.value});
+                }}
                 style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px' }}
+                min={formData.startDate ? getMinDateTimeLocal(formData.startDate) : formatDateTimeLocal(new Date().toISOString())}
               />
             </div>
 
             <div>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: colors.textMain }}>
-                วันที่สิ้นสุด *
+                วันที่และเวลาสิ้นสุด *
               </label>
               <input
-                type="date"
-                value={formData.endDate}
-                onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+                type="datetime-local"
+                value={formatDateTimeLocal(formData.endDate)}
+                onChange={(e) => {
+                  console.log('End date changed:', e.target.value);
+                  setFormData({...formData, endDate: e.target.value});
+                }}
                 style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px' }}
-                min={formData.startDate}
+                min={formatDateTimeLocal(formData.startDate)}
               />
             </div>
           </div>
