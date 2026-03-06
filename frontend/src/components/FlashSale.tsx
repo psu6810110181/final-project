@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { getActiveFlashSales, type Promotion, type Product } from '../services/api';
 
 interface FlashSaleProps {
@@ -153,13 +154,33 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
           const discountPercentage = Math.round(((originalPrice - discountedPrice) / originalPrice) * 100);
 
           return (
-            <div key={product.id} style={{
-              background: 'rgba(255,255,255,0.1)',
-              borderRadius: '12px',
-              padding: '16px',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255,255,255,0.2)'
-            }}>
+            <Link 
+              to={`/product/${product.id}`} 
+              key={product.id} 
+              style={{ 
+                textDecoration: 'none',
+                color: 'inherit',
+                display: 'block'
+              }}
+            >
+              <div style={{
+                background: 'rgba(255,255,255,0.1)',
+                borderRadius: '12px',
+                padding: '16px',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                cursor: 'pointer',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 12px 24px rgba(255,255,255,0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+              >
               {/* Product Image */}
               <div style={{ 
                 width: '100%', 
@@ -245,6 +266,7 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
                 }
               </div>
             </div>
+            </Link>
           );
         })}
       </div>
