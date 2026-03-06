@@ -14,10 +14,16 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await login(formData);
+      const userData = await login(formData);
       await fetchCart();
       toast.success('เข้าสู่ระบบสำเร็จ!'); // ✅ แจ้งเตือนเมื่อสำเร็จ
-      navigate('/');
+      
+      // Check if user is admin and redirect accordingly
+      if (userData?.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       toast.error('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'); // ✅ เปลี่ยนจาก alert
     }
