@@ -302,17 +302,55 @@ const PromotionManager: React.FC = () => {
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: colors.textMain }}>
                 🎯 ประเภทโปรโมชั่น
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={formData.isFlashSale}
-                  onChange={(e) => setFormData({...formData, isFlashSale: e.target.checked})}
-                  style={{ marginRight: '8px', width: '16px', height: '16px' }}
-                />
-                <span style={{ fontSize: '14px' }}>
-                  {formData.isFlashSale ? '🔥 Flash Sale (แสดงหน้าแรก)' : '📅 Seasonal Promotion (โปรโมชั่นปกติ)'}
-                </span>
-              </label>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setFormData({...formData, isFlashSale: true})}
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    border: `2px solid ${formData.isFlashSale ? colors.secondary : colors.border}`,
+                    borderRadius: '8px',
+                    background: formData.isFlashSale ? colors.secondaryLight : colors.bgWhite,
+                    color: formData.isFlashSale ? colors.secondary : colors.textMuted,
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  🔥 Flash Sale
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({...formData, isFlashSale: false})}
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    border: `2px solid ${!formData.isFlashSale ? colors.primary : colors.border}`,
+                    borderRadius: '8px',
+                    background: !formData.isFlashSale ? colors.primaryLight : colors.bgWhite,
+                    color: !formData.isFlashSale ? colors.primary : colors.textMuted,
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  📅 Seasonal Promotion
+                </button>
+              </div>
+              <div style={{ fontSize: '12px', color: colors.textMuted, marginTop: '6px' }}>
+                {formData.isFlashSale ? '🔥 Flash Sale (แสดงหน้าแรก)' : '📅 Seasonal Promotion (โปรโมชั่นปกติ)'}
+              </div>
             </div>
 
             <div>
