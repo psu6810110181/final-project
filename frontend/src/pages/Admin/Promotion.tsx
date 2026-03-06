@@ -171,6 +171,15 @@ const PromotionManager: React.FC = () => {
       return;
     }
 
+    // Validate discount percentage limit
+    if (formData.discountType === 'PERCENTAGE') {
+      const discountValue = Number(formData.discountValue);
+      if (discountValue > 90) {
+        toast.error("ส่วนลดสูงสุดคือ 90%");
+        return;
+      }
+    }
+
     try {
       const promotionData = {
         ...formData,
@@ -323,10 +332,21 @@ const PromotionManager: React.FC = () => {
               <input
                 type="number"
                 value={formData.discountValue}
-                onChange={(e) => setFormData({...formData, discountValue: e.target.value})}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (formData.discountType === 'PERCENTAGE') {
+                    const numValue = Number(value);
+                    if (numValue > 90) {
+                      toast.error('ส่วนลดสูงสุดคือ 90%');
+                      return;
+                    }
+                  }
+                  setFormData({...formData, discountValue: value});
+                }}
                 style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px' }}
-                placeholder={formData.discountType === 'PERCENTAGE' ? 'เช่น 20' : 'เช่น 100'}
+                placeholder={formData.discountType === 'PERCENTAGE' ? 'เช่น 20 (สูงสุด 90%)' : 'เช่น 100'}
                 min="0"
+                max={formData.discountType === 'PERCENTAGE' ? 90 : undefined}
                 step={formData.discountType === 'PERCENTAGE' ? '0.01' : '1'}
               />
             </div>
