@@ -23,6 +23,8 @@ import { ColorsModule } from './colors/colors.module';
 import { MaterialsModule } from './materials/materials.module';
 import { SizesModule } from './sizes/sizes.module';
 import { PromotionsModule } from './promotions/promotions.module';
+
+// 👇 เพิ่ม Import สำหรับ Bookmarks Module (สินค้าที่สนใจ)
 import { BookmarksModule } from './bookmarks/bookmarks.module';
 
 @Module({
@@ -52,7 +54,7 @@ import { BookmarksModule } from './bookmarks/bookmarks.module';
             username: configService.get<string>('DB_USERNAME'),
             password: configService.get<string>('DB_PASSWORD'),
             database: configService.get<string>('DB_DATABASE'),
-            autoLoadEntities: true,
+            autoLoadEntities: true, // 💡 จุดนี้คือตัวจัดการโหลด Bookmark ให้เองอัตโนมัติ
             synchronize: true,
           };
         } else {
@@ -60,7 +62,7 @@ import { BookmarksModule } from './bookmarks/bookmarks.module';
           return {
             type: 'sqlite',
             database: configService.get<string>('DB_DATABASE', './data/finalproject.db'),
-            autoLoadEntities: true,
+            autoLoadEntities: true, // 💡 โหลด Entity อัตโนมัติเช่นกัน
             synchronize: true,
           };
         }
@@ -84,6 +86,8 @@ import { BookmarksModule } from './bookmarks/bookmarks.module';
     MaterialsModule,
     SizesModule,
     PromotionsModule,
+
+    // 👇 ลงทะเบียน BookmarksModule ในระบบ
     BookmarksModule,
   ],
   controllers: [AppController],
