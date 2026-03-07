@@ -1,26 +1,41 @@
 // frontend/src/components/TabBar.tsx
 import { Link, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import * as api from '../services/api'; // ✅ นำเข้า api
 
 const TabBar = () => {
   const location = useLocation();
   const [bookmarkCount, setBookmarkCount] = useState(0);
 
-  // อัปเดตจำนวน bookmark เมื่อมีการเปลี่ยนแปลงใน localStorage
+  // อัปเดตจำนวน bookmark โดยดึงจาก API แทน localStorage
   useEffect(() => {
-    const updateCount = () => {
-      const saved = localStorage.getItem('bookmarks');
-      if (saved) {
-        setBookmarkCount(JSON.parse(saved).length);
-      } else {
+    const updateCount = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setBookmarkCount(0); // ถ้าไม่ได้ล็อกอิน ไม่ต้องแสดงจำนวน
+        return;
+      }
+
+      try {
+        const data = await api.getBookmarks().catch(() => []); // ดึงจาก API
+        if (Array.isArray(data)) {
+          setBookmarkCount(data.length);
+        } else if (data && Array.isArray(data.data)) {
+          setBookmarkCount(data.data.length);
+        } else {
+          setBookmarkCount(0);
+        }
+      } catch (error) {
+        console.error('Failed to fetch bookmarks count', error);
         setBookmarkCount(0);
       }
     };
 
     updateCount();
-    // ฟังการเปลี่ยนแปลงของ localStorage เผื่อมีการกด bookmark จากหน้าอื่น
+    
+    // ฟังการเปลี่ยนแปลงเผื่อมีการกดเข้า-ออกระบบ
     window.addEventListener('storage', updateCount); 
-    // Custom event ไว้ดักฟังเวลาแก้ไขจากหน้าเดียวกัน (เพราะ window.storage ไม่ทำงานบนแท็บเดียวกัน)
+    // ฟัง Event เมื่อมีการกดเพิ่ม/ลบ Bookmark จากหน้าอื่นๆ
     window.addEventListener('bookmarksUpdated', updateCount); 
 
     return () => {
