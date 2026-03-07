@@ -348,7 +348,7 @@ export const createReview = async (reviewData: Review) => {
 };
 
 // ---------------------------------------------------------
-// ✅ 8. Bookmarks (สินค้าที่สนใจ)
+// ✅ 13. Bookmarks (สินค้าที่สนใจ)
 // ---------------------------------------------------------
 export const getBookmarks = async () => {
   const response = await api.get('/bookmarks');
@@ -363,4 +363,5 @@ export const addBookmark = async (productId: string) => {
 export const removeBookmark = async (productId: string) => {
   return await api.delete(`/bookmarks/${productId}`);
 };
+
 export default api;

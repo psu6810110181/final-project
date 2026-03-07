@@ -23,6 +23,7 @@ import { ColorsModule } from './colors/colors.module';
 import { MaterialsModule } from './materials/materials.module';
 import { SizesModule } from './sizes/sizes.module';
 import { PromotionsModule } from './promotions/promotions.module';
+import { BookmarksModule } from './bookmarks/bookmarks.module';
 
 @Module({
   imports: [
@@ -83,6 +84,7 @@ import { PromotionsModule } from './promotions/promotions.module';
     MaterialsModule,
     SizesModule,
     PromotionsModule,
+    BookmarksModule,
   ],
   controllers: [AppController],
   providers: [AppService],
