@@ -8,6 +8,9 @@ import toast from 'react-hot-toast';
 import { useCart } from '../contexts/CartContext';
 import TabBar from '../components/TabBar';
 
+// ✅ นำเข้ารูปภาพพื้นหลังจากโฟลเดอร์ assets
+import heroBackground from '../assets/background.jpg';
+
 export type ProductWithPromo = Product & { promo?: Promotion };
 
 const getColorHex = (colorName: string) => {
@@ -26,7 +29,7 @@ function calculateDiscountPrice(price: string | number, promo: Promotion) {
 
 const HomepagePromotion = () => {
   const [products, setProducts] = useState<ProductWithPromo[]>([]);
-  const [promotions, setPromotions] = useState<Promotion[]>([]); // ✅ เก็บรายการโปรโมชันทั้งหมด
+  const [promotions, setPromotions] = useState<Promotion[]>([]); 
   const [categories, setCategories] = useState<Category[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [features, setFeatures] = useState<Feature[]>([]);
@@ -37,7 +40,7 @@ const HomepagePromotion = () => {
   const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const [selectedPromotions, setSelectedPromotions] = useState<string[]>([]); // ✅ State สำหรับ Filter โปรโมชัน
+  const [selectedPromotions, setSelectedPromotions] = useState<string[]>([]); 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
@@ -52,7 +55,6 @@ const HomepagePromotion = () => {
   const { addToCart } = useCart();
   const navigate = useNavigate();
 
-  // ✅ อนุญาตให้ใช้ Advanced Filter ได้ถ้าเลือกหมวดหมู่ใดๆ หรือเลือกโปรโมชัน
   const isAdvancedFilterAllowed = selectedCategories.length > 0 || selectedRooms.length > 0 || selectedFeatures.length > 0 || selectedPromotions.length > 0;
 
   useEffect(() => {
@@ -75,7 +77,7 @@ const HomepagePromotion = () => {
         
         let promoMap = new Map<string, Promotion>();
         const now = new Date();
-        const activePromos: Promotion[] = []; // ✅ เก็บข้อมูลโปรโมชันที่กำลัง Active ไปสร้าง Filter
+        const activePromos: Promotion[] = []; 
 
         if (Array.isArray(promoData)) {
             promoData.forEach((promo: Promotion) => {
@@ -154,7 +156,6 @@ const HomepagePromotion = () => {
   }, []);
 
   const filteredProducts = products.filter((product) => {
-    // ✅ เพิ่มการคัดกรอง โปรโมชัน
     const matchPromotion = selectedPromotions.length === 0 || (product.promo && selectedPromotions.includes(product.promo.title));
     const matchCategory = selectedCategories.length === 0 || (product.category && selectedCategories.includes(product.category));
     const matchRoom = selectedRooms.length === 0 || (product.room && selectedRooms.includes(product.room));
@@ -198,7 +199,7 @@ const HomepagePromotion = () => {
   };
 
   const clearAllFilters = () => {
-    setSelectedPromotions([]); // ✅ ล้าง Filter โปรโมชัน
+    setSelectedPromotions([]); 
     setSelectedCategories([]); setSelectedRooms([]); setSelectedFeatures([]);
     setSelectedColors([]); setSelectedMaterials([]); setSelectedSizes([]);
     setMinPrice(''); setMaxPrice(''); setSearchTerm('');
@@ -342,7 +343,7 @@ const HomepagePromotion = () => {
           
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
             
-            {/* ✅ Promotion Dropdown (ใหม่) */}
+            {/* ✅ Promotion Dropdown */}
             <div className="relative">
               <button onClick={() => toggleDropdown('promotion')} className={`px-4 py-2 border rounded-full text-sm font-medium flex items-center gap-2 transition-colors ${selectedPromotions.length > 0 ? 'border-red-500 text-red-500 bg-red-50' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
                 โปรโมชัน {selectedPromotions.length > 0 && `(${selectedPromotions.length})`}
@@ -531,10 +532,10 @@ const HomepagePromotion = () => {
         </div>
       </div>
 
-      {/* --- HERO BANNER --- */}
+      {/* --- ✅ นำเข้ารูปภาพพื้นหลังจากโฟลเดอร์ assets --- */}
       <div className="relative bg-gray-900 h-[400px] mb-8 overflow-hidden">
         <img 
-          src="https://images.unsplash.com/photo-1618220179428-22790b461013?auto=format&fit=crop&w=1600&q=80" 
+          src={heroBackground} 
           alt="Banner" 
           className="w-full h-full object-cover opacity-60"
         />

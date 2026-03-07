@@ -9,6 +9,9 @@ import { useCart } from '../contexts/CartContext';
 import FlashSale from '../components/FlashSale';
 import TabBar from '../components/TabBar';
 
+// ✅ นำเข้ารูปภาพพื้นหลังจากโฟลเดอร์ assets
+import heroBackground from '../assets/background.jpg';
+
 export type ProductWithPromo = Product & { promo?: Promotion };
 
 const getColorHex = (colorName: string) => {
@@ -115,16 +118,14 @@ const Home = () => {
         const normalProducts = productsWithPromo.filter(p => !p.promo);
         setGeneralProducts(normalProducts.slice(0, 10));
 
-        // ✅ ดึง Bookmark จาก Backend (เพิ่มการเช็ค Array)
         const token = localStorage.getItem('token');
         if (token) {
           try {
             const bookmarkData = await api.getBookmarks();
-            // ป้องกัน error .map is not a function
             if (Array.isArray(bookmarkData)) {
                 const bookmarkIds = bookmarkData.map((b: any) => b.productId || b.product?.id || b.id);
                 setBookmarks(bookmarkIds);
-            } else if (bookmarkData && Array.isArray(bookmarkData.data)) { // เผื่อ Backend ซ้อนมาใน obj.data
+            } else if (bookmarkData && Array.isArray(bookmarkData.data)) {
                 const bookmarkIds = bookmarkData.data.map((b: any) => b.productId || b.product?.id || b.id);
                 setBookmarks(bookmarkIds);
             } else {
@@ -144,7 +145,6 @@ const Home = () => {
     };
     fetchData();
 
-    // ฟัง Event กรณีมีการกด Bookmark จากหน้าอื่น
     const handleBookmarkUpdate = () => {
       const token = localStorage.getItem('token');
       if (token) {
@@ -493,8 +493,9 @@ const Home = () => {
         </div>
       </div>
 
+      {/* ✅ เปลี่ยนลิ้งก์รูปภาพมาเป็นไฟล์ Local */}
       <div className="relative bg-gray-900 h-[400px] mb-8 overflow-hidden">
-        <img src="https://images.unsplash.com/photo-1618220179428-22790b461013?auto=format&fit=crop&w=1600&q=80" alt="Banner" className="w-full h-full object-cover opacity-60" />
+        <img src={heroBackground} alt="Banner" className="w-full h-full object-cover opacity-60" />
         <div className="absolute inset-0 container mx-auto px-4 flex flex-col justify-center text-white">
           <span className="text-[#148F96] bg-white px-3 py-1 rounded-full text-xs font-bold w-fit mb-4">NEW COLLECTION</span>
           <h1 className="text-4xl md:text-6xl font-bold mb-4">แต่งบ้านในฝัน <br/>ให้เป็นจริง</h1>
