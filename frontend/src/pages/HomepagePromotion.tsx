@@ -26,6 +26,7 @@ function calculateDiscountPrice(price: string | number, promo: Promotion) {
 
 const HomepagePromotion = () => {
   const [products, setProducts] = useState<ProductWithPromo[]>([]);
+  const [promotions, setPromotions] = useState<Promotion[]>([]); // ✅ เก็บรายการโปรโมชันทั้งหมด
   const [categories, setCategories] = useState<Category[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [features, setFeatures] = useState<Feature[]>([]);
@@ -36,6 +37,7 @@ const HomepagePromotion = () => {
   const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
+  const [selectedPromotions, setSelectedPromotions] = useState<string[]>([]); // ✅ State สำหรับ Filter โปรโมชัน
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
@@ -45,12 +47,13 @@ const HomepagePromotion = () => {
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [activeDropdown, setActiveDropdown] = useState<'category' | 'room' | 'feature' | 'color' | 'material' | 'size' | null>(null);
+  const [activeDropdown, setActiveDropdown] = useState<'promotion' | 'category' | 'room' | 'feature' | 'color' | 'material' | 'size' | null>(null);
 
   const { addToCart } = useCart();
   const navigate = useNavigate();
 
-  const isAdvancedFilterAllowed = selectedCategories.length > 0 || selectedRooms.length > 0 || selectedFeatures.length > 0;
+  // ✅ อนุญาตให้ใช้ Advanced Filter ได้ถ้าเลือกหมวดหมู่ใดๆ หรือเลือกโปรโมชัน
+  const isAdvancedFilterAllowed = selectedCategories.length > 0 || selectedRooms.length > 0 || selectedFeatures.length > 0 || selectedPromotions.length > 0;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -72,6 +75,7 @@ const HomepagePromotion = () => {
         
         let promoMap = new Map<string, Promotion>();
         const now = new Date();
+        const activePromos: Promotion[] = []; // ✅ เก็บข้อมูลโปรโมชันที่กำลัง Active ไปสร้าง Filter
 
         if (Array.isArray(promoData)) {
             promoData.forEach((promo: Promotion) => {
@@ -80,6 +84,7 @@ const HomepagePromotion = () => {
                 const isCurrentlyActive = promo.isActive && now >= startDate && now <= endDate;
 
                 if (isCurrentlyActive) {
+                    activePromos.push(promo);
                     promo.products?.forEach((prod: Product) => {
                         if (!promoMap.has(prod.id)) promoMap.set(prod.id, promo);
                     });
@@ -89,7 +94,6 @@ const HomepagePromotion = () => {
 
         const validProducts = Array.isArray(productsData) ? productsData : [];
         
-        // ✅ กรองเอาเฉพาะสินค้าที่มีโปรโมชันเท่านั้น (ต่างจาก Home ที่เอามาทั้งหมด)
         const productsWithPromo: ProductWithPromo[] = validProducts
             .filter(p => promoMap.has(p.id))
             .map(p => ({
@@ -98,6 +102,7 @@ const HomepagePromotion = () => {
             }));
 
         setProducts(productsWithPromo);
+        setPromotions(activePromos);
         setCategories(Array.isArray(categoriesData) ? categoriesData : []);
         setRooms(Array.isArray(roomsData) ? roomsData : []);
         setFeatures(Array.isArray(featuresData) ? featuresData : []);
@@ -105,17 +110,14 @@ const HomepagePromotion = () => {
         setMaterials(Array.isArray(materialsData) ? materialsData : []);
         setSizes(Array.isArray(sizesData) ? sizesData : []);
 
-        // ✅ ดึง Bookmark จาก Backend
         const token = localStorage.getItem('token');
         if (token) {
           try {
             const bookmarkData = await api.getBookmarks();
             if (Array.isArray(bookmarkData)) {
-                const bookmarkIds = bookmarkData.map((b: any) => b.productId || b.product?.id || b.id);
-                setBookmarks(bookmarkIds);
+                setBookmarks(bookmarkData.map((b: any) => b.productId || b.product?.id || b.id));
             } else if (bookmarkData && Array.isArray(bookmarkData.data)) {
-                const bookmarkIds = bookmarkData.data.map((b: any) => b.productId || b.product?.id || b.id);
-                setBookmarks(bookmarkIds);
+                setBookmarks(bookmarkData.data.map((b: any) => b.productId || b.product?.id || b.id));
             } else {
                 setBookmarks([]);
             }
@@ -152,6 +154,8 @@ const HomepagePromotion = () => {
   }, []);
 
   const filteredProducts = products.filter((product) => {
+    // ✅ เพิ่มการคัดกรอง โปรโมชัน
+    const matchPromotion = selectedPromotions.length === 0 || (product.promo && selectedPromotions.includes(product.promo.title));
     const matchCategory = selectedCategories.length === 0 || (product.category && selectedCategories.includes(product.category));
     const matchRoom = selectedRooms.length === 0 || (product.room && selectedRooms.includes(product.room));
     const matchFeature = selectedFeatures.length === 0 || (product.features && product.features.some((f) => selectedFeatures.includes(f)));
@@ -177,7 +181,7 @@ const HomepagePromotion = () => {
     const matchMinPrice = minPrice === '' || productPrice >= Number(minPrice);
     const matchMaxPrice = maxPrice === '' || productPrice <= Number(maxPrice);
 
-    return matchCategory && matchRoom && matchFeature && matchColor && matchMaterial && matchSize && matchSearch && matchMinPrice && matchMaxPrice; 
+    return matchPromotion && matchCategory && matchRoom && matchFeature && matchColor && matchMaterial && matchSize && matchSearch && matchMinPrice && matchMaxPrice; 
   });
 
   const handleToggle = (value: string, selectedList: string[], setList: React.Dispatch<React.SetStateAction<string[]>>) => {
@@ -187,19 +191,20 @@ const HomepagePromotion = () => {
 
   const toggleDropdown = (dropdownName: any) => {
     if (['color', 'material', 'size'].includes(dropdownName) && !isAdvancedFilterAllowed) {
-      toast.error('กรุณาเลือก หมวดหมู่, ห้อง หรือ คุณสมบัติ อย่างน้อย 1 อย่างก่อนใช้ตัวกรองนี้');
+      toast.error('กรุณาเลือก โปรโมชัน, หมวดหมู่, ห้อง หรือ คุณสมบัติ อย่างน้อย 1 อย่างก่อนใช้ตัวกรองนี้');
       return;
     }
     setActiveDropdown(activeDropdown === dropdownName ? null : dropdownName);
   };
 
   const clearAllFilters = () => {
+    setSelectedPromotions([]); // ✅ ล้าง Filter โปรโมชัน
     setSelectedCategories([]); setSelectedRooms([]); setSelectedFeatures([]);
     setSelectedColors([]); setSelectedMaterials([]); setSelectedSizes([]);
     setMinPrice(''); setMaxPrice(''); setSearchTerm('');
   };
 
-  const hasAnyFilter = selectedCategories.length > 0 || selectedRooms.length > 0 || selectedFeatures.length > 0 || minPrice !== '' || maxPrice !== '' || searchTerm !== '' || selectedColors.length > 0 || selectedMaterials.length > 0 || selectedSizes.length > 0;
+  const hasAnyFilter = selectedPromotions.length > 0 || selectedCategories.length > 0 || selectedRooms.length > 0 || selectedFeatures.length > 0 || minPrice !== '' || maxPrice !== '' || searchTerm !== '' || selectedColors.length > 0 || selectedMaterials.length > 0 || selectedSizes.length > 0;
 
   const toggleBookmark = async (e: React.MouseEvent, productId: string) => {
     e.preventDefault(); 
@@ -263,8 +268,8 @@ const HomepagePromotion = () => {
 
   const ProductGrid = ({ title, items }: { title?: string, items: ProductWithPromo[] }) => (
     <div className="mb-12">
-        {title && <h2 className="text-2xl font-bold mb-4 text-gray-800 border-l-4 border-[#148F96] pl-3">{title}</h2>}
-        {items.length === 0 ? <p className="text-gray-500 bg-white p-8 text-center rounded-xl shadow-sm">ไม่พบสินค้าโปรโมชันในขณะนี้</p> : (
+        {title && <h2 className="text-2xl font-bold mb-4 text-gray-800 border-l-4 border-red-500 pl-3">{title}</h2>}
+        {items.length === 0 ? <p className="text-gray-500 bg-white p-8 text-center rounded-xl shadow-sm">ไม่พบสินค้าในโปรโมชันนี้</p> : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
                 {items.map((product) => (
                 <Link to={`/product/${product.id}`} key={product.id} className="group relative block">
@@ -336,6 +341,27 @@ const HomepagePromotion = () => {
         <div className="container mx-auto px-4 py-3 flex flex-col lg:flex-row gap-4 justify-between items-center">
           
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+            
+            {/* ✅ Promotion Dropdown (ใหม่) */}
+            <div className="relative">
+              <button onClick={() => toggleDropdown('promotion')} className={`px-4 py-2 border rounded-full text-sm font-medium flex items-center gap-2 transition-colors ${selectedPromotions.length > 0 ? 'border-red-500 text-red-500 bg-red-50' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
+                โปรโมชัน {selectedPromotions.length > 0 && `(${selectedPromotions.length})`}
+                <ChevronDown size={16} className={`transition-transform duration-200 ${activeDropdown === 'promotion' ? 'rotate-180' : ''}`} />
+              </button>
+              {activeDropdown === 'promotion' && (
+                <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-100 rounded-xl shadow-lg p-4 z-50">
+                  <ul className="max-h-60 overflow-y-auto space-y-3">
+                    {promotions.map((promo) => (
+                      <li key={promo.id} className="flex items-center gap-3 text-gray-600 hover:text-red-500 cursor-pointer" onClick={() => handleToggle(promo.title, selectedPromotions, setSelectedPromotions)}>
+                        <input type="checkbox" className="rounded border-gray-300 text-red-500 focus:ring-red-500 cursor-pointer" checked={selectedPromotions.includes(promo.title)} readOnly />
+                        <span className={selectedPromotions.includes(promo.title) ? 'font-bold text-red-500' : ''}>{promo.title}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
             {/* Category Dropdown */}
             <div className="relative">
               <button onClick={() => toggleDropdown('category')} className={`px-4 py-2 border rounded-full text-sm font-medium flex items-center gap-2 transition-colors ${selectedCategories.length > 0 ? 'border-[#148F96] text-[#148F96] bg-teal-50' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
@@ -521,11 +547,25 @@ const HomepagePromotion = () => {
 
       {/* --- MAIN CONTENT --- */}
       <div className="container mx-auto px-4">
-        <main>
+        <main className="flex flex-col gap-4">
           {hasAnyFilter ? (
              <ProductGrid title="ผลการค้นหาและตัวกรอง" items={filteredProducts} />
           ) : (
-             <ProductGrid title="🔥 สินค้าโปรโมชันทั้งหมด" items={products} />
+             <>
+               {/* ✅ วนลูปแสดงสินค้าแยกตามแต่ละโปรโมชัน */}
+               {promotions.map((promo) => {
+                 const promoItems = products.filter(p => p.promo?.id === promo.id);
+                 if (promoItems.length === 0) return null;
+                 return (
+                   <ProductGrid key={promo.id} title={`🔥 ${promo.title}`} items={promoItems} />
+                 );
+               })}
+
+               {/* กรณีไม่มีโปรโมชันเปิดใช้งานเลย */}
+               {promotions.length === 0 && (
+                   <p className="text-center py-20 text-gray-500 bg-white rounded-xl shadow-sm">ไม่มีโปรโมชันในขณะนี้</p>
+               )}
+             </>
           )}
         </main>
       </div>
