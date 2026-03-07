@@ -58,11 +58,6 @@ const Home = () => {
   const isAdvancedFilterAllowed = selectedCategories.length > 0 || selectedRooms.length > 0 || selectedFeatures.length > 0;
 
   useEffect(() => {
-    const savedBookmarks = localStorage.getItem('bookmarks');
-    if (savedBookmarks) {
-      setBookmarks(JSON.parse(savedBookmarks));
-    }
-
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -70,44 +65,46 @@ const Home = () => {
           productsData, categoriesData, roomsData, featuresData,
           colorsData, materialsData, sizesData, promoData
         ] = await Promise.all([
-          api.getAllProducts(),
-          api.getAllCategories(),
-          api.getAllRooms(),
-          api.getAllFeatures(),
-          api.getAllColors(),
-          api.getAllMaterials(),
-          api.getAllSizes(),
-          api.getAllPromotions() 
+          api.getAllProducts().catch(() => []),
+          api.getAllCategories().catch(() => []),
+          api.getAllRooms().catch(() => []),
+          api.getAllFeatures().catch(() => []),
+          api.getAllColors().catch(() => []),
+          api.getAllMaterials().catch(() => []),
+          api.getAllSizes().catch(() => []),
+          api.getAllPromotions().catch(() => []) 
         ]);
         
-        // ลอจิกในการแมปโปรโมชัน ให้เช็ค isActive และช่วงเวลา
         let promoMap = new Map<string, Promotion>();
         const now = new Date();
 
-        promoData.forEach((promo: Promotion) => {
-            const startDate = new Date(promo.startDate);
-            const endDate = new Date(promo.endDate);
-            const isCurrentlyActive = promo.isActive && now >= startDate && now <= endDate;
+        if (Array.isArray(promoData)) {
+            promoData.forEach((promo: Promotion) => {
+                const startDate = new Date(promo.startDate);
+                const endDate = new Date(promo.endDate);
+                const isCurrentlyActive = promo.isActive && now >= startDate && now <= endDate;
 
-            if (isCurrentlyActive) {
-                promo.products?.forEach((prod: Product) => {
-                    if (!promoMap.has(prod.id)) promoMap.set(prod.id, promo);
-                });
-            }
-        });
+                if (isCurrentlyActive) {
+                    promo.products?.forEach((prod: Product) => {
+                        if (!promoMap.has(prod.id)) promoMap.set(prod.id, promo);
+                    });
+                }
+            });
+        }
 
-        const productsWithPromo: ProductWithPromo[] = productsData.map(p => ({
+        const validProducts = Array.isArray(productsData) ? productsData : [];
+        const productsWithPromo: ProductWithPromo[] = validProducts.map(p => ({
             ...p,
             promo: promoMap.get(p.id)
         }));
 
         setProducts(productsWithPromo);
-        setCategories(categoriesData);
-        setRooms(roomsData);
-        setFeatures(featuresData);
-        setColors(colorsData);
-        setMaterials(materialsData);
-        setSizes(sizesData);
+        setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+        setRooms(Array.isArray(roomsData) ? roomsData : []);
+        setFeatures(Array.isArray(featuresData) ? featuresData : []);
+        setColors(Array.isArray(colorsData) ? colorsData : []);
+        setMaterials(Array.isArray(materialsData) ? materialsData : []);
+        setSizes(Array.isArray(sizesData) ? sizesData : []);
 
         const shuffled = [...productsWithPromo].sort(() => 0.5 - Math.random());
         setRecommendedProducts(shuffled.slice(0, 10));
@@ -118,6 +115,27 @@ const Home = () => {
         const normalProducts = productsWithPromo.filter(p => !p.promo);
         setGeneralProducts(normalProducts.slice(0, 10));
 
+        // ✅ ดึง Bookmark จาก Backend (เพิ่มการเช็ค Array)
+        const token = localStorage.getItem('token');
+        if (token) {
+          try {
+            const bookmarkData = await api.getBookmarks();
+            // ป้องกัน error .map is not a function
+            if (Array.isArray(bookmarkData)) {
+                const bookmarkIds = bookmarkData.map((b: any) => b.productId || b.product?.id || b.id);
+                setBookmarks(bookmarkIds);
+            } else if (bookmarkData && Array.isArray(bookmarkData.data)) { // เผื่อ Backend ซ้อนมาใน obj.data
+                const bookmarkIds = bookmarkData.data.map((b: any) => b.productId || b.product?.id || b.id);
+                setBookmarks(bookmarkIds);
+            } else {
+                setBookmarks([]);
+            }
+          } catch (err) {
+            console.error('Failed to load bookmarks', err);
+            setBookmarks([]);
+          }
+        }
+
       } catch (error) {
         toast.error('ไม่สามารถดึงข้อมูลสินค้าได้');
       } finally {
@@ -125,15 +143,34 @@ const Home = () => {
       }
     };
     fetchData();
+
+    // ฟัง Event กรณีมีการกด Bookmark จากหน้าอื่น
+    const handleBookmarkUpdate = () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+          api.getBookmarks().then(data => {
+              if (Array.isArray(data)) {
+                  const bookmarkIds = data.map((b: any) => b.productId || b.product?.id || b.id);
+                  setBookmarks(bookmarkIds);
+              } else if (data && Array.isArray(data.data)) {
+                  const bookmarkIds = data.data.map((b: any) => b.productId || b.product?.id || b.id);
+                  setBookmarks(bookmarkIds);
+              }
+          }).catch(() => {});
+      } else {
+          setBookmarks([]);
+      }
+    };
+    window.addEventListener('bookmarksUpdated', handleBookmarkUpdate);
+    return () => window.removeEventListener('bookmarksUpdated', handleBookmarkUpdate);
+
   }, []);
 
   const filteredProducts = products.filter((product) => {
-    // กรองหมวดหมู่ ห้อง และคุณสมบัติพื้นฐาน
     const matchCategory = selectedCategories.length === 0 || (product.category && selectedCategories.includes(product.category));
     const matchRoom = selectedRooms.length === 0 || (product.room && selectedRooms.includes(product.room));
     const matchFeature = selectedFeatures.length === 0 || (product.features && product.features.some((f) => selectedFeatures.includes(f)));
     
-    // กรอง สี (Color), วัสดุ (Material), และขนาด (Size)
     const variants = (product as any).variants || [];
 
     const matchColor = selectedColors.length === 0 || 
@@ -148,14 +185,12 @@ const Home = () => {
       variants.some((v: any) => selectedSizes.includes(v.size?.name || v.size)) ||
       ((product as any).sizes || []).some((s: any) => selectedSizes.includes(s?.name || s));
 
-    // กรองการค้นหา
     const searchLower = searchTerm.toLowerCase();
     const matchSearch = searchTerm === '' || 
       product.name.toLowerCase().includes(searchLower) || 
       (product.category && product.category.toLowerCase().includes(searchLower)) || 
       (product.description && product.description.toLowerCase().includes(searchLower));
     
-    // กรองช่วงราคา
     const productPrice = product.promo ? calculateDiscountPrice(product.price, product.promo) : Number(product.price);
     const matchMinPrice = minPrice === '' || productPrice >= Number(minPrice);
     const matchMaxPrice = maxPrice === '' || productPrice <= Number(maxPrice);
@@ -184,23 +219,33 @@ const Home = () => {
 
   const hasAnyFilter = selectedCategories.length > 0 || selectedRooms.length > 0 || selectedFeatures.length > 0 || minPrice !== '' || maxPrice !== '' || searchTerm !== '' || selectedColors.length > 0 || selectedMaterials.length > 0 || selectedSizes.length > 0;
 
-  const toggleBookmark = (e: React.MouseEvent, productId: string) => {
+  const toggleBookmark = async (e: React.MouseEvent, productId: string) => {
     e.preventDefault(); 
     e.stopPropagation();
-    let updated = [...bookmarks];
-    if (updated.includes(productId)) {
-        updated = updated.filter(id => id !== productId);
-        toast.success('ลบออกจากสินค้าที่สนใจแล้ว');
-    } else {
-        updated.push(productId);
-        toast.success('เพิ่มลงในสินค้าที่สนใจแล้ว');
+    
+    const token = localStorage.getItem('token');
+    if (!token) {
+        toast.error('กรุณาเข้าสู่ระบบเพื่อบันทึกสินค้าที่สนใจ');
+        navigate('/login');
+        return;
     }
-    setBookmarks(updated);
-    localStorage.setItem('bookmarks', JSON.stringify(updated));
-    window.dispatchEvent(new Event('bookmarksUpdated'));
+
+    try {
+        if (bookmarks.includes(productId)) {
+            await api.removeBookmark(productId);
+            setBookmarks(prev => prev.filter(id => id !== productId));
+            toast.success('ลบออกจากสินค้าที่สนใจแล้ว');
+        } else {
+            await api.addBookmark(productId);
+            setBookmarks(prev => [...prev, productId]);
+            toast.success('เพิ่มลงในสินค้าที่สนใจแล้ว');
+        }
+        window.dispatchEvent(new Event('bookmarksUpdated'));
+    } catch (error) {
+        toast.error('เกิดข้อผิดพลาดในการจัดการสินค้าที่สนใจ');
+    }
   };
 
-  // ดึง Base URL จาก Environment
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   const getImageUrl = (product: Product) => {
@@ -301,13 +346,9 @@ const Home = () => {
 
   return (
     <div className="bg-gray-50 min-h-screen pb-10">
-      
       <TabBar />
-
-      {/* --- FILTER TAB BAR --- */}
       <div className="bg-white border-b shadow-sm relative z-30">
         <div className="container mx-auto px-4 py-3 flex flex-col lg:flex-row gap-4 justify-between items-center">
-          
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
             {/* Category Dropdown */}
             <div className="relative">
@@ -328,7 +369,6 @@ const Home = () => {
                 </div>
               )}
             </div>
-
             {/* Room Dropdown */}
             <div className="relative">
               <button onClick={() => toggleDropdown('room')} className={`px-4 py-2 border rounded-full text-sm font-medium flex items-center gap-2 transition-colors ${selectedRooms.length > 0 ? 'border-[#148F96] text-[#148F96] bg-teal-50' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
@@ -348,7 +388,6 @@ const Home = () => {
                 </div>
               )}
             </div>
-
             {/* Feature Dropdown */}
             <div className="relative">
               <button onClick={() => toggleDropdown('feature')} className={`px-4 py-2 border rounded-full text-sm font-medium flex items-center gap-2 transition-colors ${selectedFeatures.length > 0 ? 'border-[#148F96] text-[#148F96] bg-teal-50' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
@@ -368,7 +407,6 @@ const Home = () => {
                 </div>
               )}
             </div>
-
             {/* Price Filter */}
             <div className="flex items-center gap-2 border border-gray-300 rounded-full px-8 py-1.5 bg-white focus-within:border-[#148F96] transition-colors">
               <span className="text-sm font-medium text-gray-700">ราคา:</span>
@@ -376,14 +414,9 @@ const Home = () => {
               <span className="text-gray-400">-</span>
               <input type="number" placeholder="สูงสุด" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} className="w-24 text-sm outline-none bg-transparent text-center text-gray-700" min="0" />
             </div>
-
             {/* Color Filter */}
             <div className="relative">
-              <button 
-                onClick={() => toggleDropdown('color')}
-                className={`px-4 py-2 border rounded-full text-sm font-medium flex items-center gap-2 transition-colors 
-                ${!isAdvancedFilterAllowed ? 'opacity-50 cursor-not-allowed bg-gray-100 border-gray-200' : selectedColors.length > 0 ? 'border-[#148F96] text-[#148F96] bg-teal-50' : 'border-gray-300 hover:bg-gray-50'}`}
-              >
+              <button onClick={() => toggleDropdown('color')} className={`px-4 py-2 border rounded-full text-sm font-medium flex items-center gap-2 transition-colors ${!isAdvancedFilterAllowed ? 'opacity-50 cursor-not-allowed bg-gray-100 border-gray-200' : selectedColors.length > 0 ? 'border-[#148F96] text-[#148F96] bg-teal-50' : 'border-gray-300 hover:bg-gray-50'}`}>
                 สี {selectedColors.length > 0 && `(${selectedColors.length})`}
                 <ChevronDown size={16} />
               </button>
@@ -400,14 +433,9 @@ const Home = () => {
                 </div>
               )}
             </div>
-
             {/* Material Filter */}
             <div className="relative">
-              <button 
-                onClick={() => toggleDropdown('material')}
-                className={`px-4 py-2 border rounded-full text-sm font-medium flex items-center gap-2 transition-colors 
-                ${!isAdvancedFilterAllowed ? 'opacity-50 cursor-not-allowed bg-gray-100 border-gray-200' : selectedMaterials.length > 0 ? 'border-[#148F96] text-[#148F96] bg-teal-50' : 'border-gray-300 hover:bg-gray-50'}`}
-              >
+              <button onClick={() => toggleDropdown('material')} className={`px-4 py-2 border rounded-full text-sm font-medium flex items-center gap-2 transition-colors ${!isAdvancedFilterAllowed ? 'opacity-50 cursor-not-allowed bg-gray-100 border-gray-200' : selectedMaterials.length > 0 ? 'border-[#148F96] text-[#148F96] bg-teal-50' : 'border-gray-300 hover:bg-gray-50'}`}>
                 วัสดุ {selectedMaterials.length > 0 && `(${selectedMaterials.length})`}
                 <ChevronDown size={16} />
               </button>
@@ -424,14 +452,9 @@ const Home = () => {
                 </div>
               )}
             </div>
-
             {/* Size Filter */}
             <div className="relative">
-              <button 
-                onClick={() => toggleDropdown('size')}
-                className={`px-4 py-2 border rounded-full text-sm font-medium flex items-center gap-2 transition-colors 
-                ${!isAdvancedFilterAllowed ? 'opacity-50 cursor-not-allowed bg-gray-100 border-gray-200' : selectedSizes.length > 0 ? 'border-[#148F96] text-[#148F96] bg-teal-50' : 'border-gray-300 hover:bg-gray-50'}`}
-              >
+              <button onClick={() => toggleDropdown('size')} className={`px-4 py-2 border rounded-full text-sm font-medium flex items-center gap-2 transition-colors ${!isAdvancedFilterAllowed ? 'opacity-50 cursor-not-allowed bg-gray-100 border-gray-200' : selectedSizes.length > 0 ? 'border-[#148F96] text-[#148F96] bg-teal-50' : 'border-gray-300 hover:bg-gray-50'}`}>
                 ขนาด {selectedSizes.length > 0 && `(${selectedSizes.length})`}
                 <ChevronDown size={16} />
               </button>
@@ -448,7 +471,6 @@ const Home = () => {
                 </div>
               )}
             </div>
-
             {/* Clear Filters Button */}
             {hasAnyFilter && (
               <button onClick={clearAllFilters} className="px-4 py-2 text-red-500 text-sm font-medium flex items-center gap-2 hover:bg-red-50 rounded-full transition-colors ml-auto lg:ml-0">
@@ -456,17 +478,10 @@ const Home = () => {
               </button>
             )}
           </div>
-
           {/* แถบค้นหา และแสดงจำนวนผลลัพธ์ */}
           <div className="flex flex-col items-end w-full lg:w-80 flex-shrink-0 mt-2 lg:mt-0">
             <div className="relative w-full">
-              <input 
-                type="text" 
-                placeholder="ค้นหาชื่อ รายละเอียด" 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#04A5E3] transition text-sm bg-gray-50"
-              />
+              <input type="text" placeholder="ค้นหาชื่อ รายละเอียด" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#04A5E3] transition text-sm bg-gray-50" />
               <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
             </div>
             {hasAnyFilter && (
@@ -478,13 +493,8 @@ const Home = () => {
         </div>
       </div>
 
-      {/* --- HERO BANNER --- */}
       <div className="relative bg-gray-900 h-[400px] mb-8 overflow-hidden">
-        <img 
-          src="https://images.unsplash.com/photo-1618220179428-22790b461013?auto=format&fit=crop&w=1600&q=80" 
-          alt="Banner" 
-          className="w-full h-full object-cover opacity-60"
-        />
+        <img src="https://images.unsplash.com/photo-1618220179428-22790b461013?auto=format&fit=crop&w=1600&q=80" alt="Banner" className="w-full h-full object-cover opacity-60" />
         <div className="absolute inset-0 container mx-auto px-4 flex flex-col justify-center text-white">
           <span className="text-[#148F96] bg-white px-3 py-1 rounded-full text-xs font-bold w-fit mb-4">NEW COLLECTION</span>
           <h1 className="text-4xl md:text-6xl font-bold mb-4">แต่งบ้านในฝัน <br/>ให้เป็นจริง</h1>
@@ -492,7 +502,6 @@ const Home = () => {
         </div>
       </div>
 
-      {/* --- MAIN CONTENT --- */}
       <div className="container mx-auto px-4">
         <main>
           {hasAnyFilter ? (
