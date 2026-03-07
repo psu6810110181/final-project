@@ -19,7 +19,6 @@ const getColorHex = (colorName: string) => {
   return colorMap[colorName] || '#ccc';
 };
 
-// ✅ เปลี่ยนมาใช้ function ธรรมดา เพื่อให้เกิด Hoisting แก้ปัญหา Cannot access before initialization แน่นอน
 function calculateDiscountPrice(price: string | number, promo: Promotion) {
   const p = Number(price);
   if (promo.discountType === 'PERCENTAGE') return p - (p * (promo.discountValue / 100));
@@ -129,18 +128,39 @@ const Home = () => {
   }, []);
 
   const filteredProducts = products.filter((product) => {
+    // กรองหมวดหมู่ ห้อง และคุณสมบัติพื้นฐาน
     const matchCategory = selectedCategories.length === 0 || (product.category && selectedCategories.includes(product.category));
     const matchRoom = selectedRooms.length === 0 || (product.room && selectedRooms.includes(product.room));
     const matchFeature = selectedFeatures.length === 0 || (product.features && product.features.some((f) => selectedFeatures.includes(f)));
-    const searchLower = searchTerm.toLowerCase();
-    const matchSearch = searchTerm === '' || product.name.toLowerCase().includes(searchLower) || (product.category && product.category.toLowerCase().includes(searchLower)) || (product.description && product.description.toLowerCase().includes(searchLower));
     
-    // ฟังก์ชัน calculateDiscountPrice จะถูกเรียกใช้ได้อย่างถูกต้องแล้ว
+    // กรอง สี (Color), วัสดุ (Material), และขนาด (Size)
+    const variants = (product as any).variants || [];
+
+    const matchColor = selectedColors.length === 0 || 
+      variants.some((v: any) => selectedColors.includes(v.color?.name || v.color)) ||
+      ((product as any).colors || []).some((c: any) => selectedColors.includes(c?.name || c)); 
+
+    const matchMaterial = selectedMaterials.length === 0 || 
+      variants.some((v: any) => selectedMaterials.includes(v.material?.name || v.material)) ||
+      ((product as any).materials || []).some((m: any) => selectedMaterials.includes(m?.name || m));
+
+    const matchSize = selectedSizes.length === 0 || 
+      variants.some((v: any) => selectedSizes.includes(v.size?.name || v.size)) ||
+      ((product as any).sizes || []).some((s: any) => selectedSizes.includes(s?.name || s));
+
+    // กรองการค้นหา
+    const searchLower = searchTerm.toLowerCase();
+    const matchSearch = searchTerm === '' || 
+      product.name.toLowerCase().includes(searchLower) || 
+      (product.category && product.category.toLowerCase().includes(searchLower)) || 
+      (product.description && product.description.toLowerCase().includes(searchLower));
+    
+    // กรองช่วงราคา
     const productPrice = product.promo ? calculateDiscountPrice(product.price, product.promo) : Number(product.price);
     const matchMinPrice = minPrice === '' || productPrice >= Number(minPrice);
     const matchMaxPrice = maxPrice === '' || productPrice <= Number(maxPrice);
 
-    return matchCategory && matchRoom && matchFeature && matchSearch && matchMinPrice && matchMaxPrice; 
+    return matchCategory && matchRoom && matchFeature && matchColor && matchMaterial && matchSize && matchSearch && matchMinPrice && matchMaxPrice; 
   });
 
   const handleToggle = (value: string, selectedList: string[], setList: React.Dispatch<React.SetStateAction<string[]>>) => {
@@ -180,10 +200,9 @@ const Home = () => {
     window.dispatchEvent(new Event('bookmarksUpdated'));
   };
 
-  // ดึง Base URL จาก Environment (ถ้าไม่มีให้ใช้ localhost)
+  // ดึง Base URL จาก Environment
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-  // ปรับแก้ getImageUrl เพื่อดึงรูปจาก Backend
   const getImageUrl = (product: Product) => {
     try {
         const rawImages = product.image;
@@ -195,13 +214,8 @@ const Home = () => {
         }
         if (images.length > 0) {
             const img = images[0];
-
             if (img.startsWith('http')) return img;
-            
-            // ดึงค่า baseUrl จาก .env
-            const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-            return `${baseUrl}/uploads/${img}`;
-
+            return `${API_BASE_URL}/uploads/${img}`;
         }
     } catch (e) {
         console.error("Error parsing image:", e);
@@ -244,7 +258,6 @@ const Home = () => {
                     </button>
 
                     <div className="h-48 overflow-hidden bg-gray-100">
-                        {/* รูปภาพจะถูกดึงจาก Backend อย่างถูกต้อง */}
                         <img src={getImageUrl(product)} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                     </div>
                     <div className="p-4 flex flex-col flex-1">
@@ -486,8 +499,8 @@ const Home = () => {
              <ProductGrid title="ผลการค้นหาและตัวกรอง" items={filteredProducts} />
           ) : (
              <>
-                <ProductGrid title="✨ สินค้าแนะนำสำหรับคุณ" items={recommendedProducts} />
                 <FlashSale products={products} />
+                <ProductGrid title="✨ สินค้าแนะนำสำหรับคุณ" items={recommendedProducts} />
                 <ProductGrid title="🔥 โปรโมชันพิเศษ" items={promoProducts} />
                 <ProductGrid title="🛋️ สินค้าทั่วไป" items={generalProducts} />
              </>
