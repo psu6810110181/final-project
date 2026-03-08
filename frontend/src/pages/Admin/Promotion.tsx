@@ -1,10 +1,8 @@
-// Promotion.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import api, { type Promotion, type Product } from "../../services/api";
 import Confirm from "../../components/Confirm";
 import toast from "react-hot-toast";
 
-// Helper function to safely format datetime-local value
 const formatDateTimeLocal = (dateString: string | undefined) => {
   if (!dateString) return '';
   try {
@@ -23,16 +21,13 @@ const formatDateTimeLocal = (dateString: string | undefined) => {
   }
 };
 
-// Helper function to get minimum datetime for start date input
 const getMinDateTimeLocal = (dateString: string) => {
   const selectedDate = new Date(dateString);
   const now = new Date();
   
-  // If selected date is today, set min to current time
   if (selectedDate.toDateString() === now.toDateString()) {
     return formatDateTimeLocal(now.toISOString());
   } else {
-    // If selected date is in future, set min to beginning of that day
     return formatDateTimeLocal(selectedDate.toISOString());
   }
 };
@@ -44,8 +39,9 @@ const PromotionManager: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
   const [editingPromotion, setEditingPromotion] = useState<Promotion | null>(null);
+  const [openDiscountDropdown, setOpenDiscountDropdown] = useState<boolean>(false);
+  const discountDropdownRef = useRef<HTMLDivElement>(null);
   
-  // Confirm state
   const [confirm, setConfirm] = useState<{ 
     message: string; 
     onConfirm: () => void; 
@@ -63,7 +59,6 @@ const PromotionManager: React.FC = () => {
     isActive: true
   });
 
-  // --- Design System Colors ---
   const colors = {
     primary: '#148F96', 
     primaryLight: '#E6F7F8',
@@ -84,7 +79,6 @@ const PromotionManager: React.FC = () => {
     infoLight: '#DBEAFE'
   };
 
-  // ฟังก์ชันดึง Token ป้องกัน Error 401
   const getAuthHeader = () => {
     const token = localStorage.getItem('token');
     return { headers: { Authorization: `Bearer ${token}` } };
@@ -101,7 +95,6 @@ const PromotionManager: React.FC = () => {
     } catch (error: any) {
       console.error("Failed to fetch promotions", error);
       
-      // Debug error details
       if (error.response) {
         console.error("Fetch error response:", error.response);
         console.error("Fetch error status:", error.response.status);
@@ -138,6 +131,16 @@ const PromotionManager: React.FC = () => {
     fetchProducts();
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (discountDropdownRef.current && !discountDropdownRef.current.contains(event.target as Node)) {
+        setOpenDiscountDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const validateSelectedProducts = (discountType: string, discountValue: string) => {
     if (discountType === 'FIXED_AMOUNT' && discountValue) {
       const discountAmount = Number(discountValue);
@@ -161,8 +164,7 @@ const PromotionManager: React.FC = () => {
     return true;
   };
 
-const handleProductToggle = (productId: string) => {
-    // Check if this is a fixed amount discount and validate product price
+  const handleProductToggle = (productId: string) => {
     if (formData.discountType === 'FIXED_AMOUNT' && formData.discountValue) {
       const discountAmount = Number(formData.discountValue);
       const product = products.find(p => p.id === productId);
@@ -170,7 +172,6 @@ const handleProductToggle = (productId: string) => {
       if (product) {
         const productPrice = typeof product.price === 'string' ? Number(product.price) : product.price;
         
-        // If trying to add a product and its price is less than discount amount
         if (productPrice < discountAmount && !formData.productIds.includes(productId)) {
           toast.error(`ไม่สามารถเพิ่มสินค้า "${product.name}" ได้เนื่องจากราคาสินค้า (฿${productPrice.toLocaleString()}) ต่ำกว่าจำนวนเงินที่ลด (฿${discountAmount.toLocaleString()})`);
           return;
@@ -200,6 +201,7 @@ const handleProductToggle = (productId: string) => {
     });
     setEditingPromotion(null);
     setShowForm(false);
+    setOpenDiscountDropdown(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -210,7 +212,6 @@ const handleProductToggle = (productId: string) => {
       return;
     }
 
-    // Validate discount percentage limit
     if (formData.discountType === 'PERCENTAGE') {
       const discountValue = Number(formData.discountValue);
       if (discountValue > 90) {
@@ -247,7 +248,6 @@ const handleProductToggle = (productId: string) => {
     } catch (error: any) {
       console.error("Error saving promotion:", error);
       
-      // Debug error details
       if (error.response) {
         console.error("Error response:", error.response);
         console.error("Error status:", error.response.status);
@@ -321,6 +321,11 @@ const handleProductToggle = (productId: string) => {
     });
   };
 
+  const discountOptions = [
+    { value: 'PERCENTAGE', label: 'เปอร์เซ็นต์ (%)' },
+    { value: 'FIXED_AMOUNT', label: 'จำนวนเงินคงที่ (บาท)' }
+  ];
+
   if (showForm) {
     return (
       <article style={{ maxWidth: '800px', margin: '0 auto', padding: '10px 0', fontFamily: "'Prompt', sans-serif" }}>
@@ -345,30 +350,92 @@ const handleProductToggle = (productId: string) => {
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData({...formData, title: e.target.value})}
-                style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px' }}
+                style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px', outline: 'none' }}
                 placeholder="เช่น ลดราคา 20%"
               />
             </div>
 
-            <div>
+            <div style={{ position: 'relative' }} ref={discountDropdownRef}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: colors.textMain }}>
                 ประเภทส่วนลด *
               </label>
-              <select
-                value={formData.discountType}
-                onChange={(e) => {
-                  const newType = e.target.value as 'PERCENTAGE' | 'FIXED_AMOUNT';
-                  // Validate selected products when changing discount type
-                  if (!validateSelectedProducts(newType, formData.discountValue)) {
-                    return;
-                  }
-                  setFormData({...formData, discountType: newType});
-                }}
-                style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px' }}
+              <div 
+                onClick={() => setOpenDiscountDropdown(!openDiscountDropdown)}
+                style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px', backgroundColor: colors.bgWhite, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', userSelect: 'none' }}
               >
-                <option value="PERCENTAGE">เปอร์เซ็นต์ (%)</option>
-                <option value="FIXED_AMOUNT">จำนวนเงินคงที่ (บาท)</option>
-              </select>
+                <span>
+                  {discountOptions.find(opt => opt.value === formData.discountType)?.label}
+                </span>
+                <svg 
+                  width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" 
+                  strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" 
+                  style={{ 
+                    transform: openDiscountDropdown ? 'rotate(180deg)' : 'rotate(0deg)', 
+                    transition: 'transform 0.2s ease-in-out',
+                    color: colors.textMuted
+                  }}
+                >
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+
+              {openDiscountDropdown && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  marginTop: '4px',
+                  backgroundColor: colors.bgWhite,
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  zIndex: 50,
+                  padding: '6px 0'
+                }}>
+                  {discountOptions.map(opt => (
+                    <div
+                      key={opt.value}
+                      onClick={() => {
+                        const newType = opt.value as 'PERCENTAGE' | 'FIXED_AMOUNT';
+                        if (!validateSelectedProducts(newType, formData.discountValue)) {
+                          return;
+                        }
+                        setFormData({...formData, discountType: newType});
+                        setOpenDiscountDropdown(false);
+                      }}
+                      style={{
+                        padding: '10px 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        color: colors.textMain,
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = colors.bgLight}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <div style={{
+                        width: '16px',
+                        height: '16px',
+                        borderRadius: '50%',
+                        border: `1px solid ${formData.discountType === opt.value ? colors.primary : '#9CA3AF'}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        {formData.discountType === opt.value && (
+                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: colors.primary }} />
+                        )}
+                      </div>
+                      {opt.label}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div>
@@ -387,13 +454,12 @@ const handleProductToggle = (productId: string) => {
                       return;
                     }
                   }
-                  // Validate selected products when changing discount value
                   if (!validateSelectedProducts(formData.discountType, value)) {
                     return;
                   }
                   setFormData({...formData, discountValue: value});
                 }}
-                style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px' }}
+                style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px', outline: 'none' }}
                 placeholder={formData.discountType === 'PERCENTAGE' ? 'เช่น 20 (สูงสุด 90%)' : 'เช่น 100 (ไม่มีขีดจำกัด)'}
                 min="0"
                 max={formData.discountType === 'PERCENTAGE' ? 90 : undefined}
@@ -522,7 +588,7 @@ const handleProductToggle = (productId: string) => {
                   console.log('Start date changed:', e.target.value);
                   setFormData({...formData, startDate: e.target.value});
                 }}
-                style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px' }}
+                style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px', outline: 'none' }}
                 min={formData.startDate ? getMinDateTimeLocal(formData.startDate) : formatDateTimeLocal(new Date().toISOString())}
               />
             </div>
@@ -538,7 +604,7 @@ const handleProductToggle = (productId: string) => {
                   console.log('End date changed:', e.target.value);
                   setFormData({...formData, endDate: e.target.value});
                 }}
-                style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px' }}
+                style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px', outline: 'none' }}
                 min={formatDateTimeLocal(formData.startDate)}
               />
             </div>
@@ -551,7 +617,7 @@ const handleProductToggle = (productId: string) => {
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({...formData, description: e.target.value})}
-              style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px', minHeight: '100px', resize: 'vertical' }}
+              style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px', minHeight: '100px', resize: 'vertical', outline: 'none' }}
               placeholder="รายละเอียดเพิ่มเติมเกี่ยวกับโปรโมชั่น..."
             />
           </div>
@@ -579,7 +645,6 @@ const handleProductToggle = (productId: string) => {
   return (
     <article style={{ maxWidth: '1200px', margin: '0 auto', padding: '10px 0', fontFamily: "'Prompt', sans-serif" }}>
       
-      {/* Header */}
       <header style={{ 
         background: 'linear-gradient(to right, #ffffff, #f8fafc)',
         padding: '24px 32px', borderRadius: '16px', boxShadow: '0 4px 20px -2px rgba(0, 0, 0, 0.04)',
@@ -617,14 +682,12 @@ const handleProductToggle = (productId: string) => {
         </button>
       </header>
 
-      {/* Error Alert */}
       {error && (
         <div style={{ background: colors.dangerLight, color: colors.danger, padding: '16px 20px', borderRadius: '12px', marginBottom: '24px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '10px', border: `1px solid #FECACA` }} role="alert">
           <span aria-hidden="true">⚠️</span> {error}
         </div>
       )}
 
-      {/* Table Section */}
       <section aria-labelledby="manage-promotions-heading" style={{ background: colors.bgWhite, borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', border: `1px solid ${colors.border}`, overflow: 'hidden' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px', color: colors.textMuted }}>
@@ -737,14 +800,12 @@ const handleProductToggle = (productId: string) => {
         )}
       </section>
 
-      {/* Hover styles */}
       <style>{`
         .promotion-row:hover {
           background-color: #F8FAFC !important;
         }
       `}</style>
       
-      {/* Custom Confirm */}
       {confirm && (
         <Confirm
           message={confirm.message}

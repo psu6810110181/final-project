@@ -33,15 +33,26 @@ interface ProductFormProps {
 const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, onSuccess }) => {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
-  const [categoryId, setCategoryId] = useState(""); 
-  const [roomId, setRoomId] = useState(""); 
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+ 
+  const [selectedRoom, setSelectedRoom] = useState<string>("");
+  const [showRoomDropdown, setShowRoomDropdown] = useState(false); 
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]); 
   const [description, setDescription] = useState("");
   // Main product attributes
-const [mainColor, setMainColor] = useState("");
-const [mainMaterial, setMainMaterial] = useState("");
-const [mainSize, setMainSize] = useState("");
-const [mainStock, setMainStock] = useState("");
+  const [selectedMainColor, setSelectedMainColor] = useState<string>("");
+  const [showMainColorDropdown, setShowMainColorDropdown] = useState(false);
+  const [selectedMainMaterial, setSelectedMainMaterial] = useState<string>("");
+  const [showMainMaterialDropdown, setShowMainMaterialDropdown] = useState(false);
+  const [selectedMainSize, setSelectedMainSize] = useState<string>("");
+  const [showMainSizeDropdown, setShowMainSizeDropdown] = useState(false);
+  const [mainStock, setMainStock] = useState("");
+  
+  // Variant dropdown states
+  const [variantColorDropdowns, setVariantColorDropdowns] = useState<boolean[]>([]);
+  const [variantMaterialDropdowns, setVariantMaterialDropdowns] = useState<boolean[]>([]);
+  const [variantSizeDropdowns, setVariantSizeDropdowns] = useState<boolean[]>([]);
   
   // State สำหรับเก็บไฟล์ของจริง
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -118,14 +129,14 @@ const [mainStock, setMainStock] = useState("");
       setImageUrl(fetchedImageUrl);
       setOriginalMainImage(originalImageName);
       
-      setCategoryId(productDetails.category || "");
-      setRoomId(productDetails.room || "");
+      setSelectedCategory(productDetails.category ? productDetails.category.split(',')[0] || "" : "");
+      setSelectedRoom(productDetails.room ? productDetails.room.split(',')[0] || "" : "");
       setSelectedFeatures(productDetails.features || []);
       
       // ดึงข้อมูลสินค้าหลัก
-      setMainColor(productDetails.color || "");
-      setMainMaterial(productDetails.material || "");
-      setMainSize(productDetails.size || "");
+      setSelectedMainColor(productDetails.color ? productDetails.color.split(',')[0] || "" : "");
+      setSelectedMainMaterial(productDetails.material ? productDetails.material.split(',')[0] || "" : "");
+      setSelectedMainSize(productDetails.size ? productDetails.size.split(',')[0] || "" : "");
       setMainStock(String(productDetails.mainStock || productDetails.stock || ""));
 
       // ✅ 2. จัดการ URL รูปภาพของตัวเลือก (Variants) ให้มี Path /uploads/ 
@@ -165,12 +176,72 @@ const [mainStock, setMainStock] = useState("");
     setName(""); setPrice(""); setDescription(""); 
     setImageUrl(""); setImageFile(null); 
     setOriginalMainImage(""); // ✅ เคลียร์รูปเดิมด้วย
-    setCategoryId(""); setRoomId(""); setSelectedFeatures([]);
+    setSelectedCategory(""); setSelectedRoom(""); setSelectedFeatures([]);
+    setSelectedMainColor(""); setSelectedMainMaterial(""); setSelectedMainSize("");
     setVariants([{ color: "", material: "", size: "", price: "", stock: "" }]);
+  };
+
+  const toggleCategory = (categoryName: string) => {
+    setSelectedCategory(prev => prev === categoryName ? "" : categoryName);
+  };
+
+  const toggleRoom = (roomName: string) => {
+    setSelectedRoom(prev => prev === roomName ? "" : roomName);
+  };
+
+  const toggleMainColor = (colorName: string) => {
+    setSelectedMainColor(prev => prev === colorName ? "" : colorName);
+  };
+
+  const toggleMainMaterial = (materialName: string) => {
+    setSelectedMainMaterial(prev => prev === materialName ? "" : materialName);
+  };
+
+  const toggleMainSize = (sizeName: string) => {
+    setSelectedMainSize(prev => prev === sizeName ? "" : sizeName);
   };
 
   const toggleFeature = (featureName: string) => {
     setSelectedFeatures(prev => prev.includes(featureName) ? prev.filter(f => f !== featureName) : [...prev, featureName]);
+  };
+
+  const toggleVariantColor = (variantIndex: number, colorName: string) => {
+    const newVariants = [...variants];
+    const currentColor = newVariants[variantIndex].color || "";
+    newVariants[variantIndex].color = currentColor === colorName ? "" : colorName;
+    setVariants(newVariants);
+  };
+
+  const toggleVariantMaterial = (variantIndex: number, materialName: string) => {
+    const newVariants = [...variants];
+    const currentMaterial = newVariants[variantIndex].material || "";
+    newVariants[variantIndex].material = currentMaterial === materialName ? "" : materialName;
+    setVariants(newVariants);
+  };
+
+  const toggleVariantSize = (variantIndex: number, sizeName: string) => {
+    const newVariants = [...variants];
+    const currentSize = newVariants[variantIndex].size || "";
+    newVariants[variantIndex].size = currentSize === sizeName ? "" : sizeName;
+    setVariants(newVariants);
+  };
+
+  const toggleVariantColorDropdown = (index: number) => {
+    const newDropdowns = [...variantColorDropdowns];
+    newDropdowns[index] = !newDropdowns[index];
+    setVariantColorDropdowns(newDropdowns);
+  };
+
+  const toggleVariantMaterialDropdown = (index: number) => {
+    const newDropdowns = [...variantMaterialDropdowns];
+    newDropdowns[index] = !newDropdowns[index];
+    setVariantMaterialDropdowns(newDropdowns);
+  };
+
+  const toggleVariantSizeDropdown = (index: number) => {
+    const newDropdowns = [...variantSizeDropdowns];
+    newDropdowns[index] = !newDropdowns[index];
+    setVariantSizeDropdowns(newDropdowns);
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,13 +268,26 @@ const [mainStock, setMainStock] = useState("");
     }
   };
 
-  const addVariant = () => setVariants([...variants, { color: "", material: "", size: "", price: "", stock: "", imageUrl: "" }]);
-  const removeVariant = (index: number) => setVariants(variants.filter((_, i) => i !== index));
+  const addVariant = () => {
+    const newVariant = { color: "", material: "", size: "", price: "", stock: "", imageUrl: "" };
+    setVariants([...variants, newVariant]);
+    setVariantColorDropdowns([...variantColorDropdowns, false]);
+    setVariantMaterialDropdowns([...variantMaterialDropdowns, false]);
+    setVariantSizeDropdowns([...variantSizeDropdowns, false]);
+  };
+  
+  const removeVariant = (index: number) => {
+    const newVariants = variants.filter((_, i) => i !== index);
+    setVariants(newVariants);
+    setVariantColorDropdowns(variantColorDropdowns.filter((_, i) => i !== index));
+    setVariantMaterialDropdowns(variantMaterialDropdowns.filter((_, i) => i !== index));
+    setVariantSizeDropdowns(variantSizeDropdowns.filter((_, i) => i !== index));
+  };
 
   const handleConfirm = async (e: React.FormEvent) => {
     e.preventDefault(); 
     try {
-      if (!name || !price || !categoryId) {
+      if (!name || !price || !selectedCategory) {
         toast.error("กรุณากรอกชื่อสินค้า, ราคา และเลือกหมวดหมู่");
         return;
       }
@@ -213,16 +297,16 @@ const [mainStock, setMainStock] = useState("");
       const formData = new FormData();
       formData.append('name', name);
       formData.append('price', price);
-      formData.append('category', categoryId);
+      formData.append('category', selectedCategory);
       formData.append('stock', String(totalStock));
       
-      if (roomId) formData.append('room', roomId);
+      if (selectedRoom) formData.append('room', selectedRoom);
       if (description) formData.append('description', description);
       
       // เพิ่มข้อมูลสินค้าหลัก
-      if (mainColor) formData.append('color', mainColor);
-      if (mainMaterial) formData.append('material', mainMaterial);
-      if (mainSize) formData.append('size', mainSize);
+      if (selectedMainColor) formData.append('color', selectedMainColor);
+      if (selectedMainMaterial) formData.append('material', selectedMainMaterial);
+      if (selectedMainSize) formData.append('size', selectedMainSize);
       if (mainStock) formData.append('mainStock', mainStock);
 
       if (imageFile) {
@@ -396,50 +480,424 @@ const [mainStock, setMainStock] = useState("");
                   <input id="product-price" placeholder="0.00" type="number" value={price} onChange={e => setPrice(e.target.value)} required style={inputStyle} />
                 </div>
               </div>
-
               <div style={{ display: 'flex', gap: '16px' }}>
                 <div style={{ flex: 1 }}>
-                  <label htmlFor="product-category" style={labelStyle}>หมวดหมู่สินค้า <span style={{color: colors.danger}} aria-label="จำเป็น">*</span></label>
-                  <select id="product-category" value={categoryId} onChange={e => setCategoryId(e.target.value)} required style={{...inputStyle, cursor: 'pointer'}}>
-                    <option value="" disabled>-- เลือกหมวดหมู่ --</option>
-                    {categoriesList.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
-                  </select>
+                  <label style={labelStyle}>หมวดหมู่สินค้า <span style={{color: colors.danger}} aria-label="จำเป็น">*</span></label>
+                  <div style={{ 
+                    position: 'relative',
+                    ...inputStyle,
+                    padding: '0',
+                    cursor: 'pointer',
+                    minHeight: '48px'
+                  }}>
+                    <div 
+                      onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                      style={{
+                        padding: '12px 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        minHeight: '48px',
+                        userSelect: 'none'
+                      }}
+                    >
+                      <span style={{ color: selectedCategory ? colors.textMain : colors.textMuted }}>
+                        {selectedCategory || '-- เลือกหมวดหมู่ --'}
+                      </span>
+                      <span style={{ 
+                        transform: showCategoryDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s',
+                        color: colors.textMuted
+                      }}>
+                        ▼
+                      </span>
+                    </div>
+                    
+                    {showCategoryDropdown && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        background: colors.bgWhite,
+                        border: `1px solid ${colors.border}`,
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        zIndex: 1000,
+                        maxHeight: '200px',
+                        overflowY: 'auto',
+                        marginTop: '4px'
+                      }}>
+                        {categoriesList.map(cat => (
+                          <label
+                            key={cat.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              padding: '8px 16px',
+                              cursor: 'pointer',
+                              transition: 'background 0.2s',
+                              userSelect: 'none'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.background = colors.bgLight}
+                            onMouseOut={(e) => e.currentTarget.style.background = colors.bgWhite}
+                          >
+                            <input
+                              type="radio"
+                              name="category"
+                              checked={selectedCategory === cat.name}
+                              onChange={() => toggleCategory(cat.name)}
+                              style={{
+                                marginRight: '12px',
+                                width: '16px',
+                                height: '16px',
+                                cursor: 'pointer'
+                              }}
+                            />
+                            <span style={{ fontSize: '14px', color: colors.textMain }}>
+                              {cat.name}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label htmlFor="product-room" style={labelStyle}>หมวดหมู่ห้อง</label>
-                  <select id="product-room" value={roomId} onChange={e => setRoomId(e.target.value)} style={{...inputStyle, cursor: 'pointer'}}>
-                    <option value="">-- เลือกห้อง --</option>
-                    {roomsList.map(room => <option key={room.id} value={room.name}>{room.name}</option>)}
-                  </select>
+                  <label style={labelStyle}>ห้อง</label>
+                  <div style={{
+                    position: 'relative',
+                    ...inputStyle,
+                    padding: '0',
+                    cursor: 'pointer',
+                    minHeight: '48px'
+                  }}>
+                    <div
+                      onClick={() => setShowRoomDropdown(!showRoomDropdown)}
+                      style={{
+                        padding: '12px 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        minHeight: '48px',
+                        userSelect: 'none'
+                      }}
+                    >
+                      <span style={{ color: selectedRoom ? colors.textMain : colors.textMuted }}>
+                        {selectedRoom || '-- เลือกห้อง --'}
+                      </span>
+                      <span style={{
+                        transform: showRoomDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s',
+                        color: colors.textMuted
+                      }}>
+                        ▼
+                      </span>
+                    </div>
+                    
+                    {showRoomDropdown && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        background: colors.bgWhite,
+                        border: `1px solid ${colors.border}`,
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        zIndex: 1000,
+                        maxHeight: '200px',
+                        overflowY: 'auto',
+                        marginTop: '4px'
+                      }}>
+                        {roomsList.map(room => (
+                          <label
+                            key={room.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              padding: '8px 16px',
+                              cursor: 'pointer',
+                              transition: 'background 0.2s',
+                              userSelect: 'none'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.background = colors.bgLight}
+                            onMouseOut={(e) => e.currentTarget.style.background = colors.bgWhite}
+                          >
+                            <input
+                              type="radio"
+                              name="room"
+                              checked={selectedRoom === room.name}
+                              onChange={() => toggleRoom(room.name)}
+                              style={{
+                                marginRight: '12px',
+                                width: '16px',
+                                height: '16px',
+                                cursor: 'pointer'
+                              }}
+                            />
+                            <span style={{ fontSize: '14px', color: colors.textMain }}>
+                              {room.name}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '16px' }}>
-  <div style={{ flex: 1 }}>
-    <label htmlFor="main-color" style={labelStyle}>สีหลัก</label>
-    <select id="main-color" value={mainColor} onChange={e => setMainColor(e.target.value)} style={inputStyle}>
-      <option value="">-- เลือกสี --</option>
-      {colorsList.map(color => <option key={color.id} value={color.name}>{color.name}</option>)}
-    </select>
-  </div>
-  <div style={{ flex: 1 }}>
-    <label htmlFor="main-material" style={labelStyle}>วัสดุหลัก</label>
-    <select id="main-material" value={mainMaterial} onChange={e => setMainMaterial(e.target.value)} style={inputStyle}>
-      <option value="">-- เลือกวัสดุ --</option>
-      {materialsList.map(material => <option key={material.id} value={material.name}>{material.name}</option>)}
-    </select>
-  </div>
-  <div style={{ flex: 1 }}>
-    <label htmlFor="main-size" style={labelStyle}>ขนาดหลัก</label>
-    <select id="main-size" value={mainSize} onChange={e => setMainSize(e.target.value)} style={inputStyle}>
-      <option value="">-- เลือกขนาด --</option>
-      {sizesList.map(size => <option key={size.id} value={size.name}>{size.name}</option>)}
-    </select>
-  </div>
-  <div style={{ flex: 1 }}>
-    <label htmlFor="main-stock" style={labelStyle}>คลังหลัก</label>
-    <input id="main-stock" placeholder="0" type="number" value={mainStock} onChange={e => setMainStock(e.target.value)} style={inputStyle} />
-  </div>
-</div>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>สีหลัก</label>
+                  <div style={{
+                    position: 'relative',
+                    ...inputStyle,
+                    padding: '0',
+                    cursor: 'pointer',
+                    minHeight: '48px'
+                  }}>
+                    <div
+                      onClick={() => setShowMainColorDropdown(!showMainColorDropdown)}
+                      style={{
+                        padding: '12px 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        minHeight: '48px',
+                        userSelect: 'none'
+                      }}
+                    >
+                      <span style={{ color: selectedMainColor ? colors.textMain : colors.textMuted }}>
+                        {selectedMainColor || 'สี'}
+                      </span>
+                      <span style={{
+                        transform: showMainColorDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s',
+                        color: colors.textMuted
+                      }}>
+                        ▼
+                      </span>
+                    </div>
+                    
+                    {showMainColorDropdown && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        background: colors.bgWhite,
+                        border: `1px solid ${colors.border}`,
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        zIndex: 1000,
+                        maxHeight: '200px',
+                        overflowY: 'auto',
+                        marginTop: '4px'
+                      }}>
+                        {colorsList.map(color => (
+                          <label
+                            key={color.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              padding: '8px 16px',
+                              cursor: 'pointer',
+                              transition: 'background 0.2s',
+                              userSelect: 'none'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.background = colors.bgLight}
+                            onMouseOut={(e) => e.currentTarget.style.background = colors.bgWhite}
+                          >
+                            <input
+                              type="radio"
+                              name="main-color"
+                              checked={selectedMainColor === color.name}
+                              onChange={() => toggleMainColor(color.name)}
+                              style={{
+                                marginRight: '12px',
+                                width: '16px',
+                                height: '16px',
+                                cursor: 'pointer'
+                              }}
+                            />
+                            <span style={{ fontSize: '14px', color: colors.textMain }}>
+                              {color.name}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>วัสดุหลัก</label>
+                  <div style={{
+                    position: 'relative',
+                    ...inputStyle,
+                    padding: '0',
+                    cursor: 'pointer',
+                    minHeight: '48px'
+                  }}>
+                    <div
+                      onClick={() => setShowMainMaterialDropdown(!showMainMaterialDropdown)}
+                      style={{
+                        padding: '12px 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        minHeight: '48px',
+                        userSelect: 'none'
+                      }}
+                    >
+                      <span style={{ color: selectedMainMaterial ? colors.textMain : colors.textMuted }}>
+                        {selectedMainMaterial || 'วัสดุ'}
+                      </span>
+                      <span style={{
+                        transform: showMainMaterialDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s',
+                        color: colors.textMuted
+                      }}>
+                        ▼
+                      </span>
+                    </div>
+                    
+                    {showMainMaterialDropdown && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        background: colors.bgWhite,
+                        border: `1px solid ${colors.border}`,
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        zIndex: 1000,
+                        maxHeight: '200px',
+                        overflowY: 'auto',
+                        marginTop: '4px'
+                      }}>
+                        {materialsList.map(material => (
+                          <label
+                            key={material.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              padding: '8px 16px',
+                              cursor: 'pointer',
+                              transition: 'background 0.2s',
+                              userSelect: 'none'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.background = colors.bgLight}
+                            onMouseOut={(e) => e.currentTarget.style.background = colors.bgWhite}
+                          >
+                            <input
+                              type="radio"
+                              name="main-material"
+                              checked={selectedMainMaterial === material.name}
+                              onChange={() => toggleMainMaterial(material.name)}
+                              style={{
+                                marginRight: '12px',
+                                width: '16px',
+                                height: '16px',
+                                cursor: 'pointer'
+                              }}
+                            />
+                            <span style={{ fontSize: '14px', color: colors.textMain }}>
+                              {material.name}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>ขนาดหลัก</label>
+                  <div style={{
+                    position: 'relative',
+                    ...inputStyle,
+                    padding: '0',
+                    cursor: 'pointer',
+                    minHeight: '48px'
+                  }}>
+                    <div
+                      onClick={() => setShowMainSizeDropdown(!showMainSizeDropdown)}
+                      style={{
+                        padding: '12px 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        minHeight: '48px',
+                        userSelect: 'none'
+                      }}
+                    >
+                      <span style={{ color: selectedMainSize ? colors.textMain : colors.textMuted }}>
+                        {selectedMainSize || 'ขนาด'}
+                      </span>
+                      <span style={{
+                        transform: showMainSizeDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s',
+                        color: colors.textMuted
+                      }}>
+                        ▼
+                      </span>
+                    </div>
+                    
+                    {showMainSizeDropdown && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        background: colors.bgWhite,
+                        border: `1px solid ${colors.border}`,
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        zIndex: 1000,
+                        maxHeight: '200px',
+                        overflowY: 'auto',
+                        marginTop: '4px'
+                      }}>
+                        {sizesList.map(size => (
+                          <label
+                            key={size.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              padding: '8px 16px',
+                              cursor: 'pointer',
+                              transition: 'background 0.2s',
+                              userSelect: 'none'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.background = colors.bgLight}
+                            onMouseOut={(e) => e.currentTarget.style.background = colors.bgWhite}
+                          >
+                            <input
+                              type="radio"
+                              name="main-size"
+                              checked={selectedMainSize === size.name}
+                              onChange={() => toggleMainSize(size.name)}
+                              style={{
+                                marginRight: '12px',
+                                width: '16px',
+                                height: '16px',
+                                cursor: 'pointer'
+                              }}
+                            />
+                            <span style={{ fontSize: '14px', color: colors.textMain }}>
+                              {size.name}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label htmlFor="main-stock" style={labelStyle}>คลังหลัก</label>
+                  <input id="main-stock" placeholder="0" type="number" value={mainStock} onChange={e => setMainStock(e.target.value)} style={inputStyle} />
+                </div>
+              </div>
               <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
                 <legend style={labelStyle}>✨ คุณสมบัติพิเศษ</legend>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', padding: '12px', background: colors.bgLight, borderRadius: '10px', border: `1px solid ${colors.border}` }}>
@@ -514,26 +972,251 @@ const [mainStock, setMainStock] = useState("");
                 <div style={{ display: 'flex', flex: 1, gap: '12px', minWidth: '300px' }}>
                   <div style={{ flex: 1 }}>
                     <label htmlFor={`variant-color-${index}`} style={{...labelStyle, fontSize: '12px', color: colors.textMuted}}>สี</label>
-                    <select id={`variant-color-${index}`} value={variant.color} onChange={e => handleVariantChange(index, 'color', e.target.value)} style={{...inputStyle, padding: '10px'}}>
-                      <option value="">-- สี --</option>
-                      {colorsList.map(color => <option key={color.id} value={color.name}>{color.name}</option>)}
-                    </select>
+                    <div style={{
+                      position: 'relative',
+                      ...inputStyle,
+                      padding: '0',
+                      cursor: 'pointer',
+                      minHeight: '48px'
+                    }}>
+                      <div
+                        onClick={() => toggleVariantColorDropdown(index)}
+                        style={{
+                          padding: '12px 16px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          minHeight: '48px',
+                          userSelect: 'none'
+                        }}
+                      >
+                        <span style={{ color: variant.color ? colors.textMain : colors.textMuted }}>
+                          {variant.color || 'สี'}
+                        </span>
+                        <span style={{
+                          transform: variantColorDropdowns[index] ? 'rotate(180deg)' : 'rotate(0deg)',
+                          transition: 'transform 0.2s',
+                          color: colors.textMuted
+                        }}>
+                          ▼
+                        </span>
+                      </div>
+                      
+                      {variantColorDropdowns[index] && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '100%',
+                          left: 0,
+                          right: 0,
+                          background: colors.bgWhite,
+                          border: `1px solid ${colors.border}`,
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                          zIndex: 1000,
+                          maxHeight: '200px',
+                          overflowY: 'auto',
+                          marginTop: '4px'
+                        }}>
+                          {colorsList.map(color => (
+                            <label
+                              key={color.id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '8px 16px',
+                                cursor: 'pointer',
+                                transition: 'background 0.2s',
+                                userSelect: 'none'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.background = colors.bgLight}
+                              onMouseOut={(e) => e.currentTarget.style.background = colors.bgWhite}
+                            >
+                              <input
+                                type="radio"
+                                name={`variant-color-${index}`}
+                                checked={variant.color === color.name}
+                                onChange={() => toggleVariantColor(index, color.name)}
+                                style={{
+                                  marginRight: '12px',
+                                  width: '16px',
+                                  height: '16px',
+                                  cursor: 'pointer'
+                                }}
+                              />
+                              <span style={{ fontSize: '14px', color: colors.textMain }}>
+                                {color.name}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div style={{ flex: 1 }}>
                     <label htmlFor={`variant-material-${index}`} style={{...labelStyle, fontSize: '12px', color: colors.textMuted}}>วัสดุ</label>
-                    <select id={`variant-material-${index}`} value={variant.material} onChange={e => handleVariantChange(index, 'material', e.target.value)} style={{...inputStyle, padding: '10px'}}>
-                      <option value="">-- วัสดุ --</option>
-                      {materialsList.map(material => <option key={material.id} value={material.name}>{material.name}</option>)}
-                    </select>
+                    <div style={{
+                      position: 'relative',
+                      ...inputStyle,
+                      padding: '0',
+                      cursor: 'pointer',
+                      minHeight: '48px'
+                    }}>
+                      <div
+                        onClick={() => toggleVariantMaterialDropdown(index)}
+                        style={{
+                          padding: '12px 16px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          minHeight: '48px',
+                          userSelect: 'none'
+                        }}
+                      >
+                        <span style={{ color: variant.material ? colors.textMain : colors.textMuted }}>
+                          {variant.material || 'วัสดุ'}
+                        </span>
+                        <span style={{
+                          transform: variantMaterialDropdowns[index] ? 'rotate(180deg)' : 'rotate(0deg)',
+                          transition: 'transform 0.2s',
+                          color: colors.textMuted
+                        }}>
+                          ▼
+                        </span>
+                      </div>
+                      
+                      {variantMaterialDropdowns[index] && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '100%',
+                          left: 0,
+                          right: 0,
+                          background: colors.bgWhite,
+                          border: `1px solid ${colors.border}`,
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                          zIndex: 1000,
+                          maxHeight: '200px',
+                          overflowY: 'auto',
+                          marginTop: '4px'
+                        }}>
+                          {materialsList.map(material => (
+                            <label
+                              key={material.id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '8px 16px',
+                                cursor: 'pointer',
+                                transition: 'background 0.2s',
+                                userSelect: 'none'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.background = colors.bgLight}
+                              onMouseOut={(e) => e.currentTarget.style.background = colors.bgWhite}
+                            >
+                              <input
+                                type="radio"
+                                name={`variant-material-${index}`}
+                                checked={variant.material === material.name}
+                                onChange={() => toggleVariantMaterial(index, material.name)}
+                                style={{
+                                  marginRight: '12px',
+                                  width: '16px',
+                                  height: '16px',
+                                  cursor: 'pointer'
+                                }}
+                              />
+                              <span style={{ fontSize: '14px', color: colors.textMain }}>
+                                {material.name}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div style={{ flex: 1 }}>
                     <label htmlFor={`variant-size-${index}`} style={{...labelStyle, fontSize: '12px', color: colors.textMuted}}>ขนาด</label>
-                    <select id={`variant-size-${index}`} value={variant.size} onChange={e => handleVariantChange(index, 'size', e.target.value)} style={{...inputStyle, padding: '10px'}}>
-                      <option value="">-- ขนาด --</option>
-                      {sizesList.map(size => <option key={size.id} value={size.name}>{size.name}</option>)}
-                    </select>
+                    <div style={{
+                      position: 'relative',
+                      ...inputStyle,
+                      padding: '0',
+                      cursor: 'pointer',
+                      minHeight: '48px'
+                    }}>
+                      <div
+                        onClick={() => toggleVariantSizeDropdown(index)}
+                        style={{
+                          padding: '12px 16px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          minHeight: '48px',
+                          userSelect: 'none'
+                        }}
+                      >
+                        <span style={{ color: variant.size ? colors.textMain : colors.textMuted }}>
+                          {variant.size || 'ขนาด'}
+                        </span>
+                        <span style={{
+                          transform: variantSizeDropdowns[index] ? 'rotate(180deg)' : 'rotate(0deg)',
+                          transition: 'transform 0.2s',
+                          color: colors.textMuted
+                        }}>
+                          ▼
+                        </span>
+                      </div>
+                      
+                      {variantSizeDropdowns[index] && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '100%',
+                          left: 0,
+                          right: 0,
+                          background: colors.bgWhite,
+                          border: `1px solid ${colors.border}`,
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                          zIndex: 1000,
+                          maxHeight: '200px',
+                          overflowY: 'auto',
+                          marginTop: '4px'
+                        }}>
+                          {sizesList.map(size => (
+                            <label
+                              key={size.id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '8px 16px',
+                                cursor: 'pointer',
+                                transition: 'background 0.2s',
+                                userSelect: 'none'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.background = colors.bgLight}
+                              onMouseOut={(e) => e.currentTarget.style.background = colors.bgWhite}
+                            >
+                              <input
+                                type="radio"
+                                name={`variant-size-${index}`}
+                                checked={variant.size === size.name}
+                                onChange={() => toggleVariantSize(index, size.name)}
+                                style={{
+                                  marginRight: '12px',
+                                  width: '16px',
+                                  height: '16px',
+                                  cursor: 'pointer'
+                                }}
+                              />
+                              <span style={{ fontSize: '14px', color: colors.textMain }}>
+                                {size.name}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
