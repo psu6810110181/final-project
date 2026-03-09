@@ -460,7 +460,7 @@ const PromotionManager: React.FC = () => {
                   setFormData({...formData, discountValue: value});
                 }}
                 style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px', outline: 'none' }}
-                placeholder={formData.discountType === 'PERCENTAGE' ? 'เช่น 20 (สูงสุด 90%)' : 'เช่น 100 (ไม่มีขีดจำกัด)'}
+                placeholder={formData.discountType === 'PERCENTAGE' ? 'เช่น 20 (สูงสุด 90%)' : 'เช่น 1000 (ไม่มีขีดจำกัด)'}
                 min="0"
                 max={formData.discountType === 'PERCENTAGE' ? 90 : undefined}
                 step={formData.discountType === 'PERCENTAGE' ? '0.01' : '1'}

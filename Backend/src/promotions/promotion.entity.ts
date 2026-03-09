@@ -19,7 +19,7 @@ export class Promotion {
   })
   discountType: 'PERCENTAGE' | 'FIXED_AMOUNT';
 
-  @Column('decimal', { precision: 5, scale: 2 })
+  @Column('decimal', { precision: 10, scale: 2 })
   discountValue: number;
 
   @Column({ type: 'timestamp', nullable: true })
