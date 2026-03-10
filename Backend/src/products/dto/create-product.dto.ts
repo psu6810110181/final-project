@@ -3,22 +3,24 @@ import { Type } from 'class-transformer';
 
 class CreateProductVariantDto {
   @IsString()
-  @IsNotEmpty()
-  color: string;
+  @IsOptional()
+  color?: string;
 
   @IsString()
-  @IsNotEmpty()
-  material: string;
+  @IsOptional()
+  material?: string;
 
   @IsString()
-  @IsNotEmpty()
-  size: string;
+  @IsOptional()
+  size?: string;
 
   @IsNumber()
-  price: number;
+  @IsOptional()
+  price?: number;
 
   @IsNumber()
-  stock: number;
+  @IsOptional()
+  stock?: number;
 }
 
 export class CreateProductDto {
@@ -76,7 +78,8 @@ export class CreateProductDto {
 
   // 👇 รับค่าเป็น Array ของ Variants
   @IsArray()
+  @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => CreateProductVariantDto)
-  variants: CreateProductVariantDto[];
+  variants?: CreateProductVariantDto[];
 }

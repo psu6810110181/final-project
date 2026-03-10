@@ -115,11 +115,12 @@ const ManageSystem: React.FC<ManageSystemProps> = ({ onEditProduct }) => {
         });
       } else {
         // ถ้าไม่มี variants ให้ตรวจสอบเฉพาะสต็อกหลัก
-        if (product.stock < 20) {
+        const mainStock = product.mainStock ?? product.stock ?? 0;
+        if (mainStock < 20) {
           lowStockItems.push({
             product,
             lowStockType: 'main',
-            stockLevel: product.stock
+            stockLevel: mainStock
           });
         }
       }

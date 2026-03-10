@@ -326,23 +326,29 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
           formData.append('features', JSON.stringify(selectedFeatures)); 
       }
 
-      const formattedVariants = variants.map(v => {
-        const variantData: any = { 
-          color: v.color, 
-          material: v.material, 
-          size: v.size, 
-          price: parseFloat(v.price), 
-          stock: parseInt(v.stock) 
-        };
-        
-        // ✅ ถ้าไม่มีการอัปโหลดรูปใหม่ ให้ใช้รูปเดิม (originalImage)
-        if (!v.imageFile && v.originalImage) {
-          variantData.image = v.originalImage;
-        }
-        
-        return variantData;
-      });
-      formData.append('variants', JSON.stringify(formattedVariants));
+      const formattedVariants = variants
+        .filter(v => v.color || v.material || v.size || v.price || v.stock) // Filter out completely empty variants
+        .map(v => {
+          const variantData: any = { 
+            color: v.color || undefined, 
+            material: v.material || undefined, 
+            size: v.size || undefined, 
+            price: v.price && v.price !== "" ? parseFloat(v.price) : 0, 
+            stock: v.stock && v.stock !== "" ? parseInt(v.stock) : 0 
+          };
+          
+          // ✅ ถ้าไม่มีการอัปโหลดรูปใหม่ ให้ใช้รูปเดิม (originalImage)
+          if (!v.imageFile && v.originalImage) {
+            variantData.image = v.originalImage;
+          }
+          
+          return variantData;
+        });
+      
+      // Only append variants if there are any valid variants
+      if (formattedVariants.length > 0) {
+        formData.append('variants', JSON.stringify(formattedVariants));
+      }
 
       if (editingProductId) {
         await updateProduct(editingProductId, formData); 
@@ -450,19 +456,50 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
           </header>
           
           <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap' }}>
-            <div style={{ flex: '1 1 300px', maxWidth: '350px' }}>
+            <div style={{ flex: '0 0 200px', maxWidth: '200px' }}>
               <label htmlFor="product-image" style={labelStyle}>รูปภาพหลักของสินค้า <span style={{color: colors.danger}} aria-label="จำเป็น">*</span></label>
               <input type="file" id="product-image" accept="image/*" style={{ display: 'none' }} onChange={handleImageChange} />
-              <label htmlFor="product-image" style={{ cursor: 'pointer', display: 'block', width: '100%', aspectRatio: '1/1', borderRadius: '12px', overflow: 'hidden', border: imageUrl ? 'none' : `2px dashed #CBD5E1`, backgroundColor: colors.bgLight, transition: 'all 0.2s', position: 'relative' }}>
+              <label htmlFor="product-image" style={{ 
+                  cursor: 'pointer', 
+                  display: 'block', 
+                  width: '200px', 
+                  height: '200px', 
+                  borderRadius: '12px', 
+                  overflow: 'hidden', 
+                  border: imageUrl ? 'none' : `2px dashed #CBD5E1`, 
+                  backgroundColor: colors.bgLight, 
+                  transition: 'all 0.2s', 
+                  position: 'relative',
+                  boxSizing: 'border-box'
+                }}>
                 {imageUrl ? (
                   <>
-                    <img src={imageUrl} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    <div style={{ position: 'absolute', bottom: '10px', right: '10px', background: 'rgba(0,0,0,0.6)', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '500' }}>เปลี่ยนรูปภาพ</div>
+                    <div style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      maxWidth: '200px', 
+                      maxHeight: '200px',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <img src={imageUrl} alt="preview" style={{ 
+                        width: '100%', 
+                        height: '100%', 
+                        maxWidth: '200px', 
+                        maxHeight: '200px',
+                        objectFit: 'contain', 
+                        display: 'block',
+                        boxSizing: 'border-box'
+                      }} />
+                    </div>
+                    <div style={{ position: 'absolute', bottom: '8px', right: '8px', background: 'rgba(0,0,0,0.6)', color: 'white', padding: '4px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '500' }}>เปลี่ยนรูปภาพ</div>
                   </>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94A3B8' }}>
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                    <p style={{ marginTop: '12px', fontSize: '15px', fontWeight: '500', color: colors.textMuted }}>อัปโหลดรูปภาพ</p>
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                    <p style={{ marginTop: '8px', fontSize: '13px', fontWeight: '500', color: colors.textMuted }}>อัปโหลดรูปภาพ</p>
                   </div>
                 )}
               </label>

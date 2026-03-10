@@ -44,7 +44,7 @@ export class OrdersController {
   }
 
   @Post('webhook')
-  async stripeWebhook(@Req() req: RawBodyRequest<Request>, @Res() res: Response, @Headers('stripe-signature') signature: string) {
+  async stripeWebhook(@Req() req: RawBodyRequest<Request>, @Res() res: Response, @Headers('stripe-signature') signature: string) {    
     let event;
     try {
       // ✅ ใช้ req.rawBody ตามที่ NestJS ส่งมา
