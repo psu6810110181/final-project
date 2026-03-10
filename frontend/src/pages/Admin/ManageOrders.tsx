@@ -85,6 +85,20 @@ const ManageOrders: React.FC = () => {
     });
   };
 
+  const handleViewStripeReceipt = async (orderId: string) => {
+    try {
+      const response = await api.get(`/orders/${orderId}/stripe-receipt`, getAuthHeader());
+      if (response.data.receiptUrl) {
+        window.open(response.data.receiptUrl, '_blank');
+      } else {
+        toast.error('ไม่พบข้อมูลใบเสร็จ Stripe');
+      }
+    } catch (error: any) {
+      console.error("Error fetching Stripe receipt:", error);
+      toast.error(error.response?.data?.message || "เกิดข้อผิดพลาดในการดึงข้อมูลใบเสร็จ");
+    }
+  };
+
   const handleDeleteOrder = async (orderId: string) => {
     setConfirm({
       message: `คุณแน่ใจหรือไม่ว่าต้องการลบคำสั่งซื้อ ID: ${orderId.substring(0, 8)}?\n(การกระทำนี้ไม่สามารถย้อนกลับได้)`,
@@ -248,6 +262,10 @@ const ManageOrders: React.FC = () => {
                           <a href={`http://localhost:3000/uploads/slips/${order.paymentSlipImage}`} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: colors.primary, textDecoration: 'none', fontWeight: '600', background: colors.primaryLight, padding: '6px 12px', borderRadius: '20px', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#CCFBF1'} onMouseOut={(e) => e.currentTarget.style.background = colors.primaryLight}>
                             <span aria-hidden="true">🧾</span> ดูสลิป
                           </a>
+                        ) : order.stripeReceiptUrl ? (
+                          <button onClick={() => handleViewStripeReceipt(order.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: colors.info, textDecoration: 'none', fontWeight: '600', background: colors.infoLight, padding: '6px 12px', borderRadius: '20px', transition: 'background 0.2s', border: 'none', cursor: 'pointer' }} onMouseOver={(e) => e.currentTarget.style.background = '#BFDBFE'} onMouseOut={(e) => e.currentTarget.style.background = colors.infoLight}>
+                            <span aria-hidden="true">💳</span> ดูใบเสร็จ Stripe
+                          </button>
                         ) : (
                           <span style={{ color: colors.textMuted, fontStyle: 'italic' }}>ไม่มีสลิป</span>
                         )}

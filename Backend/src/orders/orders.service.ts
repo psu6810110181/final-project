@@ -120,7 +120,38 @@ export class OrdersService {
   // 4. ดูออเดอร์ทั้งหมดในระบบ
   async findAll() {
     return this.ordersRepository.find({
-      relations: ['user', 'items', 'items.product'], order: { orderDate: 'DESC' }
+      relations: ['user', 'items', 'items.product'], 
+      select: {
+        id: true,
+        orderDate: true,
+        totalAmountProduct: true,
+        totalAmountInstallation: true,
+        totalAmount: true,
+        status: true,
+        paymentSlipImage: true,
+        installationCharge: true,
+        shippingAddress: true,
+        stripeSessionId: true,
+        stripeReceiptUrl: true,
+        user: {
+          id: true,
+          email: true,
+          username: true
+        },
+        items: {
+          id: true,
+          quantity: true,
+          priceAtPurchase: true,
+          installationQty: true,
+          product: {
+            id: true,
+            name: true,
+            price: true,
+            stock: true
+          }
+        }
+      },
+      order: { orderDate: 'DESC' }
     });
   }
 
@@ -190,5 +221,21 @@ export class OrdersService {
 
   async clearUserCart(userId: string) {
     await this.cartItemsRepository.delete({ user: { id: userId } });
+  }
+
+  // Save Stripe session data for receipt viewing
+  async saveStripeSessionData(orderId: string, sessionId: string, receiptUrl: string) {
+    await this.ordersRepository.update(orderId, {
+      stripeSessionId: sessionId,
+      stripeReceiptUrl: receiptUrl
+    });
+  }
+
+  // Get Stripe receipt URL for admin viewing
+  async getStripeReceiptUrl(orderId: string) {
+    const order = await this.ordersRepository.findOne({ where: { id: orderId } });
+    if (!order) throw new NotFoundException('ไม่พบคำสั่งซื้อ');
+    if (!order.stripeReceiptUrl) throw new NotFoundException('ไม่พบข้อมูลใบเสร็จ Stripe');
+    return order.stripeReceiptUrl;
   }
 }
