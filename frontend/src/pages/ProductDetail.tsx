@@ -273,7 +273,7 @@ const ProductDetail = () => {
                    </div>
                    <div>
                        <span className="font-bold text-gray-500">วัสดุ:</span> <span className={!displayMaterialAttr ? "text-gray-400" : ""}>{displayMaterialAttr || '-'}</span>
-                   </div>
+                     </div>
                    <div>
                        <span className="font-bold text-gray-500">ขนาด:</span> <span className={!displaySizeAttr ? "text-gray-400" : ""}>{displaySizeAttr || '-'}</span>
                    </div>

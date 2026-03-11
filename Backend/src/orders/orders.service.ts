@@ -5,9 +5,9 @@ import { Order } from './entities/order.entity';
 import { OrderItem } from '../order_items/entities/order_item.entity';
 import { CartItem } from '../cart_items/entities/cart_item.entity';
 import { Product } from '../products/entities/product.entity';
-import { ProductVariant } from '../products/entities/product-variant.entity'; 
+import { ProductVariant } from '../products/entities/product-variant.entity';
 import { User } from '../users/entities/user.entity';
-import Stripe from 'stripe'; 
+import Stripe from 'stripe';
 
 function getDiscountedPrice(product: any, variantPrice?: number): number {
   let price = variantPrice ? Number(variantPrice) : Number(product.price);
@@ -26,12 +26,12 @@ function getDiscountedPrice(product: any, variantPrice?: number): number {
 
 @Injectable()
 export class OrdersService {
-  private stripe: Stripe; 
+  private stripe: Stripe;
 
   constructor(
     @InjectRepository(Order) private ordersRepository: Repository<Order>,
     @InjectRepository(Product) private productsRepository: Repository<Product>,
-    @InjectRepository(ProductVariant) private variantsRepository: Repository<ProductVariant>, 
+    @InjectRepository(ProductVariant) private variantsRepository: Repository<ProductVariant>,
     @InjectRepository(CartItem) private cartItemsRepository: Repository<CartItem>,
     private dataSource: DataSource,
   ) {
@@ -46,7 +46,7 @@ export class OrdersService {
     for (const item of order.items) {
       const currentPrice = getDiscountedPrice(item.product, item.variant ? item.variant.price : undefined);
       // แอบเปลี่ยนค่าใน Memory (ยังไม่เซฟลง DB) เพื่อส่งกลับไปให้ Frontend โชว์ของใหม่ล่าสุด
-      item.priceAtPurchase = currentPrice; 
+      item.priceAtPurchase = currentPrice;
       totalAmountProduct += currentPrice * item.quantity;
     }
     
@@ -57,12 +57,12 @@ export class OrdersService {
   async createStripeSession(orderId: string, totalAmount: number, userId: string) {
     const frontendUrl = process.env.FRONTEND_URL;
     return await this.stripe.checkout.sessions.create({
-      payment_method_types: ['card', 'promptpay'], 
+      payment_method_types: ['card', 'promptpay'],
       line_items: [{
         price_data: {
           currency: 'thb',
           product_data: { name: `ออเดอร์หมายเลข: ${orderId}` },
-          unit_amount: Math.round(totalAmount * 100), 
+          unit_amount: Math.round(totalAmount * 100),
         },
         quantity: 1,
       }],
@@ -73,10 +73,12 @@ export class OrdersService {
     });
   }
 
+  // 1. Checkout
   async checkout(user: User, address: string) {
+    // ✅ ดึงตะกร้ามาพร้อมโปรโมชันและ Variant
     const cartItems = await this.cartItemsRepository.find({
-      where: { user: { id: user.id } }, 
-      relations: ['product', 'product.promotions', 'variant'], 
+      where: { user: { id: user.id } },
+      relations: ['product', 'product.promotions', 'variant'],
     });
 
     if (cartItems.length === 0) throw new BadRequestException('ไม่มีสินค้าในตะกร้า');
@@ -87,8 +89,9 @@ export class OrdersService {
 
     try {
       let totalAmountProduct = 0;
-      let totalInstallQty = 0; 
+      let totalInstallQty = 0;
 
+      // ✅ คำนวณราคาส่วนลดใน Loop
       for (const item of cartItems) {
         const stockToCheck = item.variant ? item.variant.stock : (item.product.mainStock ?? item.product.stock);
         if (stockToCheck < item.quantity) {
@@ -97,7 +100,7 @@ export class OrdersService {
         
         const finalPrice = getDiscountedPrice(item.product, item.variant ? item.variant.price : undefined);
         totalAmountProduct += finalPrice * item.quantity;
-        totalInstallQty += item.installationQty || 0; 
+        totalInstallQty += item.installationQty || 0;
       }
 
       let totalAmountInstallation = totalInstallQty >= 4 ? 990 : (totalInstallQty * 400);
@@ -106,19 +109,20 @@ export class OrdersService {
       const order = this.ordersRepository.create({
         user: user, totalAmountProduct, totalAmountInstallation, totalAmount,
         status: 'PENDING', installationCharge: totalAmountInstallation,
-        shippingAddress: address || user.address 
+        shippingAddress: address || user.address
       });
       const savedOrder = await queryRunner.manager.save(order);
 
+      // สร้าง Order Items
       for (const item of cartItems) {
         const finalPrice = getDiscountedPrice(item.product, item.variant ? item.variant.price : undefined);
         const orderItem = queryRunner.manager.create(OrderItem, {
-          order: savedOrder, 
-          product: item.product, 
-          variant: item.variant, 
+          order: savedOrder,
+          product: item.product,
+          variant: item.variant, // ✅ บันทึก variant เผื่อ Order History ใช้งาน
           quantity: item.quantity,
-          priceAtPurchase: finalPrice, 
-          installationQty: item.installationQty || 0 
+          priceAtPurchase: finalPrice, // ✅ บันทึกราคาตอนซื้อที่หักส่วนลดแล้ว
+          installationQty: item.installationQty || 0
         });
         await queryRunner.manager.save(orderItem);
       }
@@ -139,7 +143,7 @@ export class OrdersService {
   async retryPayment(orderId: string, userId: string) {
     const order = await this.ordersRepository.findOne({
       where: { id: orderId },
-      relations: ['items', 'items.product', 'items.product.promotions', 'items.variant', 'user'], 
+      relations: ['items', 'items.product', 'items.product.promotions', 'items.variant', 'user'],
     });
 
     if (!order) throw new NotFoundException('ไม่พบคำสั่งซื้อ');
@@ -164,7 +168,7 @@ export class OrdersService {
 
   async findOne(orderId: string, userId: string, role: string) {
     const order = await this.ordersRepository.findOne({
-      where: { id: orderId }, 
+      where: { id: orderId },
       relations: ['items', 'items.product', 'items.product.promotions', 'items.variant', 'user'], // ✅ เพิ่มดึงโปรโมชั่นมาด้วย
     });
     if (!order) throw new NotFoundException('ไม่พบคำสั่งซื้อ');
@@ -188,12 +192,9 @@ export class OrdersService {
   }
 
   async findAll() {
-<<<<<<< backend
+    // ใช้แบบผสมผสาน Performance Optimization จาก develop แต่ยังคงรักษา relations ให้คำนวณราคาได้
     const orders = await this.ordersRepository.find({
-      relations: ['user', 'items', 'items.product', 'items.product.promotions', 'items.variant'], order: { orderDate: 'DESC' } // ✅
-=======
-    return this.ordersRepository.find({
-      relations: ['user', 'items', 'items.product'], 
+      relations: ['user', 'items', 'items.product', 'items.product.promotions', 'items.variant'],
       select: {
         id: true,
         orderDate: true,
@@ -220,12 +221,20 @@ export class OrdersService {
             id: true,
             name: true,
             price: true,
-            stock: true
+            stock: true,
+            promotions: {
+              isActive: true,
+              discountType: true,
+              discountValue: true
+            }
+          },
+          variant: {
+            id: true,
+            price: true
           }
         }
       },
       order: { orderDate: 'DESC' }
->>>>>>> develop
     });
 
     // ✅ วนลูปอัปเดตราคา PENDING ก่อนส่งกลับไปให้แอดมินดู
@@ -233,11 +242,10 @@ export class OrdersService {
     return orders;
   }
 
- // เปลี่ยนโค้ดในช่วงฟังก์ชัน updateStatus ให้เป็นแบบนี้ครับ
   // 5. อัปเดตสถานะ (แยกการตัดสต็อกและบันทึกยอดขาย 100%)
   async updateStatus(orderId: string, status: string) {
     const order = await this.ordersRepository.findOne({
-      where: { id: orderId }, relations: ['items', 'items.product', 'items.variant'] 
+      where: { id: orderId }, relations: ['items', 'items.product', 'items.variant']
     });
 
     if (!order) throw new NotFoundException('ไม่พบคำสั่งซื้อ');
@@ -245,14 +253,14 @@ export class OrdersService {
     if (status === 'PAID' && order.status !== 'PAID') {
       for (const item of order.items) {
         if (item.variant) {
-          // ✅ ซื้อตัวเลือก: หักสต็อกและบวกยอดขาย "เฉพาะตัวเลือกนั้น" 
-          item.variant.stock -= item.quantity; 
-          item.variant.sold = (item.variant.sold || 0) + item.quantity; 
+          // ✅ ซื้อตัวเลือก: หักสต็อกและบวกยอดขาย "เฉพาะตัวเลือกนั้น"
+          item.variant.stock -= item.quantity;
+          item.variant.sold = (item.variant.sold || 0) + item.quantity;
           await this.variantsRepository.save(item.variant);
         } else {
           // ✅ ซื้อสินค้าหลัก: หักสต็อกและบวกยอดขาย "เฉพาะสินค้าหลัก"
-          item.product.stock -= item.quantity; 
-          item.product.sold = (item.product.sold || 0) + item.quantity; 
+          item.product.stock -= item.quantity;
+          item.product.sold = (item.product.sold || 0) + item.quantity;
           if (item.product.mainStock !== null && item.product.mainStock !== undefined) {
              item.product.mainStock -= item.quantity;
           }
@@ -265,13 +273,13 @@ export class OrdersService {
       for (const item of order.items) {
         if (item.variant) {
           // ✅ คืนสต็อกและหักยอดขาย "เฉพาะตัวเลือกนั้น"
-          item.variant.stock += item.quantity; 
-          item.variant.sold = Math.max(0, (item.variant.sold || 0) - item.quantity); 
+          item.variant.stock += item.quantity;
+          item.variant.sold = Math.max(0, (item.variant.sold || 0) - item.quantity);
           await this.variantsRepository.save(item.variant);
         } else {
           // ✅ คืนสต็อกและหักยอดขาย "เฉพาะสินค้าหลัก"
-          item.product.stock += item.quantity; 
-          item.product.sold = Math.max(0, (item.product.sold || 0) - item.quantity); 
+          item.product.stock += item.quantity;
+          item.product.sold = Math.max(0, (item.product.sold || 0) - item.quantity);
           if (item.product.mainStock !== null && item.product.mainStock !== undefined) {
              item.product.mainStock += item.quantity;
           }
@@ -284,6 +292,7 @@ export class OrdersService {
     return this.ordersRepository.save(order);
   }
 
+  // 6. ยกเลิกออเดอร์โดยผู้ใช้งาน
   async cancelMyOrder(orderId: string, userId: string) {
     const order = await this.ordersRepository.findOne({
       where: { id: orderId }, relations: ['user', 'items', 'items.product'],

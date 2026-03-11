@@ -32,6 +32,11 @@ export class OrderItem {
   @Column({ name: 'price_at_purchase', type: 'decimal', precision: 10, scale: 2 })
   priceAtPurchase: number;
 
+  // requestInstallation (Boolean) -> เก็บว่าสินค้านี้ขอรับบริการติดตั้งไหม
   @Column({ type: 'int', default: 0 })
   installationQty: number; // จำนวนชิ้นที่ต้องการให้ติดตั้ง
+
+  @ManyToOne(() => ProductVariant, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'variant_id' })
+  variant: ProductVariant;
 }

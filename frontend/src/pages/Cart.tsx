@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Trash2, Minus, Plus, MapPin, X } from 'lucide-react'; 
 import { useNavigate } from 'react-router-dom';
-// ✅ Import calculateDiscountPrice ยังอยู่ครบ
 import { useCart, calculateDiscountPrice } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import * as api from '../services/api';
+import toast from 'react-hot-toast';
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -16,10 +16,7 @@ const Cart = () => {
   const { cartItems, removeFromCart, updateCartItem, cartTotal, fetchCart } = useCart();
   const { user } = useAuth();
   
-  // -- การคำนวณจำนวนชิ้นและค่าบริการ --
   const totalInstallQty = cartItems.reduce((sum: number, item: any) => sum + (item.installationQty || 0), 0);
-  
-  // คำนวณจำนวนชิ้นสินค้าทั้งหมด เพื่อเช็คระยะเวลาจัดส่ง
   const totalProductQty = cartItems.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
   const deliveryEstimationText = totalProductQty >= 4 ? "5-7 วัน" : "3 วัน";
 
@@ -48,7 +45,9 @@ const Cart = () => {
     setShowAddressModal(false);
   };
 
+  // ✅ ดึงรูปภาพโดยตรวจสอบทั้งจาก Variant และ Product หลัก
   const getImageUrl = (source: any) => {
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
     if (!source) return "https://via.placeholder.com/150";
     const raw = source.image || source.images || source.imageUrl;
     if (!raw) return "https://via.placeholder.com/150";
@@ -65,37 +64,33 @@ const Cart = () => {
           fileName = raw;
         }
       } else {
-        fileName = raw;
+          fileName = raw;
       }
     }
 
     if (!fileName) return "https://via.placeholder.com/150";
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    return fileName.startsWith('http') ? fileName : `${baseUrl}/uploads/${fileName}`; // อิง path ภาพสินค้า
+    return fileName.startsWith('http') ? fileName : `${baseUrl}/uploads/${fileName}`; 
   };
 
-  // ✅ เปลี่ยนมาใช้ handleCheckout เพื่อเด้งไป Stripe โดยตรง
   const handleCheckout = async () => {
     try {
       setIsProcessing(true);
       const checkoutRes = await api.checkout(address);
       
-      // ล้างที่อยู่และตะกร้า
       localStorage.removeItem('delivery_address');
       await fetchCart();
 
       if (checkoutRes.url) {
-        // ทริคสวมรอยหน้าเว็บ เพื่อให้กดย้อนกลับแล้วมาเจอหน้า Order History
         navigate('/orders', { replace: true });
         setTimeout(() => {
           window.location.href = checkoutRes.url;
         }, 100);
       } else {
-        alert("ไม่พบ URL ชำระเงิน กรุณาลองใหม่อีกครั้ง");
+        toast.error("ไม่พบ URL ชำระเงิน กรุณาลองใหม่อีกครั้ง");
         navigate('/orders');
       }
     } catch (error: any) {
-      alert(error.response?.data?.message || "เกิดข้อผิดพลาดในการสั่งซื้อ");
+      toast.error(error.response?.data?.message || "เกิดข้อผิดพลาดในการสั่งซื้อ");
     } finally {
       setIsProcessing(false);
     }
@@ -112,7 +107,6 @@ const Cart = () => {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* --- ฝั่งซ้าย: รายการสินค้า --- */}
           <div className="flex-1 space-y-4">
             {cartItems.length === 0 ? (
               <div className="bg-white/80 p-20 rounded-2xl text-center shadow-inner border border-white/50">
@@ -124,7 +118,7 @@ const Cart = () => {
                 if (!item?.product) return null;
 
                 // ✅ ดึงราคาจาก Variant (ถ้ามี) หรือ Product หลัก
-                const basePrice = item.variant ? Number(item.variant.price) : Number(item.product.price);
+                const basePrice = item.variant ? Number(item.variant.price) : Number(item.product.price || 0);
                 const discountedPrice = calculateDiscountPrice(basePrice, item.product.promo);
                 
                 // ✅ เลือกว่าจะโชว์รูปของ Variant หรือรูปของ Product หลัก
@@ -177,6 +171,7 @@ const Cart = () => {
                         <div className="font-bold text-[#D65A31] text-lg mb-2">฿{basePrice.toLocaleString()}</div>
                       )}
                       
+                      {/* ✅ ปุ่มบริการติดตั้ง */}
                       <div className="flex items-center gap-2 mt-2">
                           <span className="text-xs text-[#148F96] font-bold">🔧 บริการติดตั้ง:</span>
                           <div className="flex items-center bg-white border border-gray-200 rounded-md">
@@ -188,6 +183,7 @@ const Cart = () => {
 
                     </div>
                     
+                    {/* ✅ ส่วนจัดการจำนวนสินค้าและปุ่มลบ (Responsive) */}
                     <div className="flex sm:flex-col items-center justify-between sm:justify-center w-full sm:w-auto gap-4 sm:gap-0 mt-4 sm:mt-0">
                       <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl p-1 shadow-inner">
                         <button onClick={() => updateCartItem(item.id, item.quantity - 1, Math.min(item.quantity - 1, item.installationQty || 0))} className="p-2 text-gray-400 hover:text-black transition-colors disabled:opacity-30" disabled={item.quantity <= 1}><Minus size={16}/></button>
@@ -205,7 +201,6 @@ const Cart = () => {
             )}
           </div>
 
-          {/* --- ฝั่งขวา: สรุปราคาและที่อยู่ --- */}
           <div className="w-full lg:w-[380px] space-y-4">
             
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-white/60">
@@ -242,7 +237,6 @@ const Cart = () => {
               </div>
             </div>
 
-            {/* ส่วนสรุปคำสั่งซื้อ */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-white/60">
               <h4 className="font-bold text-gray-800 mb-4">สรุปคำสั่งซื้อ</h4>
               <div className="space-y-3 text-sm mb-6 border-b border-gray-50 pb-6">
@@ -264,7 +258,6 @@ const Cart = () => {
                 <span className="text-[#D65A31]">฿{total.toLocaleString()}</span>
               </div>
 
-              {/* แจ้งเตือนระยะเวลาการจัดส่ง */}
               {cartItems.length > 0 && (
                 <div className="mb-6 p-4 bg-orange-50 border border-orange-100 rounded-xl text-xs text-[#D65A31] leading-relaxed">
                   <span className="font-bold text-sm block mb-1">🚚 ระยะเวลาจัดส่งโดยประมาณ:</span>
@@ -272,7 +265,6 @@ const Cart = () => {
                 </div>
               )}
 
-              {/* ✅ ปุ่มจ่ายเงินวิ่งไปหา Stripe */}
               <button 
                 onClick={handleCheckout}
                 disabled={cartItems.length === 0 || !address.trim() || isProcessing} 
@@ -285,7 +277,6 @@ const Cart = () => {
         </div>
       </div>
 
-      {/* Modal แก้ไขที่อยู่ */}
       {showAddressModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#4A6365]/90 backdrop-blur-md">
           <div className="bg-white w-full max-w-lg rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in duration-200">

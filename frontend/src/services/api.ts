@@ -237,7 +237,7 @@ export const getCart = async () => {
   return await api.get('/cart-items');
 };
 
-// ✅ แก้ไขให้รับ variantId ได้
+// ✅ แก้ไขให้รับ variantId ได้ และกรองค่าก่อนส่งให้ Backend
 export const addToCart = async (productId: string | number, quantity: number, installationQty: number = 0, variantId?: number) => {
   // ✅ จัดเตรียมข้อมูลพื้นฐาน
   const payload: any = { productId, quantity, installationQty };

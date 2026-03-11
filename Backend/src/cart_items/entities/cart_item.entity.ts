@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Product } from '../../products/entities/product.entity';
 import { ProductVariant } from '../../products/entities/product-variant.entity'; // ✅ นำเข้า ProductVariant
@@ -25,5 +25,8 @@ export class CartItem {
   // ✅ เพิ่มความสัมพันธ์: ผูกกับ Variant (ตัวเลือกสินค้า)
   // ใส่ nullable: true ไว้ เผื่อสินค้าชิ้นนั้นเป็นสินค้าเดี่ยวๆ ไม่มีตัวเลือก
   @ManyToOne(() => ProductVariant, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'variant_id' }) // ระบุชื่อคอลัมน์ใน DB ให้ชัดเจน
+  variant: ProductVariant;
+}
   variant: ProductVariant;
 }

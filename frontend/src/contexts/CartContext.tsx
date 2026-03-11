@@ -16,7 +16,7 @@ export interface CartItem {
   id: number; 
   quantity: number;
   installationQty?: number; 
-  variant?: Variant; // ✅ เพิ่ม variant มารองรับระบบตัวเลือกสินค้า
+  variant?: Variant; // ✅ เพิ่ม variant มารองรับระบบตัวเลือกสินค้า (ใช้ Type ชัดเจนปลอดภัยกว่า any)
   product: {
     id: string;   
     name: string;
@@ -161,8 +161,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const cartTotal = safeCartItems.reduce((total, item) => {
     if (!item || !item.product) return total; 
     
-    // ✅ ถ้ารายการนั้นซื้อ Variant ให้ใช้ราคา Variant ถ้าไม่มีก็ใช้ราคา Product หลัก
-    const basePrice = item.variant ? item.variant.price : item.product.price;
+    // ✅ ดึงราคาจาก Variant ถ้าไม่มีให้ดึงราคาจาก Product หลัก (ครอบ Number เผื่อข้อมูลมาเป็น String)
+    const basePrice = item.variant ? Number(item.variant.price) : Number(item.product.price);
+    
+    // ใช้ฟังก์ชันคำนวณส่วนลด
     const finalPrice = calculateDiscountPrice(basePrice, item.product.promo);
     const quantity = Number(item.quantity) || 0;
     

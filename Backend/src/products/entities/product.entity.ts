@@ -3,6 +3,8 @@ import { CartItem } from '../../cart_items/entities/cart_item.entity';
 import { ProductVariant } from './product-variant.entity';
 import { Review } from '../../reviews/entities/review.entity';
 import { Promotion } from '../../promotions/promotion.entity';
+// ✅ 1. เพิ่ม Import OrderItem
+import { OrderItem } from '../../order_items/entities/order_item.entity'; 
 
 @Entity()
 export class Product {
@@ -12,7 +14,7 @@ export class Product {
   @Column()
   name: string;
 
-  @Column({ type: 'text', nullable: true }) // เพิ่มรายละเอียดสินค้า
+  @Column({ type: 'text', nullable: true }) 
   description: string;
 
   @Column('decimal', { precision: 10, scale: 2, default: 0 })
@@ -26,20 +28,17 @@ export class Product {
   sold: number;
 
   @Column({ default: 'General' })
-  category: string; // หมวดหมู่สินค้า (Single Select)
+  category: string; 
 
-  // เพิ่มหมวดหมู่ห้อง (Single Select)
   @Column({ nullable: true })
   room: string; 
 
-  // เพิ่มคุณสมบัติพิเศษ (Multi Select) - เก็บเป็น Array ของ String
   @Column("simple-array", { nullable: true }) 
   features: string[];
 
   @Column({ nullable: true })
   image: string;
 
-  // Main product attributes
   @Column({ nullable: true })
   color: string;
 
@@ -72,4 +71,8 @@ export class Product {
 
   @ManyToMany(() => Promotion, promotion => promotion.products)
   promotions: Promotion[];
+
+  // ✅ 2. เพิ่ม Property orderItems เพื่อผูกความสัมพันธ์กับ OrderItem
+  @OneToMany(() => OrderItem, (orderItem) => orderItem.product)
+  orderItems: OrderItem[];
 }
