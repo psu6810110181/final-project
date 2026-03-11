@@ -56,7 +56,8 @@ const PromotionManager: React.FC = () => {
     endDate: '',
     isFlashSale: false,
     productIds: [] as string[],
-    isActive: true
+    isActive: true,
+    season: ''
   });
 
   const colors = {
@@ -197,7 +198,8 @@ const PromotionManager: React.FC = () => {
       endDate: '',
       isFlashSale: false,
       productIds: [],
-      isActive: true
+      isActive: true,
+      season: ''
     });
     setEditingPromotion(null);
     setShowForm(false);
@@ -274,7 +276,8 @@ const PromotionManager: React.FC = () => {
       endDate: formatDateTimeLocal(promotion.endDate),
       isFlashSale: promotion.isFlashSale,
       productIds: promotion.products?.map(p => p.id) || [],
-      isActive: promotion.isActive
+      isActive: promotion.isActive,
+      season: (promotion as any).season || ''
     });
     setShowForm(true);
   };
@@ -326,6 +329,13 @@ const PromotionManager: React.FC = () => {
     { value: 'FIXED_AMOUNT', label: 'จำนวนเงินคงที่ (บาท)' }
   ];
 
+  const seasonOptions = [
+    { value: 'SUMMER', label: 'Summer (ฤดูร้อน)', icon: '☀️' },
+    { value: 'WINTER', label: 'Winter (ฤดูหนาว)', icon: '❄️' },
+    { value: 'SPRING', label: 'Spring (ฤดูใบไม้ผลิ)', icon: '🌸' },
+    { value: 'AUTUMN', label: 'Autumn (ฤดูใบไม้ร่วง)', icon: '🍂' }
+  ];
+
   if (showForm) {
     return (
       <article style={{ maxWidth: '800px', margin: '0 auto', padding: '10px 0', fontFamily: "'Prompt', sans-serif" }}>
@@ -346,13 +356,52 @@ const PromotionManager: React.FC = () => {
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: colors.textMain }}>
                 ชื่อโปรโมชั่น *
               </label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData({...formData, title: e.target.value})}
-                style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px', outline: 'none' }}
-                placeholder="เช่น ลดราคา 20%"
-              />
+              {formData.isFlashSale ? (
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px', outline: 'none' }}
+                  placeholder="เช่น Flash Sale ลดราคา 20%"
+                />
+              ) : (
+                <div>
+                  {console.log('Seasonal dropdown - isFlashSale:', formData.isFlashSale, 'seasonOptions:', seasonOptions)}
+                  <select
+                    value={formData.season}
+                    onChange={(e) => {
+                      const selectedSeason = e.target.value;
+                      const seasonOption = seasonOptions.find(opt => opt.value === selectedSeason);
+                      console.log('Selected season:', selectedSeason, 'Option:', seasonOption);
+                      setFormData({
+                        ...formData, 
+                        season: selectedSeason,
+                        title: seasonOption ? seasonOption.label : ''
+                      });
+                    }}
+                    style={{ 
+                      width: '100%', 
+                      padding: '12px', 
+                      border: `1px solid ${colors.border}`, 
+                      borderRadius: '8px', 
+                      fontSize: '14px', 
+                      outline: 'none',
+                      backgroundColor: colors.bgWhite,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="">เลือกฤดูกาล...</option>
+                    {seasonOptions.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.icon} {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <div style={{ fontSize: '12px', color: colors.textMuted, marginTop: '4px' }}>
+                    ชื่อโปรโมชั่นจะถูกกำหนดอัตโนมัติตามฤดูกาลที่เลือก
+                  </div>
+                </div>
+              )}
             </div>
 
             <div style={{ position: 'relative' }} ref={discountDropdownRef}>

@@ -7,7 +7,9 @@ import type { Product, Category, Room, Feature, Color, Material, Size, Promotion
 import toast from 'react-hot-toast';
 import { useCart } from '../contexts/CartContext';
 import FlashSale from '../components/FlashSale';
+import SeasonalPromotion from '../components/SeasonalPromotion';
 import TabBar from '../components/TabBar';
+import { getSeasonFromPromoTitle } from '../constants/seasonalThemes';
 
 // ✅ นำเข้ารูปภาพพื้นหลังจากโฟลเดอร์ assets
 import heroBackground from '../assets/background.jpg';
@@ -39,6 +41,7 @@ const Home = () => {
 
   const [recommendedProducts, setRecommendedProducts] = useState<ProductWithPromo[]>([]);
   const [promoProducts, setPromoProducts] = useState<ProductWithPromo[]>([]);
+  const [seasonalProducts, setSeasonalProducts] = useState<ProductWithPromo[]>([]);
   const [generalProducts, setGeneralProducts] = useState<ProductWithPromo[]>([]);
 
   const [bookmarks, setBookmarks] = useState<string[]>([]);
@@ -114,6 +117,10 @@ const Home = () => {
 
         const onSaleProducts = productsWithPromo.filter(p => p.promo);
         setPromoProducts(onSaleProducts.slice(0, 10));
+
+        // Filter seasonal promotions (non-flash sale promotions)
+        const seasonalPromoProducts = productsWithPromo.filter(p => p.promo && !p.promo.isFlashSale);
+        setSeasonalProducts(seasonalPromoProducts.slice(0, 5));
 
         const normalProducts = productsWithPromo.filter(p => !p.promo);
         setGeneralProducts(normalProducts.slice(0, 10));
@@ -511,6 +518,7 @@ const Home = () => {
              <>
                 <FlashSale products={products} />
                 <ProductGrid title="✨ สินค้าแนะนำสำหรับคุณ" items={recommendedProducts} />
+                <SeasonalPromotion products={seasonalProducts} title={seasonalProducts[0]?.promo?.title} season={seasonalProducts[0]?.promo?.title ? getSeasonFromPromoTitle(seasonalProducts[0].promo.title) : undefined} />
                 <ProductGrid title="🔥 โปรโมชันพิเศษ" items={promoProducts} />
                 <ProductGrid title="🛋️ สินค้าทั่วไป" items={generalProducts} />
              </>
@@ -520,5 +528,4 @@ const Home = () => {
     </div>
   );
 };
-
 export default Home;
