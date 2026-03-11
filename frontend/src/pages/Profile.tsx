@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-// เพิ่มการนำเข้า updateProfile
 import { getProfile, updateProfile } from '../services/api';
-import toast from 'react-hot-toast'; // ✅ นำเข้า toast
+import toast from 'react-hot-toast';
+// ✅ เพิ่ม Star เข้ามาในบรรทัดนี้แล้วครับ
+import { User, Mail, Phone, MapPin, Edit3, Check, X, Star } from 'lucide-react';
 
 interface UserProfile {
   id: string;
@@ -18,8 +19,8 @@ const Profile: React.FC = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
 
-  // --- State สำหรับการแก้ไขข้อมูล ---
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({ phone: '', address: '' });
   const [isSaving, setIsSaving] = useState(false);
@@ -34,7 +35,6 @@ const Profile: React.FC = () => {
       const data = await getProfile(); 
       setProfile(data);
     } catch (error) {
-      console.error('Failed to fetch profile:', error);
       if (user) {
         setProfile({
           id: user.id || '',
@@ -45,12 +45,11 @@ const Profile: React.FC = () => {
       }
     } finally {
       setIsLoading(false);
+      setTimeout(() => setIsVisible(true), 100);
     }
   };
 
-  // --- Handlers สำหรับฟอร์มแก้ไข ---
   const handleEditClick = () => {
-    // นำข้อมูลปัจจุบันมาใส่ในฟอร์มเตรียมแก้ไข
     setEditData({
       phone: profile?.phone || '',
       address: profile?.address || ''
@@ -65,20 +64,16 @@ const Profile: React.FC = () => {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // สร้าง FormData ตามที่ api.ts ต้องการ
       const formData = new FormData();
       formData.append('phone', editData.phone);
       formData.append('address', editData.address);
 
       await updateProfile(formData);
-      
-      // อัปเดตข้อมูลในหน้าจอใหม่หลังบันทึกเสร็จ
       await fetchProfileData();
       setIsEditing(false);
-      toast.success('บันทึกข้อมูลโปรไฟล์เรียบร้อยแล้ว'); // ✅ เพิ่มแจ้งเตือนเมื่อสำเร็จ
+      toast.success('บันทึกข้อมูลโปรไฟล์เรียบร้อยแล้ว');
     } catch (error) {
-      console.error('Failed to update profile:', error);
-      toast.error('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง'); // ✅ เปลี่ยนจาก alert
+      toast.error('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง'); 
     } finally {
       setIsSaving(false);
     }
@@ -91,141 +86,168 @@ const Profile: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#148F96]"></div>
+      <div className="flex justify-center items-center min-h-[80vh] bg-[#F8FAFA]">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#148F96]"></div>
       </div>
     );
   }
 
   if (!profile) {
     return (
-      <div className="flex justify-center items-center min-h-[60vh] text-gray-500 text-lg">
+      <div className="flex justify-center items-center min-h-[80vh] text-slate-500 text-lg bg-[#F8FAFA]">
         ไม่พบข้อมูลผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่อีกครั้ง
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <h1 className="text-3xl font-bold text-gray-800 mb-8">บัญชีของฉัน</h1>
-      
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="h-32 bg-gradient-to-r from-[#148F96] to-[#107378]"></div>
+    <div className="bg-[#F8FAFA] min-h-screen pb-20 relative overflow-hidden font-sans pt-10">
+      {/* Background Orbs */}
+      <div className="absolute top-[-20%] left-1/4 w-[600px] h-[600px] bg-[#148F96]/10 blur-[150px] rounded-full pointer-events-none z-0" />
+      <div className="absolute bottom-10 right-10 w-[500px] h-[500px] bg-slate-400/10 blur-[150px] rounded-full pointer-events-none z-0" />
+
+      <div className={`relative z-10 container mx-auto px-4 max-w-4xl transition-all duration-1000 ease-out ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
         
-        <div className="px-8 pb-8">
-          <div className="relative flex justify-between items-end -mt-16 mb-8">
-            <div className="flex items-end space-x-6">
-              <div className="w-32 h-32 bg-white rounded-full p-1 shadow-md overflow-hidden">
-                {profile.userImage ? (
-                  <img 
-                    src={profile.userImage} 
-                    alt="Profile" 
-                    className="w-full h-full object-cover rounded-full" 
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
+        <div className="bg-white/80 backdrop-blur-2xl rounded-[3rem] shadow-2xl shadow-slate-200/50 border border-white overflow-hidden relative">
+          
+          {/* Header Gradient Cover */}
+          <div className="h-48 bg-gradient-to-r from-slate-900 via-[#0a4d52] to-[#148F96] relative overflow-hidden">
+            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
+          </div>
+          
+          <div className="px-8 md:px-12 pb-12">
+            {/* Profile Avatar & Actions */}
+            <div className="relative flex flex-col md:flex-row md:justify-between items-center md:items-end -mt-20 mb-10 gap-6">
+              <div className="flex flex-col items-center md:items-start text-center md:text-left z-10">
+                <div className="w-40 h-40 bg-white rounded-[2rem] p-2 shadow-2xl border border-white/50 overflow-hidden mb-4 md:mb-0 transform rotate-3 hover:rotate-0 transition-transform duration-500">
+                  {profile.userImage ? (
+                    <img 
+                      src={profile.userImage} 
+                      alt="Profile" 
+                      className="w-full h-full object-cover rounded-[1.5rem]" 
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 text-[#148F96] rounded-[1.5rem] flex items-center justify-center text-6xl font-black uppercase shadow-inner">
+                      {profile.username.charAt(0)}
+                    </div>
+                  )}
+                </div>
+                <div className="md:ml-44 md:-mt-16">
+                  <h1 className="text-4xl font-extrabold text-slate-800 drop-shadow-sm">{profile.username}</h1>
+                  <p className="text-[#148F96] font-bold mt-1 uppercase tracking-widest text-sm bg-teal-50 px-3 py-1 rounded-full inline-block">
+                    {profile.role} ACCOUNT
+                  </p>
+                </div>
+              </div>
+              
+              <div className="z-10">
+                {!isEditing ? (
+                  <button 
+                    onClick={handleEditClick}
+                    className="px-8 py-3 bg-slate-900 hover:bg-[#148F96] text-white rounded-2xl font-bold transition-all shadow-lg hover:shadow-[#148F96]/30 flex items-center gap-2 active:scale-95"
+                  >
+                    <Edit3 size={18} /> แก้ไขข้อมูล
+                  </button>
                 ) : (
-                  <div className="w-full h-full bg-[#148F96]/10 text-[#148F96] rounded-full flex items-center justify-center text-5xl font-bold uppercase">
-                    {profile.username.charAt(0)}
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={handleCancel}
+                      disabled={isSaving}
+                      className="px-6 py-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-2xl font-bold transition-colors disabled:opacity-50 flex items-center gap-2"
+                    >
+                      <X size={18} /> ยกเลิก
+                    </button>
+                    <button 
+                      onClick={handleSave}
+                      disabled={isSaving}
+                      className="px-8 py-3 bg-[#148F96] hover:bg-[#0f6f75] text-white rounded-2xl font-bold transition-all shadow-lg shadow-[#148F96]/30 flex items-center gap-2 active:scale-95 disabled:opacity-50"
+                    >
+                      {isSaving ? 'กำลังบันทึก...' : <><Check size={18} /> บันทึก</>}
+                    </button>
                   </div>
                 )}
               </div>
-              <div className="pb-2">
-                <h2 className="text-2xl font-bold text-gray-800">{profile.username}</h2>
-                <p className="text-gray-500 mt-1 uppercase text-sm font-semibold tracking-wider">
-                  Status: {profile.role}
-                </p>
-              </div>
-            </div>
-            
-            {/* สลับปุ่มตามโหมด Edit / View */}
-            {!isEditing ? (
-              <button 
-                onClick={handleEditClick}
-                className="px-6 py-2 bg-[#148F96] hover:bg-[#107378] text-white rounded-lg font-medium transition-colors shadow-sm"
-              >
-                แก้ไขโปรไฟล์
-              </button>
-            ) : (
-              <div className="flex space-x-3">
-                <button 
-                  onClick={handleCancel}
-                  disabled={isSaving}
-                  className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors shadow-sm disabled:opacity-50"
-                >
-                  ยกเลิก
-                </button>
-                <button 
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors shadow-sm flex items-center disabled:opacity-50"
-                >
-                  {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
-                </button>
-              </div>
-            )}
-          </div>
-
-          <hr className="mb-8 border-gray-100" />
-
-          {/* ฟอร์มข้อมูล */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-500">ชื่อผู้ใช้<span className="text-xs text-gray-400">- ไม่อนุญาตให้แก้ไข</span></label>
-              <div className="p-3 bg-gray-100 border border-gray-200 rounded-lg text-gray-500 cursor-not-allowed">
-                {profile.username}
-              </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-500">อีเมล<span className="text-xs text-gray-400">- ไม่อนุญาตให้แก้ไข</span></label>
-              <div className="p-3 bg-gray-100 border border-gray-200 rounded-lg text-gray-500 cursor-not-allowed">
-                {profile.email || 'ไม่ได้ระบุ'}
-              </div>
-            </div>
+            <div className="h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent mb-10"></div>
 
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-500">เบอร์โทรศัพท์</label>
-              {!isEditing ? (
-                <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-800">
-                  {profile.phone || 'ยังไม่ได้ระบุข้อมูล'}
+            {/* Details Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              
+              {/* Username (Readonly) */}
+              <div className="bg-slate-50/50 p-5 rounded-3xl border border-slate-100">
+                <div className="flex items-center gap-2 mb-2 text-slate-400">
+                  <User size={16} /> <span className="text-sm font-bold uppercase tracking-wider">ชื่อผู้ใช้</span>
                 </div>
-              ) : (
-                <input 
-                  type="tel"
-                  name="phone"
-                  value={editData.phone}
-                  onChange={handleInputChange}
-                  placeholder="กรอกเบอร์โทรศัพท์"
-                  className="w-full p-3 bg-white border border-[#148F96] rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#148F96]/50"
-                />
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-500">ตำแหน่ง</label>
-              <div className="p-3 bg-gray-100 border border-gray-200 rounded-lg text-gray-500 uppercase cursor-not-allowed">
-                {profile.role}
-              </div>
-            </div>
-
-            <div className="space-y-1 md:col-span-2">
-              <label className="text-sm font-medium text-gray-500">ที่อยู่ปัจจุบัน</label>
-              {!isEditing ? (
-                <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 min-h-[80px] whitespace-pre-wrap">
-                  {profile.address || 'ยังไม่ได้ระบุที่อยู่สำหรับจัดส่ง'}
+                <div className="text-slate-800 font-medium text-lg px-2">
+                  {profile.username}
                 </div>
-              ) : (
-                <textarea 
-                  name="address"
-                  value={editData.address}
-                  onChange={handleInputChange}
-                  placeholder="กรอกที่อยู่สำหรับจัดส่งสินค้า"
-                  rows={3}
-                  className="w-full p-3 bg-white border border-[#148F96] rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#148F96]/50 resize-none"
-                />
-              )}
+              </div>
+
+              {/* Email (Readonly) */}
+              <div className="bg-slate-50/50 p-5 rounded-3xl border border-slate-100">
+                <div className="flex items-center gap-2 mb-2 text-slate-400">
+                  <Mail size={16} /> <span className="text-sm font-bold uppercase tracking-wider">อีเมล</span>
+                </div>
+                <div className="text-slate-800 font-medium text-lg px-2">
+                  {profile.email || '-'}
+                </div>
+              </div>
+
+              {/* Phone */}
+              <div className={`p-5 rounded-3xl border transition-colors ${isEditing ? 'bg-white border-[#148F96]/30 shadow-sm' : 'bg-slate-50/50 border-slate-100'}`}>
+                <div className="flex items-center gap-2 mb-2 text-slate-400">
+                  <Phone size={16} className={isEditing ? "text-[#148F96]" : ""} /> 
+                  <span className={`text-sm font-bold uppercase tracking-wider ${isEditing ? "text-[#148F96]" : ""}`}>เบอร์โทรศัพท์</span>
+                </div>
+                {!isEditing ? (
+                  <div className="text-slate-800 font-medium text-lg px-2">
+                    {profile.phone || <span className="text-slate-400 italic">ยังไม่ได้ระบุข้อมูล</span>}
+                  </div>
+                ) : (
+                  <input 
+                    type="tel"
+                    name="phone"
+                    value={editData.phone}
+                    onChange={handleInputChange}
+                    placeholder="08X-XXX-XXXX"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#148F96]/50 focus:bg-white transition-all"
+                  />
+                )}
+              </div>
+
+              {/* Role */}
+              <div className="bg-slate-50/50 p-5 rounded-3xl border border-slate-100">
+                <div className="flex items-center gap-2 mb-2 text-slate-400">
+                  <Star size={16} /> <span className="text-sm font-bold uppercase tracking-wider">สถานะบัญชี</span>
+                </div>
+                <div className="text-slate-800 font-black text-lg px-2 uppercase">
+                  {profile.role}
+                </div>
+              </div>
+
+              {/* Address */}
+              <div className={`md:col-span-2 p-5 rounded-3xl border transition-colors ${isEditing ? 'bg-white border-[#148F96]/30 shadow-sm' : 'bg-slate-50/50 border-slate-100'}`}>
+                <div className="flex items-center gap-2 mb-3 text-slate-400">
+                  <MapPin size={16} className={isEditing ? "text-[#148F96]" : ""} /> 
+                  <span className={`text-sm font-bold uppercase tracking-wider ${isEditing ? "text-[#148F96]" : ""}`}>ที่อยู่สำหรับจัดส่ง</span>
+                </div>
+                {!isEditing ? (
+                  <div className="text-slate-800 font-medium text-lg px-2 leading-relaxed min-h-[60px]">
+                    {profile.address || <span className="text-slate-400 italic">คุณยังไม่ได้เพิ่มที่อยู่สำหรับจัดส่งสินค้า</span>}
+                  </div>
+                ) : (
+                  <textarea 
+                    name="address"
+                    value={editData.address}
+                    onChange={handleInputChange}
+                    placeholder="บ้านเลขที่, ถนน, ซอย, ตำบล, อำเภอ, จังหวัด, รหัสไปรษณีย์"
+                    rows={4}
+                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#148F96]/50 focus:bg-white transition-all resize-none"
+                  />
+                )}
+              </div>
+
             </div>
           </div>
         </div>
