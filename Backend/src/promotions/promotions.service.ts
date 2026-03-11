@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import { Promotion } from './promotion.entity';
@@ -18,7 +18,7 @@ export class PromotionsService {
   }
 
   async findActiveFlashSales(): Promise<Promotion[]> {
-    // ✅ แก้ไขชื่อตัวแปรให้ตรงกับที่ใช้ใน Query
+    // แก้ไขชื่อตัวแปรให้ตรงกับที่ใช้ใน Query
     const currentDate = new Date(); 
     
     return this.promotionsRepository.find({
@@ -27,6 +27,21 @@ export class PromotionsService {
         isFlashSale: true,
         startDate: LessThanOrEqual(currentDate), // เปรียบเทียบวันเริ่มต้น (ต้องน้อยกว่าหรือเท่ากับปัจจุบัน)
         endDate: MoreThanOrEqual(currentDate)    // เปรียบเทียบวันสิ้นสุด (ต้องมากกว่าหรือเท่ากับปัจจุบัน)
+      },
+      relations: ['products'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async findActiveSeasonalPromotions(): Promise<Promotion[]> {
+    const currentDate = new Date(); 
+    
+    return this.promotionsRepository.find({
+      where: {
+        isActive: true,
+        isFlashSale: false, // Seasonal promotions have isFlashSale = false
+        startDate: LessThanOrEqual(currentDate),
+        endDate: MoreThanOrEqual(currentDate)
       },
       relations: ['products'],
       order: { createdAt: 'DESC' },
@@ -48,6 +63,19 @@ export class PromotionsService {
 
   async create(createPromotionDto: any): Promise<Promotion> {
     const { productIds, ...promotionData } = createPromotionDto;
+    
+    // Check if this is a seasonal promotion (isFlashSale = false)
+    if (promotionData.isFlashSale === false) {
+      // Check for existing active seasonal promotions
+      const activeSeasonalPromotions = await this.findActiveSeasonalPromotions();
+      
+      if (activeSeasonalPromotions.length > 0) {
+        throw new ConflictException(
+          'ไม่สามารถสร้าง Seasonal Promotion ใหม่ได้ เนื่องจากมี Seasonal Promotion ที่กำลังทำงานอยู่แล้ว ' +
+          'กรุณาปิด Seasonal Promotion ปัจจุบันก่อนสร้างใหม่'
+        );
+      }
+    }
     
     const promotion = this.promotionsRepository.create(promotionData);
     
@@ -75,6 +103,20 @@ export class PromotionsService {
     
     const promotion = await this.findOne(id);
     Object.assign(promotion, promotionData);
+
+    // Check if trying to activate a seasonal promotion
+    if (promotionData.isActive === true && promotion.isFlashSale === false) {
+      // Check for existing active seasonal promotions (excluding this one)
+      const activeSeasonalPromotions = await this.findActiveSeasonalPromotions();
+      const otherActiveSeasonalPromotions = activeSeasonalPromotions.filter(p => p.id !== id);
+      
+      if (otherActiveSeasonalPromotions.length > 0) {
+        throw new ConflictException(
+          'ไม่สามารถเปิดใช้งาน Seasonal Promotion นี้ได้ เนื่องจากมี Seasonal Promotion อื่นที่กำลังทำงานอยู่แล้ว ' +
+          'กรุณาปิด Seasonal Promotion ปัจจุบันก่อนเปิดใช้งานอันนี้'
+        );
+      }
+    }
     
     await this.promotionsRepository.save(promotion);
 
@@ -109,6 +151,21 @@ export class PromotionsService {
 
   async toggleStatus(id: string, isActive: boolean): Promise<Promotion> {
     const promotion = await this.findOne(id);
+    
+    // Check if trying to activate a seasonal promotion
+    if (isActive === true && promotion.isFlashSale === false) {
+      // Check for existing active seasonal promotions (excluding this one)
+      const activeSeasonalPromotions = await this.findActiveSeasonalPromotions();
+      const otherActiveSeasonalPromotions = activeSeasonalPromotions.filter(p => p.id !== id);
+      
+      if (otherActiveSeasonalPromotions.length > 0) {
+        throw new ConflictException(
+          'ไม่สามารถเปิดใช้งาน Seasonal Promotion นี้ได้ เนื่องจากมี Seasonal Promotion อื่นที่กำลังทำงานอยู่แล้ว ' +
+          'กรุณาปิด Seasonal Promotion ปัจจุบันก่อนเปิดใช้งานอันนี้'
+        );
+      }
+    }
+    
     promotion.isActive = isActive;
     const result = await this.promotionsRepository.save(promotion);
     return Array.isArray(result) ? result[0] : result;

@@ -62,6 +62,22 @@ export class OrdersController {
 
       if (orderId) {
         await this.ordersService.updateStatus(orderId, 'PAID');
+        let receiptUrl = '';
+        if (session.payment_intent) {
+          // ดึงข้อมูล PaymentIntent จาก Stripe และสั่งให้ Expand ข้อมูล latest_charge
+          const paymentIntent = await this.stripe.paymentIntents.retrieve(
+            session.payment_intent as string,
+            { expand: ['latest_charge'] }
+          );
+          
+          // ดึง receipt_url ออกมาจาก latest_charge
+          const latestCharge = paymentIntent.latest_charge as Stripe.Charge;
+          receiptUrl = latestCharge?.receipt_url ||'';
+        }
+
+        // Save Stripe session data for receipt viewing (ตอนนี้ receiptUrl จะไม่เป็น null แล้ว)
+        await this.ordersService.saveStripeSessionData(orderId, session.id, receiptUrl);
+        
         if (userId) await this.ordersService.clearUserCart(userId);
       }
     }
@@ -87,4 +103,23 @@ export class OrdersController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
   removeOrder(@Param('id') id: string) { return this.ordersService.removeOrder(id); }
+
+  @Get(':id/stripe-receipt')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin')
+  async getStripeReceipt(@Param('id') id: string) {
+    const receiptUrl = await this.ordersService.getStripeReceiptUrl(id);
+    return { receiptUrl };
+  }
+
+  // Temporary test endpoint - remove in production
+  @Post(':id/test-stripe-receipt')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin')
+  async addTestStripeReceipt(@Param('id') id: string) {
+    // Add test Stripe receipt URL to existing order
+    const testReceiptUrl = 'https://dashboard.stripe.com/test/receipts/test_' + Date.now();
+    await this.ordersService.saveStripeSessionData(id, 'test_session_' + Date.now(), testReceiptUrl);
+    return { message: 'Test Stripe receipt added', receiptUrl: testReceiptUrl };
+  }
 }
