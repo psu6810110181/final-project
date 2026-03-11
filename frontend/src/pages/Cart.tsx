@@ -143,16 +143,24 @@ const Cart = () => {
                       <h3 className="font-bold text-gray-800 text-lg truncate">{item.product.name}</h3>
                       <p className="text-gray-400 text-sm mb-1">{(item.product as any).category || "ทั่วไป"}</p>
                       
-                      {/* ✅ แสดงคุณสมบัติของ Variant (ถ้าลูกค้าเลือกตัวเลือกมา) */}
-                      {item.variant && (
-                        <div className="flex flex-wrap items-center gap-2 mb-2 text-xs text-gray-600 bg-gray-50 p-1.5 rounded-md inline-flex border border-gray-100">
-                          {item.variant.color && <span className="flex items-center gap-1">🎨 {item.variant.color}</span>}
-                          {item.variant.color && (item.variant.material || item.variant.size) && <span className="text-gray-300">|</span>}
-                          {item.variant.material && <span>🛠️ {item.variant.material}</span>}
-                          {item.variant.material && item.variant.size && <span className="text-gray-300">|</span>}
-                          {item.variant.size && <span>📏 {item.variant.size}</span>}
-                        </div>
-                      )}
+                      {/* ✅ แสดงคุณสมบัติของสินค้า (รองรับทั้งแบบมี Variant และสินค้าหลัก) */}
+                      {(() => {
+                        const displayColor = item.variant?.color || item.product?.color || item.product?.mainColor;
+                        const displayMaterial = item.variant?.material || item.product?.material || item.product?.mainMaterial;
+                        const displaySize = item.variant?.size || item.product?.size || item.product?.mainSize;
+                        
+                        if (!displayColor && !displayMaterial && !displaySize) return null;
+
+                        return (
+                          <div className="flex flex-wrap items-center gap-2 mb-2 text-xs text-gray-600 bg-gray-50 p-1.5 rounded-md inline-flex border border-gray-100">
+                            {displayColor && <span className="flex items-center gap-1">🎨 {displayColor}</span>}
+                            {displayColor && (displayMaterial || displaySize) && <span className="text-gray-300">|</span>}
+                            {displayMaterial && <span>🛠️ {displayMaterial}</span>}
+                            {displayMaterial && displaySize && <span className="text-gray-300">|</span>}
+                            {displaySize && <span>📏 {displaySize}</span>}
+                          </div>
+                        );
+                      })()}
 
                       {/* ✅ แสดงราคาลดและป้ายโปรโมชัน */}
                       {item.product.promo ? (

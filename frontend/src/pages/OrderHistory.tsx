@@ -261,14 +261,22 @@ const OrderHistory = () => {
                       <div className="flex-1">
                         <p className="font-semibold text-sm text-gray-800">{item.product?.name || 'สินค้าไม่ทราบชื่อ'}</p>
                         
-                        {/* ✅ แสดงคุณสมบัติของ Variant (ถ้ามี) */}
-                        {item.variant && (
-                          <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-1">
-                            <span className="bg-gray-100 px-1.5 py-0.5 rounded">
-                              {[item.variant.color, item.variant.material, item.variant.size].filter(Boolean).join(' | ')}
-                            </span>
-                          </div>
-                        )}
+                        {/* ✅ แสดงคุณสมบัติของสินค้า (รองรับทั้งแบบมี Variant และสินค้าหลัก) */}
+                        {(() => {
+                          const displayColor = item.variant?.color || item.product?.color || item.product?.mainColor;
+                          const displayMaterial = item.variant?.material || item.product?.material || item.product?.mainMaterial;
+                          const displaySize = item.variant?.size || item.product?.size || item.product?.mainSize;
+                          
+                          if (!displayColor && !displayMaterial && !displaySize) return null;
+
+                          return (
+                            <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-1">
+                              <span className="bg-gray-100 px-1.5 py-0.5 rounded">
+                                {[displayColor, displayMaterial, displaySize].filter(Boolean).join(' | ')}
+                              </span>
+                            </div>
+                          );
+                        })()}
 
                         <div className="text-xs text-gray-500 mt-1 flex gap-3">
                            <span>จำนวน: {item.quantity} ชิ้น</span>

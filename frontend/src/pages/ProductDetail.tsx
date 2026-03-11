@@ -178,6 +178,7 @@ const ProductDetail = () => {
 
   const displayPrice = currentVariant ? currentVariant.price : product?.price;
   const displayStock = currentVariant ? currentVariant.stock : ((product as any)?.mainStock ?? product?.stock);
+  const displaySold = currentVariant ? ((currentVariant as any).sold || 0) : ((product as any)?.sold || 0);
   
   const displayColorAttr = currentVariant ? currentVariant.color : mainColor;
   const displayMaterialAttr = currentVariant ? currentVariant.material : mainMaterial;
@@ -251,7 +252,7 @@ const ProductDetail = () => {
               ))}
               <span className="text-gray-500 text-sm ml-2">{averageRating} ({reviews.length} รีวิว)</span>
               <span className="text-gray-300 mx-2">|</span>
-              <span className="text-sm text-gray-500">ขายแล้ว {(product as any).cartItems?.length || 0} ชิ้น</span>
+              <span className="text-sm text-gray-500">ขายแล้ว {displaySold} ชิ้น</span>
             </div>
 
             <div className="mb-4 bg-gray-50 p-4 rounded-xl border border-gray-100">

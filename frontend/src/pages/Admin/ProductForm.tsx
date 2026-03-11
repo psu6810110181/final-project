@@ -292,13 +292,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
         return;
       }
       
-      const totalStock = variants.reduce((sum, variant) => sum + (parseInt(variant.stock) || 0), 0);
-      
       const formData = new FormData();
       formData.append('name', name);
       formData.append('price', price);
       formData.append('category', selectedCategory);
-      formData.append('stock', String(totalStock));
+      
+      // ✅ แก้ไข: ดึงค่าจากช่อง "คลังหลัก" มาใช้ตรงๆ เลย ไม่ต้องเอายอดจากตัวเลือกมารวม
+      const parsedMainStock = parseInt(mainStock) || 0;
+      formData.append('stock', String(parsedMainStock)); 
+      formData.append('mainStock', String(parsedMainStock)); 
       
       if (selectedRoom) formData.append('room', selectedRoom);
       if (description) formData.append('description', description);
@@ -307,8 +309,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
       if (selectedMainColor) formData.append('color', selectedMainColor);
       if (selectedMainMaterial) formData.append('material', selectedMainMaterial);
       if (selectedMainSize) formData.append('size', selectedMainSize);
-      if (mainStock) formData.append('mainStock', mainStock);
 
+      // จัดการรูปภาพหลัก
       if (imageFile) {
          formData.append('image', imageFile);
       } else if (editingProductId && originalMainImage) {
