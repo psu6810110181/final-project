@@ -36,7 +36,4 @@ export class OrderItem {
   @Column({ type: 'int', default: 0 })
   installationQty: number; // จำนวนชิ้นที่ต้องการให้ติดตั้ง
 
-  @ManyToOne(() => ProductVariant, { nullable: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'variant_id' })
-  variant: ProductVariant;
 }
