@@ -1,98 +1,125 @@
-import { 
-  Controller, Get, Post, Patch, Body, Param, UseGuards, Req, 
-  UseInterceptors, UploadedFile, BadRequestException, ParseFilePipe, 
-  MaxFileSizeValidator, FileTypeValidator 
-} from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Req, Res, Headers, type RawBodyRequest } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
-import { FileInterceptor } from '@nestjs/platform-express';
-import sharp from 'sharp'; // ✅ Import sharp แบบ Default
-import * as fs from 'fs';
-import * as path from 'path';
+import { Request, type Response } from 'express';
+import Stripe from 'stripe'; 
 
 @Controller('orders')
-@UseGuards(AuthGuard('jwt'), RolesGuard)
 export class OrdersController {
-  constructor(private readonly ordersService: OrdersService) {}
+  private stripe: Stripe;
+
+  constructor(private readonly ordersService: OrdersService) {
+    // ✅ เติม as any กัน Type Error แบบเดียวกับใน Service
+    this.stripe = new Stripe(String(process.env.STRIPE_SECRET_KEY), { apiVersion: '2026-02-25.clover' as any });
+  }
 
   @Post('checkout')
+  @UseGuards(AuthGuard('jwt'), RolesGuard) 
   create(@Req() req, @Body('address') address: string) {
     return this.ordersService.checkout(req.user, address);
   }
 
+  // ✅ แก้ไขฟังก์ชันชำระเงินต่อ ให้เรียก Service ที่จะไปอัปเดตราคาโปรโมชั่นก่อน
+  @Post(':id/retry-payment')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  async retryPayment(@Param('id') id: string, @Req() req) {
+    // โยนไปให้ Service จัดการอัปเดตราคาและขอ URL ใหม่ให้เลย
+    return this.ordersService.retryPayment(id, req.user.id);
+  }
+
   @Get('my-orders')
+  @UseGuards(AuthGuard('jwt'), RolesGuard) 
   findMyOrders(@Req() req) {
     return this.ordersService.findMyOrders(req.user.id);
   }
 
   @Patch(':id/cancel')
-  async cancelMyOrder(@Param('id') id: string, @Req() req) { // ✅ เปลี่ยนจาก @Request เป็น @Req
-    // โยน orderId และ userId ไปให้ Service ตรวจสอบ
+  @UseGuards(AuthGuard('jwt'), RolesGuard) 
+  async cancelMyOrder(@Param('id') id: string, @Req() req) { 
     return this.ordersService.cancelMyOrder(id, req.user.id); 
   }
 
-  // ---------------------------------------------------------
-  // ✅ อัปโหลดสลิป: Validate + Resize (Sharp) 🧾
-  // ---------------------------------------------------------
-  @Post('upload-slip/:id')
-  @UseInterceptors(FileInterceptor('file')) // รับไฟล์เข้ามาใน Buffer (RAM)
-  async uploadSlip(
-    @Param('id') id: string, 
-    @UploadedFile(
-      new ParseFilePipe({
-        validators: [
-          // 1. เช็คขนาดไฟล์ไม่เกิน 5MB
-          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), 
-          // 2. เช็คว่าเป็นรูปภาพเท่านั้น
-          new FileTypeValidator({ fileType: '.(png|jpeg|jpg|webp)' }), 
-        ],
-      }),
-    ) file: Express.Multer.File, 
-    @Req() req
-  ) {
-    if (!file) throw new BadRequestException('กรุณาแนบไฟล์สลิป');
-
-    // ตั้งชื่อไฟล์สลิป
-    const filename = `slip-${id}-${Date.now()}.jpeg`;
-    const uploadDir = './uploads/slips';
-    const uploadPath = path.join(uploadDir, filename);
-
-    // ตรวจสอบว่ามีโฟลเดอร์ไหม ถ้าไม่มีให้สร้าง
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+  @Post('webhook')
+  async stripeWebhook(@Req() req: RawBodyRequest<Request>, @Res() res: Response, @Headers('stripe-signature') signature: string) {    
+    let event;
+    try {
+      event = this.stripe.webhooks.constructEvent(
+        req.rawBody as Buffer, 
+        signature,
+        String(process.env.STRIPE_WEBHOOK_SECRET)
+      );
+    } catch (err: any) {
+      console.log('Webhook Error:', err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
-    // ✅ ใช้ Sharp ย่อรูปสลิป
-    await sharp(file.buffer)
-      .resize(800) // กำหนดความกว้าง 800px (ความสูงจะปรับ auto ตามสัดส่วน)
-      .toFormat('jpeg')
-      .jpeg({ quality: 80 }) // บีบอัดคุณภาพ 80%
-      .toFile(uploadPath);
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as any;
+      const orderId = session.metadata?.orderId; 
+      const userId = session.metadata?.userId; 
 
-    // ✅ ส่ง User ID ไปเช็คด้วยว่าอัปโหลดให้ถูกใบไหม
-    return this.ordersService.updatePaymentSlip(id, filename, req.user.id, req.user.role);
+      if (orderId) {
+        await this.ordersService.updateStatus(orderId, 'PAID');
+        let receiptUrl = '';
+        if (session.payment_intent) {
+          // ดึงข้อมูล PaymentIntent จาก Stripe และสั่งให้ Expand ข้อมูล latest_charge
+          const paymentIntent = await this.stripe.paymentIntents.retrieve(
+            session.payment_intent as string,
+            { expand: ['latest_charge'] }
+          );
+          
+          // ดึง receipt_url ออกมาจาก latest_charge
+          const latestCharge = paymentIntent.latest_charge as Stripe.Charge;
+          receiptUrl = latestCharge?.receipt_url ||'';
+        }
+
+        // Save Stripe session data for receipt viewing (ตอนนี้ receiptUrl จะไม่เป็น null แล้ว)
+        await this.ordersService.saveStripeSessionData(orderId, session.id, receiptUrl);
+        
+        if (userId) await this.ordersService.clearUserCart(userId);
+      }
+    }
+    res.json({ received: true });
   }
-  
 
-  // --- Admin Zone ---
   @Get()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
-  findAll() {
-    return this.ordersService.findAll();
-  }
+  findAll() { return this.ordersService.findAll(); }
 
   @Get(':id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
-  findOne(@Param('id') id: string, @Req() req) {
-    // ✅ ส่ง User ID และ Role ไปให้ Service ตรวจสอบสิทธิ์
-    return this.ordersService.findOne(id, req.user.id, req.user.role);
-  }
+  findOne(@Param('id') id: string, @Req() req) { return this.ordersService.findOne(id, req.user.id, req.user.role); }
   
   @Patch(':id/status')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
-  updateStatus(@Param('id') id: string, @Body('status') status: string) {
-    return this.ordersService.updateStatus(id, status);
+  updateStatus(@Param('id') id: string, @Body('status') status: string) { return this.ordersService.updateStatus(id, status); }
+  
+  @Delete(':id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin')
+  removeOrder(@Param('id') id: string) { return this.ordersService.removeOrder(id); }
+
+  @Get(':id/stripe-receipt')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin')
+  async getStripeReceipt(@Param('id') id: string) {
+    const receiptUrl = await this.ordersService.getStripeReceiptUrl(id);
+    return { receiptUrl };
+  }
+
+  // Temporary test endpoint - remove in production
+  @Post(':id/test-stripe-receipt')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin')
+  async addTestStripeReceipt(@Param('id') id: string) {
+    // Add test Stripe receipt URL to existing order
+    const testReceiptUrl = 'https://dashboard.stripe.com/test/receipts/test_' + Date.now();
+    await this.ordersService.saveStripeSessionData(id, 'test_session_' + Date.now(), testReceiptUrl);
+    return { message: 'Test Stripe receipt added', receiptUrl: testReceiptUrl };
   }
 }

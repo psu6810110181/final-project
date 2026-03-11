@@ -1,7 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn, ManyToMany } from 'typeorm';
 import { CartItem } from '../../cart_items/entities/cart_item.entity';
 import { ProductVariant } from './product-variant.entity';
 import { Review } from '../../reviews/entities/review.entity';
+import { Promotion } from '../../promotions/promotion.entity';
+// ✅ 1. เพิ่ม Import OrderItem
+import { OrderItem } from '../../order_items/entities/order_item.entity'; 
 
 @Entity()
 export class Product {
@@ -11,7 +14,7 @@ export class Product {
   @Column()
   name: string;
 
-  @Column({ type: 'text', nullable: true }) // เพิ่มรายละเอียดสินค้า
+  @Column({ type: 'text', nullable: true }) 
   description: string;
 
   @Column('decimal', { precision: 10, scale: 2, default: 0 })
@@ -20,19 +23,33 @@ export class Product {
   @Column('int', { default: 0 })
   stock: number;
 
-  @Column({ default: 'General' })
-  category: string; // หมวดหมู่สินค้า (Single Select)
+  // เพิ่มบรรทัดนี้ลงไปในคลาส Product
+  @Column({ type: 'int', default: 0 })
+  sold: number;
 
-  // 👇 เพิ่มหมวดหมู่ห้อง (Single Select)
+  @Column({ default: 'General' })
+  category: string; 
+
   @Column({ nullable: true })
   room: string; 
 
-  // 👇 เพิ่มคุณสมบัติพิเศษ (Multi Select) - เก็บเป็น Array ของ String
   @Column("simple-array", { nullable: true }) 
   features: string[];
 
   @Column({ nullable: true })
   image: string;
+
+  @Column({ nullable: true })
+  color: string;
+
+  @Column({ nullable: true })
+  material: string;
+
+  @Column({ nullable: true })
+  size: string;
+
+  @Column('int', { nullable: true })
+  mainStock: number;
 
   @OneToMany(() => ProductVariant, (variant) => variant.product, { cascade: true })
   variants: ProductVariant[];
@@ -51,4 +68,11 @@ export class Product {
 
   @OneToMany(() => Review, (review) => review.product)
   reviews: Review[];
+
+  @ManyToMany(() => Promotion, promotion => promotion.products)
+  promotions: Promotion[];
+
+  // ✅ 2. เพิ่ม Property orderItems เพื่อผูกความสัมพันธ์กับ OrderItem
+  @OneToMany(() => OrderItem, (orderItem) => orderItem.product)
+  orderItems: OrderItem[];
 }

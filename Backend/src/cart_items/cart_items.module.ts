@@ -3,12 +3,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CartItemsService } from './cart_items.service';
 import { CartItemsController } from './cart_items.controller';
 import { CartItem } from './entities/cart_item.entity';
-import { Product } from '../products/entities/product.entity'; // ⚠️ อย่าลืม Import
+import { Product } from '../products/entities/product.entity';
+import { ProductVariant } from '../products/entities/product-variant.entity'; // ✅ นำเข้า Variant
 
 @Module({
-  imports: [TypeOrmModule.forFeature([CartItem, Product])], // 👈 ใส่ให้ครบทั้งคู่
+  // ✅ เพิ่ม ProductVariant เข้าไปใน forFeature
+  imports: [TypeOrmModule.forFeature([CartItem, Product, ProductVariant])], 
   controllers: [CartItemsController],
   providers: [CartItemsService],
-  exports: [CartItemsService], //เผื่อ OrdersModule มาเรียกใช้
 })
 export class CartItemsModule {}
