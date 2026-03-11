@@ -162,11 +162,13 @@ const SeasonalPromotion: React.FC<SeasonalPromotionProps> = ({ products, title, 
   }
 
   return (
-    <div className="relative overflow-hidden rounded-2xl p-8 m-5 lg:m-8 shadow-2xl"
+    <div className="relative overflow-hidden rounded-2xl shadow-2xl"
          style={{
            background: theme.gradient,
            backgroundSize: '400% 400%',
            animation: theme.animation,
+           padding: '24px',
+           margin: '20px 0 40px 0',
          }}>
       
       {/* Animated Seasonal Elements */}

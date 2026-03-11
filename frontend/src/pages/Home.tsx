@@ -516,9 +516,9 @@ const Home = () => {
              <ProductGrid title="ผลการค้นหาและตัวกรอง" items={filteredProducts} />
           ) : (
              <>
+                <SeasonalPromotion products={seasonalProducts} title={seasonalProducts[0]?.promo?.title} season={seasonalProducts[0]?.promo?.title ? getSeasonFromPromoTitle(seasonalProducts[0].promo.title) : undefined} />
                 <FlashSale products={products} />
                 <ProductGrid title="✨ สินค้าแนะนำสำหรับคุณ" items={recommendedProducts} />
-                <SeasonalPromotion products={seasonalProducts} title={seasonalProducts[0]?.promo?.title} season={seasonalProducts[0]?.promo?.title ? getSeasonFromPromoTitle(seasonalProducts[0].promo.title) : undefined} />
                 <ProductGrid title="🔥 โปรโมชันพิเศษ" items={promoProducts} />
                 <ProductGrid title="🛋️ สินค้าทั่วไป" items={generalProducts} />
              </>

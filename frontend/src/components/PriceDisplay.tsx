@@ -17,13 +17,31 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ productId, originalPrice, s
     const fetchPromotion = async () => {
       try {
         const token = localStorage.getItem('token');
-        const flashSales = await api.get('/promotions/flash-sales', {
-          headers: token ? { Authorization: `Bearer ${token}` } : {}
-        });
         
-        const productPromotion = flashSales.data.find((sale: any) => 
+        // Fetch both flash sales and seasonal promotions
+        const [flashSalesResponse, allPromotionsResponse] = await Promise.all([
+          api.get('/promotions/flash-sales', {
+            headers: token ? { Authorization: `Bearer ${token}` } : {}
+          }),
+          api.get('/promotions', {
+            headers: token ? { Authorization: `Bearer ${token}` } : {}
+          })
+        ]);
+        
+        // Check flash sales first
+        let productPromotion = flashSalesResponse.data.find((sale: any) => 
           sale.products?.some((product: any) => product.id === productId)
         );
+        
+        // If not found in flash sales, check all promotions (including seasonal)
+        if (!productPromotion && allPromotionsResponse.data) {
+          productPromotion = allPromotionsResponse.data.find((promo: any) => 
+            promo.isActive && 
+            new Date(promo.startDate) <= new Date() && 
+            new Date(promo.endDate) >= new Date() &&
+            promo.products?.some((product: any) => product.id === productId)
+          );
+        }
         
         if (productPromotion) {
           setPromotion(productPromotion);
@@ -80,14 +98,14 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ productId, originalPrice, s
       <span style={{ 
         fontSize: '20px', 
         fontWeight: '700', 
-        color: promotion.isFlashSale ? '#ff6b6b' : '#4CAF50' 
+        color: promotion.isFlashSale ? '#ff6b6b' : '#D65A31' 
       }}>
         ฿{discountedPrice.toLocaleString()}
       </span>
       
       {/* เปอร์เซ็นต์ส่วนลด */}
       <span style={{
-        background: promotion.isFlashSale ? '#ff6b6b' : '#4CAF50',
+        background: promotion.isFlashSale ? '#ff6b6b' : '#D65A31',
         color: 'white',
         padding: '2px 6px',
         borderRadius: '12px',
