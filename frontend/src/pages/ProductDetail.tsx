@@ -117,17 +117,6 @@ const ProductDetail = () => {
   const mainMaterial = (product as any)?.material || (product as any)?.mainMaterial || '';
   const mainSize = (product as any)?.size || (product as any)?.mainSize || '';
 
-  // ✅ Debug: ตรวจสอบค่าที่ได้
-  console.log('Product Debug:', {
-    product,
-    mainColor,
-    mainMaterial,
-    mainSize,
-    hasColor: !!(product as any)?.color || !!(product as any)?.mainColor,
-    hasMaterial: !!(product as any)?.material || !!(product as any)?.mainMaterial,
-    hasSize: !!(product as any)?.size || !!(product as any)?.mainSize
-  });
-
   const handleImageInteract = (index: number) => {
       setSelectedImageIndex(index);
       const selectedImg = images[index];
@@ -177,7 +166,9 @@ const ProductDetail = () => {
 
     try {
         setIsAdding(true);
-        await addToCart(id, quantity, installationQty); 
+        // ✅ เปลี่ยนตรงนี้ให้ส่ง ID ตัวเลือก Variant ไปด้วย
+        const variantId = currentVariant ? currentVariant.id : undefined;
+        await addToCart(id, quantity, installationQty, variantId); 
     } catch (error) {
         console.error(error);
     } finally {

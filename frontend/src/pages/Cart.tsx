@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Trash2, Minus, Plus, MapPin, X } from 'lucide-react'; 
 import { useNavigate } from 'react-router-dom';
-// ✅ Import calculateDiscountPrice ยังอยู่ครบ
 import { useCart, calculateDiscountPrice } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import * as api from '../services/api';
@@ -16,10 +15,7 @@ const Cart = () => {
   const { cartItems, removeFromCart, updateCartItem, cartTotal, fetchCart } = useCart();
   const { user } = useAuth();
   
-  // -- การคำนวณจำนวนชิ้นและค่าบริการ --
   const totalInstallQty = cartItems.reduce((sum: number, item: any) => sum + (item.installationQty || 0), 0);
-  
-  // คำนวณจำนวนชิ้นสินค้าทั้งหมด เพื่อเช็คระยะเวลาจัดส่ง
   const totalProductQty = cartItems.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
   const deliveryEstimationText = totalProductQty >= 4 ? "5-7 วัน" : "3 วัน";
 
@@ -48,7 +44,15 @@ const Cart = () => {
     setShowAddressModal(false);
   };
 
-  const getImageUrl = (product: any) => {
+  // ✅ แก้ให้ดึงรูปภาพของ Variant มาแสดงถ้ามี
+  const getImageUrl = (product: any, variant?: any) => {
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    
+    // ถ้ารูปแบบย่อย (Variant) มีรูปภาพของตัวเอง ให้ใช้รูปนั้นก่อน
+    if (variant && variant.image) {
+        return variant.image.startsWith('http') ? variant.image : `${baseUrl}/uploads/${variant.image}`;
+    }
+
     if (!product) return "https://via.placeholder.com/150";
     const raw = product.image || product.images;
     if (!raw) return "https://via.placeholder.com/150";
@@ -70,22 +74,18 @@ const Cart = () => {
     }
 
     if (!fileName) return "https://via.placeholder.com/150";
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    return fileName.startsWith('http') ? fileName : `${baseUrl}/uploads/${fileName}`; // อิง path ภาพสินค้า
+    return fileName.startsWith('http') ? fileName : `${baseUrl}/uploads/${fileName}`; 
   };
 
-  // ✅ เปลี่ยนมาใช้ handleCheckout เพื่อเด้งไป Stripe โดยตรง
   const handleCheckout = async () => {
     try {
       setIsProcessing(true);
       const checkoutRes = await api.checkout(address);
       
-      // ล้างที่อยู่และตะกร้า
       localStorage.removeItem('delivery_address');
       await fetchCart();
 
       if (checkoutRes.url) {
-        // ทริคสวมรอยหน้าเว็บ เพื่อให้กดย้อนกลับแล้วมาเจอหน้า Order History
         navigate('/orders', { replace: true });
         setTimeout(() => {
           window.location.href = checkoutRes.url;
@@ -112,7 +112,6 @@ const Cart = () => {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* --- ฝั่งซ้าย: รายการสินค้า --- */}
           <div className="flex-1 space-y-4">
             {cartItems.length === 0 ? (
               <div className="bg-white/80 p-20 rounded-2xl text-center shadow-inner border border-white/50">
@@ -120,35 +119,49 @@ const Cart = () => {
                 <button onClick={() => navigate('/')} className="mt-4 text-[#D65A31] font-bold underline">กลับไปเลือกซื้อสินค้า</button>
               </div>
             ) : (
-              cartItems.map((item: any) => (
-                item?.product && (
+              cartItems.map((item: any) => {
+                // ✅ ดึงราคาจาก Variant (ถ้ามี) ถ้าไม่มีให้ใช้ราคาจาก Product หลัก
+                const basePrice = item.variant ? Number(item.variant.price) : Number(item.product?.price || 0);
+
+                return item?.product && (
                   <div key={item.id} className="bg-white p-5 rounded-2xl shadow-sm flex items-center gap-6 relative animate-in slide-in-from-left duration-300">
                     <div className="w-28 h-28 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 border border-gray-100">
                       <img 
-                        src={getImageUrl(item.product)} 
+                        src={getImageUrl(item.product, item.variant)} // ✅ ส่ง variant ไปหาภาพด้วย
                         alt={item.product.name}
                         className="w-full h-full object-cover" 
                       />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-bold text-gray-800 text-lg truncate">{item.product.name}</h3>
+                      
+                      {/* ✅ แสดงรายละเอียดตัวเลือกสินค้า (Variant) */}
+                      {item.variant && (
+                        <div className="flex flex-wrap gap-2 text-xs text-gray-500 mt-1 mb-1">
+                          {item.variant.color && <span className="bg-gray-50 px-2 py-0.5 rounded border border-gray-100">สี: {item.variant.color}</span>}
+                          {item.variant.material && <span className="bg-gray-50 px-2 py-0.5 rounded border border-gray-100">วัสดุ: {item.variant.material}</span>}
+                          {item.variant.size && <span className="bg-gray-50 px-2 py-0.5 rounded border border-gray-100">ขนาด: {item.variant.size}</span>}
+                        </div>
+                      )}
+
                       <p className="text-gray-400 text-sm mb-2">{(item.product as any).category || "ทั่วไป"}</p>
                       
-                      {/* ✅ แสดงราคาลดและป้ายโปรโมชัน */}
                       {item.product.promo ? (
                         <div className="mb-2 flex items-center flex-wrap gap-2">
-                           <span className="text-gray-400 line-through text-sm">฿{Number(item.product.price).toLocaleString()}</span>
+                           {/* ✅ ใช้ basePrice แทน item.product.price */}
+                           <span className="text-gray-400 line-through text-sm">฿{basePrice.toLocaleString()}</span>
                            <span className="font-bold text-[#D65A31] text-lg">
-                               ฿{calculateDiscountPrice(item.product.price, item.product.promo).toLocaleString()}
+                               ฿{calculateDiscountPrice(basePrice, item.product.promo).toLocaleString()}
                            </span>
                            <span className="text-[10px] text-red-600 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded font-bold">
                                ลด {item.product.promo.discountType === 'PERCENTAGE' ? `${item.product.promo.discountValue}%` : `฿${item.product.promo.discountValue}`}
                            </span>
                         </div>
                       ) : (
-                        <div className="font-bold text-[#D65A31] text-lg mb-2">฿{Number(item.product.price).toLocaleString()}</div>
+                        <div className="font-bold text-[#D65A31] text-lg mb-2">฿{basePrice.toLocaleString()}</div>
                       )}
                       
+                      {/* ✅ แก้ไข UI ปุ่มบริการติดตั้งที่ผิดพลาดให้อยู่ในแถวเดียวกัน */}
                       <div className="flex items-center gap-2 mt-2">
                           <span className="text-xs text-[#148F96] font-bold">🔧 บริการติดตั้ง:</span>
                           <div className="flex items-center bg-white border border-gray-200 rounded-md">
@@ -160,22 +173,22 @@ const Cart = () => {
 
                     </div>
                     
-                    <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl p-1 shadow-inner">
-                      <button onClick={() => updateCartItem(item.id, item.quantity - 1, Math.min(item.quantity - 1, item.installationQty || 0))} className="p-2 text-gray-400 hover:text-black transition-colors disabled:opacity-30" disabled={item.quantity <= 1}><Minus size={16}/></button>
-                      <span className="w-8 text-center font-bold text-sm">{item.quantity}</span>
-                      <button onClick={() => updateCartItem(item.id, item.quantity + 1, item.installationQty)} className="p-2 text-gray-400 hover:text-black transition-colors"><Plus size={16}/></button>
+                    <div className="flex flex-col items-end gap-2">
+                        <button onClick={() => removeFromCart(item.id)} className="p-2 text-gray-300 hover:text-red-500 transition-colors">
+                            <Trash2 size={20} />
+                        </button>
+                        <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl p-1 shadow-inner mt-auto">
+                            <button onClick={() => updateCartItem(item.id, item.quantity - 1, Math.min(item.quantity - 1, item.installationQty || 0))} className="p-2 text-gray-400 hover:text-black transition-colors disabled:opacity-30" disabled={item.quantity <= 1}><Minus size={16}/></button>
+                            <span className="w-8 text-center font-bold text-sm">{item.quantity}</span>
+                            <button onClick={() => updateCartItem(item.id, item.quantity + 1, item.installationQty)} className="p-2 text-gray-400 hover:text-black transition-colors"><Plus size={16}/></button>
+                        </div>
                     </div>
-
-                    <button onClick={() => removeFromCart(item.id)} className="p-2 text-gray-300 hover:text-red-500 transition-colors ml-2">
-                      <Trash2 size={20} />
-                    </button>
                   </div>
                 )
-              ))
+              })
             )}
           </div>
 
-          {/* --- ฝั่งขวา: สรุปราคาและที่อยู่ --- */}
           <div className="w-full lg:w-[380px] space-y-4">
             
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-white/60">
@@ -212,7 +225,6 @@ const Cart = () => {
               </div>
             </div>
 
-            {/* ส่วนสรุปคำสั่งซื้อ */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-white/60">
               <h4 className="font-bold text-gray-800 mb-4">สรุปคำสั่งซื้อ</h4>
               <div className="space-y-3 text-sm mb-6 border-b border-gray-50 pb-6">
@@ -234,7 +246,6 @@ const Cart = () => {
                 <span className="text-[#D65A31]">฿{total.toLocaleString()}</span>
               </div>
 
-              {/* แจ้งเตือนระยะเวลาการจัดส่ง */}
               {cartItems.length > 0 && (
                 <div className="mb-6 p-4 bg-orange-50 border border-orange-100 rounded-xl text-xs text-[#D65A31] leading-relaxed">
                   <span className="font-bold text-sm block mb-1">🚚 ระยะเวลาจัดส่งโดยประมาณ:</span>
@@ -242,7 +253,6 @@ const Cart = () => {
                 </div>
               )}
 
-              {/* ✅ ปุ่มจ่ายเงินวิ่งไปหา Stripe */}
               <button 
                 onClick={handleCheckout}
                 disabled={cartItems.length === 0 || !address.trim() || isProcessing} 
@@ -255,7 +265,6 @@ const Cart = () => {
         </div>
       </div>
 
-      {/* Modal แก้ไขที่อยู่ */}
       {showAddressModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#4A6365]/90 backdrop-blur-md">
           <div className="bg-white w-full max-w-lg rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in duration-200">

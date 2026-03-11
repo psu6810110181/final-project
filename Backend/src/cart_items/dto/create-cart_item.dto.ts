@@ -15,4 +15,8 @@ export class CreateCartItemDto {
   @IsNumber()
   @Min(0)
   installationQty?: number;
+
+  @IsOptional()
+  @IsNumber()
+  variantId?: number;
 }

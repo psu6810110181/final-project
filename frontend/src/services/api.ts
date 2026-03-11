@@ -33,6 +33,7 @@ export interface Material { id: number; name: string; }
 export interface Size { id: number; name: string; }
 
 export interface Variant {
+  id?: number;
   color: string;
   material: string;
   size: string;
@@ -236,8 +237,8 @@ export const getCart = async () => {
   return await api.get('/cart-items');
 };
 
-export const addToCart = async (productId: string | number, quantity: number, installationQty: number = 0) => {
-  return await api.post('/cart-items', { productId, quantity, installationQty });
+export const addToCart = async (productId: string | number, quantity: number, installationQty: number = 0, variantId?: number) => {
+  return await api.post('/cart-items', { productId, quantity, installationQty, variantId });
 };
 
 export const updateCartItem = async (id: number, data: { quantity?: number, installationQty?: number }) => {

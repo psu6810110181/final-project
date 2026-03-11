@@ -1,6 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Product } from '../../products/entities/product.entity';
+import { ProductVariant } from '../../products/entities/product-variant.entity';
 
 @Entity()
 export class CartItem {
@@ -20,4 +21,8 @@ export class CartItem {
   // 🔗 ความสัมพันธ์: Product 1 ชิ้น ไปอยู่ใน CartItem ของหลายคนได้
   @ManyToOne(() => Product, (product) => product.cartItems, { onDelete: 'CASCADE' })
   product: Product;
+
+  @ManyToOne(() => ProductVariant, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'variant_id' })
+  variant: ProductVariant;
 }

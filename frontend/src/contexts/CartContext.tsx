@@ -16,6 +16,7 @@ export interface CartItem {
   id: number; 
   quantity: number;
   installationQty?: number; 
+  variant?: any; // ✅ เพิ่ม variant เพื่อรองรับราคาสินค้าย่อย
   product: {
     id: string;   
     name: string;
@@ -29,7 +30,7 @@ export interface CartItem {
 
 interface CartContextType {
   cartItems: CartItem[];
-  addToCart: (productId: string, quantity: number, installationQty?: number) => Promise<void>;
+  addToCart: (productId: string, quantity: number, installationQty?: number, variantId?: number) => Promise<void>;
   removeFromCart: (id: number) => Promise<void>;
   updateCartItem: (id: number, quantity?: number, installationQty?: number) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -113,9 +114,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     fetchCart();
   }, []);
 
-  const addToCart = async (productId: string, quantity: number, installationQty: number = 0) => {
+  const addToCart = async (productId: string, quantity: number, installationQty: number = 0, variantId?: number) => {
     try {
-      await api.addToCart(productId, quantity, installationQty);
+      await api.addToCart(productId, quantity, installationQty, variantId);
       toast.success('เพิ่มลงตะกร้าแล้ว!'); 
       await fetchCart(); 
     } catch (error) {
@@ -158,8 +159,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const cartTotal = safeCartItems.reduce((total, item) => {
     if (!item || !item.product) return total; 
     
+    // ✅ ดึงราคาจาก Variant ถ้าไม่มีให้ดึงราคาจาก Product หลัก
+    const basePrice = item.variant ? Number(item.variant.price) : Number(item.product.price);
+    
     // ใช้ฟังก์ชันคำนวณส่วนลด
-    const finalPrice = calculateDiscountPrice(item.product.price, item.product.promo);
+    const finalPrice = calculateDiscountPrice(basePrice, item.product.promo);
     const quantity = Number(item.quantity) || 0;
     
     return total + (finalPrice * quantity);
