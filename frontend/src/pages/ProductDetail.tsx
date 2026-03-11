@@ -112,21 +112,9 @@ const ProductDetail = () => {
     return allImages;
   }, [product]);
 
-  // ✅ ดึงค่าข้อมูลหลักออกมาใช้งาน ป้องกันชื่อ Field คลาดเคลื่อน
   const mainColor = (product as any)?.color || (product as any)?.mainColor || '';
   const mainMaterial = (product as any)?.material || (product as any)?.mainMaterial || '';
   const mainSize = (product as any)?.size || (product as any)?.mainSize || '';
-
-  // ✅ Debug: ตรวจสอบค่าที่ได้
-  console.log('Product Debug:', {
-    product,
-    mainColor,
-    mainMaterial,
-    mainSize,
-    hasColor: !!(product as any)?.color || !!(product as any)?.mainColor,
-    hasMaterial: !!(product as any)?.material || !!(product as any)?.mainMaterial,
-    hasSize: !!(product as any)?.size || !!(product as any)?.mainSize
-  });
 
   const handleImageInteract = (index: number) => {
       setSelectedImageIndex(index);
@@ -139,7 +127,6 @@ const ProductDetail = () => {
           setSelectedMaterial(matchedVariant.material || '');
           setSelectedSize(matchedVariant.size || '');
       } else {
-          // ✅ ถ้าชี้รูปหลัก ให้เคลียร์ค่ากลับเป็น Option ของสินค้าหลัก
           setSelectedColor(mainColor);
           setSelectedMaterial(mainMaterial);
           setSelectedSize(mainSize);
@@ -155,7 +142,6 @@ const ProductDetail = () => {
       }
   }, [currentVariant, images]);
 
-  // ✅ เช็คว่าตอนนี้ User กำลังดูหรือกดเลือก "สินค้าหลัก" อยู่ใช่หรือไม่
   const isMainProductSelected = 
       selectedColor === mainColor && 
       selectedMaterial === mainMaterial && 
@@ -177,7 +163,8 @@ const ProductDetail = () => {
 
     try {
         setIsAdding(true);
-        await addToCart(id, quantity, installationQty); 
+        // ✅ เพิ่ม currentVariant?.id เข้าไปเพื่อให้รู้ว่าซื้อตัวเลือกไหน
+        await addToCart(id, quantity, installationQty, currentVariant?.id); 
     } catch (error) {
         console.error(error);
     } finally {
@@ -185,12 +172,10 @@ const ProductDetail = () => {
     }
   }; 
 
-  // ✅ รวมตัวเลือกของสินค้าหลักและ Variant เข้าด้วยกัน เพื่อสร้างปุ่มให้ครอบคลุม
   const availableColors = Array.from(new Set([mainColor, ...(product?.variants?.map(v => v.color) || [])])).filter(Boolean) as string[];
   const availableMaterials = Array.from(new Set([mainMaterial, ...(product?.variants?.map(v => v.material) || [])])).filter(Boolean) as string[];
   const availableSizes = Array.from(new Set([mainSize, ...(product?.variants?.map(v => v.size) || [])])).filter(Boolean) as string[];
 
-  // ✅ ตัดสินใจว่าจะโชว์ข้อมูลของใครระหว่าง Variant หรือ สินค้าหลัก
   const displayPrice = currentVariant ? currentVariant.price : product?.price;
   const displayStock = currentVariant ? currentVariant.stock : ((product as any)?.mainStock ?? product?.stock);
   

@@ -48,9 +48,9 @@ const Cart = () => {
     setShowAddressModal(false);
   };
 
-  const getImageUrl = (product: any) => {
-    if (!product) return "https://via.placeholder.com/150";
-    const raw = product.image || product.images;
+  const getImageUrl = (source: any) => {
+    if (!source) return "https://via.placeholder.com/150";
+    const raw = source.image || source.images || source.imageUrl;
     if (!raw) return "https://via.placeholder.com/150";
 
     let fileName = "";
@@ -120,33 +120,53 @@ const Cart = () => {
                 <button onClick={() => navigate('/')} className="mt-4 text-[#D65A31] font-bold underline">กลับไปเลือกซื้อสินค้า</button>
               </div>
             ) : (
-              cartItems.map((item: any) => (
-                item?.product && (
-                  <div key={item.id} className="bg-white p-5 rounded-2xl shadow-sm flex items-center gap-6 relative animate-in slide-in-from-left duration-300">
-                    <div className="w-28 h-28 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 border border-gray-100">
+              cartItems.map((item: any) => {
+                if (!item?.product) return null;
+
+                // ✅ ดึงราคาจาก Variant (ถ้ามี) หรือ Product หลัก
+                const basePrice = item.variant ? Number(item.variant.price) : Number(item.product.price);
+                const discountedPrice = calculateDiscountPrice(basePrice, item.product.promo);
+                
+                // ✅ เลือกว่าจะโชว์รูปของ Variant หรือรูปของ Product หลัก
+                const imageSource = (item.variant && item.variant.image) ? item.variant : item.product;
+
+                return (
+                  <div key={item.id} className="bg-white p-5 rounded-2xl shadow-sm flex items-start sm:items-center gap-4 sm:gap-6 relative animate-in slide-in-from-left duration-300 flex-col sm:flex-row">
+                    <div className="w-full sm:w-28 h-40 sm:h-28 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 border border-gray-100">
                       <img 
-                        src={getImageUrl(item.product)} 
+                        src={getImageUrl(imageSource)} 
                         alt={item.product.name}
                         className="w-full h-full object-cover" 
                       />
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 w-full">
                       <h3 className="font-bold text-gray-800 text-lg truncate">{item.product.name}</h3>
-                      <p className="text-gray-400 text-sm mb-2">{(item.product as any).category || "ทั่วไป"}</p>
+                      <p className="text-gray-400 text-sm mb-1">{(item.product as any).category || "ทั่วไป"}</p>
                       
+                      {/* ✅ แสดงคุณสมบัติของ Variant (ถ้าลูกค้าเลือกตัวเลือกมา) */}
+                      {item.variant && (
+                        <div className="flex flex-wrap items-center gap-2 mb-2 text-xs text-gray-600 bg-gray-50 p-1.5 rounded-md inline-flex border border-gray-100">
+                          {item.variant.color && <span className="flex items-center gap-1">🎨 {item.variant.color}</span>}
+                          {item.variant.color && (item.variant.material || item.variant.size) && <span className="text-gray-300">|</span>}
+                          {item.variant.material && <span>🛠️ {item.variant.material}</span>}
+                          {item.variant.material && item.variant.size && <span className="text-gray-300">|</span>}
+                          {item.variant.size && <span>📏 {item.variant.size}</span>}
+                        </div>
+                      )}
+
                       {/* ✅ แสดงราคาลดและป้ายโปรโมชัน */}
                       {item.product.promo ? (
                         <div className="mb-2 flex items-center flex-wrap gap-2">
-                           <span className="text-gray-400 line-through text-sm">฿{Number(item.product.price).toLocaleString()}</span>
+                           <span className="text-gray-400 line-through text-sm">฿{basePrice.toLocaleString()}</span>
                            <span className="font-bold text-[#D65A31] text-lg">
-                               ฿{calculateDiscountPrice(item.product.price, item.product.promo).toLocaleString()}
+                               ฿{discountedPrice.toLocaleString()}
                            </span>
                            <span className="text-[10px] text-red-600 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded font-bold">
                                ลด {item.product.promo.discountType === 'PERCENTAGE' ? `${item.product.promo.discountValue}%` : `฿${item.product.promo.discountValue}`}
                            </span>
                         </div>
                       ) : (
-                        <div className="font-bold text-[#D65A31] text-lg mb-2">฿{Number(item.product.price).toLocaleString()}</div>
+                        <div className="font-bold text-[#D65A31] text-lg mb-2">฿{basePrice.toLocaleString()}</div>
                       )}
                       
                       <div className="flex items-center gap-2 mt-2">
@@ -160,18 +180,20 @@ const Cart = () => {
 
                     </div>
                     
-                    <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl p-1 shadow-inner">
-                      <button onClick={() => updateCartItem(item.id, item.quantity - 1, Math.min(item.quantity - 1, item.installationQty || 0))} className="p-2 text-gray-400 hover:text-black transition-colors disabled:opacity-30" disabled={item.quantity <= 1}><Minus size={16}/></button>
-                      <span className="w-8 text-center font-bold text-sm">{item.quantity}</span>
-                      <button onClick={() => updateCartItem(item.id, item.quantity + 1, item.installationQty)} className="p-2 text-gray-400 hover:text-black transition-colors"><Plus size={16}/></button>
-                    </div>
+                    <div className="flex sm:flex-col items-center justify-between sm:justify-center w-full sm:w-auto gap-4 sm:gap-0 mt-4 sm:mt-0">
+                      <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl p-1 shadow-inner">
+                        <button onClick={() => updateCartItem(item.id, item.quantity - 1, Math.min(item.quantity - 1, item.installationQty || 0))} className="p-2 text-gray-400 hover:text-black transition-colors disabled:opacity-30" disabled={item.quantity <= 1}><Minus size={16}/></button>
+                        <span className="w-8 text-center font-bold text-sm">{item.quantity}</span>
+                        <button onClick={() => updateCartItem(item.id, item.quantity + 1, item.installationQty)} className="p-2 text-gray-400 hover:text-black transition-colors"><Plus size={16}/></button>
+                      </div>
 
-                    <button onClick={() => removeFromCart(item.id)} className="p-2 text-gray-300 hover:text-red-500 transition-colors ml-2">
-                      <Trash2 size={20} />
-                    </button>
+                      <button onClick={() => removeFromCart(item.id)} className="p-2 text-gray-300 hover:text-red-500 transition-colors sm:mt-2 bg-white rounded-full sm:bg-transparent shadow-sm sm:shadow-none border border-gray-100 sm:border-none">
+                        <Trash2 size={20} />
+                      </button>
+                    </div>
                   </div>
-                )
-              ))
+                );
+              })
             )}
           </div>
 
