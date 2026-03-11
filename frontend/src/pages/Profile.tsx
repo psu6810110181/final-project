@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 // เพิ่มการนำเข้า updateProfile
 import { getProfile, updateProfile } from '../services/api';
+import toast from 'react-hot-toast'; // ✅ นำเข้า toast
 
 interface UserProfile {
   id: string;
@@ -74,9 +75,10 @@ const Profile: React.FC = () => {
       // อัปเดตข้อมูลในหน้าจอใหม่หลังบันทึกเสร็จ
       await fetchProfileData();
       setIsEditing(false);
+      toast.success('บันทึกข้อมูลโปรไฟล์เรียบร้อยแล้ว'); // ✅ เพิ่มแจ้งเตือนเมื่อสำเร็จ
     } catch (error) {
       console.error('Failed to update profile:', error);
-      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง');
+      toast.error('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง'); // ✅ เปลี่ยนจาก alert
     } finally {
       setIsSaving(false);
     }

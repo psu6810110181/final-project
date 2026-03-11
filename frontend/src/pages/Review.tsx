@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Star, Send, Loader, Package, ChevronLeft, MessageSquare } from 'lucide-react';
 import * as api from '../services/api';
+import toast from 'react-hot-toast'; // ✅ นำเข้า toast
 
 // --- กำหนด Interface เพื่อแก้ปัญหาขีดแดง TypeScript ---
 interface ReviewItem {
@@ -77,7 +78,7 @@ const ReviewPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProduct || rating === 0) {
-      alert("กรุณาให้คะแนนดาวด้วยครับ");
+      toast.error("กรุณาให้คะแนนดาวด้วยครับ"); // ✅ เปลี่ยนจาก alert
       return;
     }
 
@@ -90,7 +91,7 @@ const ReviewPage = () => {
         comment
       });
       
-      alert("บันทึกรีวิวสำเร็จ ขอบคุณครับ!");
+      toast.success("บันทึกรีวิวสำเร็จ ขอบคุณครับ!"); // ✅ เปลี่ยนจาก alert
       setSelectedProduct(null); // กลับหน้าเลือกสินค้า
       setRating(0);
       setComment("");
@@ -101,7 +102,7 @@ const ReviewPage = () => {
     } catch (error: any) {
       console.error("Submit review failed", error);
       const errorMsg = error.response?.data?.message || "เกิดข้อผิดพลาดในการส่งรีวิว";
-      alert(errorMsg);
+      toast.error(errorMsg); // ✅ เปลี่ยนจาก alert
     } finally {
       setIsSubmitting(false);
     }

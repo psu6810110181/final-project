@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCart, calculateDiscountPrice } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import * as api from '../services/api';
+import toast from 'react-hot-toast'; // ✅ นำเข้า toast
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -91,11 +92,11 @@ const Cart = () => {
           window.location.href = checkoutRes.url;
         }, 100);
       } else {
-        alert("ไม่พบ URL ชำระเงิน กรุณาลองใหม่อีกครั้ง");
+        toast.error("ไม่พบ URL ชำระเงิน กรุณาลองใหม่อีกครั้ง"); // ✅ เปลี่ยนจาก alert เป็น toast
         navigate('/orders');
       }
     } catch (error: any) {
-      alert(error.response?.data?.message || "เกิดข้อผิดพลาดในการสั่งซื้อ");
+      toast.error(error.response?.data?.message || "เกิดข้อผิดพลาดในการสั่งซื้อ"); // ✅ เปลี่ยนจาก alert เป็น toast
     } finally {
       setIsProcessing(false);
     }
