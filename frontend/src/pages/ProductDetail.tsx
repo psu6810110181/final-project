@@ -257,7 +257,7 @@ const ProductDetail = () => {
               ))}
               <span className="text-gray-500 text-sm ml-2">{averageRating} ({reviews.length} รีวิว)</span>
               <span className="text-gray-300 mx-2">|</span>
-              <span className="text-sm text-gray-500">ขายแล้ว {(product as any).cartItems?.length || 0} ชิ้น</span>
+              <span className="text-sm text-gray-500">ขายแล้ว {(product as any).soldCount || 0} ชิ้น</span>
             </div>
 
             <div className="mb-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
