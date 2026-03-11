@@ -29,4 +29,3 @@ export class CartItem {
   variant: ProductVariant;
 }
   variant: ProductVariant;
-}

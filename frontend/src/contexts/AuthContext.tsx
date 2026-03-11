@@ -109,6 +109,8 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   isLoading: boolean;
+
+  setUserFromGoogle: (token: string, userData: User) => void; // ฟังก์ชันใหม่สำหรับ Google Login
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -162,6 +164,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const setUserFromGoogle = (token: string, userData: any) => {
+    const user: User = {
+      ...userData,
+      token: token,
+    };
+    setUser(user);
+    localStorage.setItem('token', token);
+    localStorage.setItem('user_data', JSON.stringify(user));
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('token');
@@ -169,7 +181,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isAuthenticated: !!user, isLoading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, setUserFromGoogle, isAuthenticated: !!user, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

@@ -79,6 +79,21 @@ const Login = () => {
             <button type="submit" className="w-full bg-[#D65A31] text-white py-3 rounded-full font-bold shadow-lg hover:bg-[#b54622] transition">
               ลงชื่อเข้าใช้
             </button>
+
+            <div className="flex items-center gap-2 w-full">
+              <hr className="flex-1 border-gray-300" />
+              <span className="text-xs text-gray-400">หรือ</span>
+              <hr className="flex-1 border-gray-300" />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => window.location.href = 'http://localhost:3000/auth/google'}
+              className="w-full flex items-center justify-center gap-2 border border-gray-300 py-3 rounded-full font-bold hover:bg-gray-50 transition text-sm"
+            >
+              <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" />
+              เข้าสู่ระบบด้วย Google
+            </button>
           </form>
 
           <div className="mt-6 flex flex-col items-center gap-2 text-xs">

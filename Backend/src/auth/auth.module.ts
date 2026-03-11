@@ -7,6 +7,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config'; // 👈 1. Import เพิ่ม
 import { JwtStrategy } from './jwt.strategy';
 import { MailerModule } from '@nestjs-modules/mailer';
+import { GoogleStrategy } from './google.strategy';
 
 @Module({
   imports: [
@@ -43,6 +44,6 @@ import { MailerModule } from '@nestjs-modules/mailer';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, GoogleStrategy],
 })
 export class AuthModule {}

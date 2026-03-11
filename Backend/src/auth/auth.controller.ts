@@ -1,4 +1,5 @@
-import { Controller, Post, Body, Param, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
@@ -29,5 +30,23 @@ export class AuthController {
     @Body('password') password: string,
   ) {
     return this.authService.resetPassword(token, password);
+  }
+
+  @Get('google')
+  @UseGuards(AuthGuard('google'))
+  async googleAuth() {}
+
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  async googleAuthCallback(@Req() req, @Res() res) {
+    try {
+      const result = await this.authService.googleLogin(req.user);
+      res.redirect(
+        `http://localhost:5173/auth/callback?token=${result.access_token}&user=${encodeURIComponent(JSON.stringify(result.user))}`
+      );
+    } catch (error) {
+      console.error('Google callback error:', error);
+      res.redirect('http://localhost:5173/login');
+    }
   }
 }
