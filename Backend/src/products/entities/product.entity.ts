@@ -23,6 +23,10 @@ export class Product {
   @Column('int', { default: 0 })
   stock: number;
 
+  // เพิ่มบรรทัดนี้ลงไปในคลาส Product
+  @Column({ type: 'int', default: 0 })
+  sold: number;
+
   @Column({ default: 'General' })
   category: string; 
 

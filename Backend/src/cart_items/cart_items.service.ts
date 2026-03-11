@@ -1,11 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull, DataSource } from 'typeorm'; 
+import { Repository, IsNull } from 'typeorm';
 import { CartItem } from './entities/cart_item.entity';
-import { CreateCartItemDto } from './dto/create-cart_item.dto'; 
+import { CreateCartItemDto } from './dto/create-cart_item.dto';
 import { User } from '../users/entities/user.entity';
 import { Product } from '../products/entities/product.entity';
-import { ProductVariant } from '../products/entities/product-variant.entity'; // ✅ Import ProductVariant
+import { ProductVariant } from '../products/entities/product-variant.entity';
 
 @Injectable()
 export class CartItemsService {
@@ -14,75 +14,72 @@ export class CartItemsService {
     private cartItemsRepository: Repository<CartItem>,
     @InjectRepository(Product)
     private productsRepository: Repository<Product>,
-    private dataSource: DataSource, // ✅ เพิ่ม DataSource สำหรับดึง Variant
+    @InjectRepository(ProductVariant)
+    private variantsRepository: Repository<ProductVariant>,
   ) {}
 
   // 1. เพิ่มของใส่ตะกร้า
-  async addToCart(createCartItemDto: CreateCartItemDto, user: User) { 
-    const { productId, quantity, installationQty, variantId } = createCartItemDto; 
+  async addToCart(createCartItemDto: CreateCartItemDto, user: User) {
+    const { productId, quantity, installationQty, variantId } = createCartItemDto;
 
     if (quantity <= 0) {
       throw new BadRequestException('จำนวนสินค้าที่เพิ่มเข้าตะกร้าต้องมากกว่า 0 ชิ้น');
     }
 
-    // 1.1 เช็คสินค้า
     const product = await this.productsRepository.findOne({ where: { id: productId } });
-    if (!product) {
-      throw new NotFoundException(`Product with ID ${productId} not found`);
-    }
+    if (!product) throw new NotFoundException(`Product with ID ${productId} not found`);
 
-    // ✅ 1.2 กำหนด Type ให้ชัดเจน ป้องกัน Error (Type 'null' is not assignable...)
     let variant: ProductVariant | null = null;
     if (variantId) {
-        variant = await this.dataSource.getRepository(ProductVariant).findOne({ where: { id: variantId } });
+      variant = await this.variantsRepository.findOne({ where: { id: variantId } });
+      if (!variant) throw new NotFoundException(`ไม่พบตัวเลือกสินค้านี้`);
     }
 
-    // 1.3 เช็คตะกร้าเดิม (ของ User คนนี้เท่านั้น) โดยแยกตาม Variant
+    // เช็คตะกร้าเดิม (ของ User คนนี้เท่านั้น) โดยแยกตาม Variant อย่างปลอดภัย
     const existingItem = await this.cartItemsRepository.findOne({
       where: {
         user: { id: user.id },
         product: { id: product.id },
-        variant: variant ? { id: variant.id } : IsNull(), // ✅ เช็ค variant ได้ปลอดภัยขึ้น
+        variant: variant ? { id: variant.id } : IsNull(),
       },
     });
 
-    // 1.4 เช็คสต็อก (อิงตาม variant หรือ สินค้าหลัก)
-    const stockToCheck = variant ? variant.stock : product.stock; 
+    // เช็คสต็อก (อิงตาม variant หรือ สินค้าหลัก)
+    const stockToCheck = variant ? variant.stock : product.stock;
     const currentQty = existingItem ? existingItem.quantity : 0;
+
     if (currentQty + quantity > stockToCheck) {
-        throw new BadRequestException(
-          `ของมีไม่พอครับ! (คลังมี: ${stockToCheck}, ตะกร้าคุณมี: ${currentQty}, จะเพิ่มอีก: ${quantity})`
-        );
+      throw new BadRequestException(
+        `ของมีไม่พอครับ! (คลังมี: ${stockToCheck}, ตะกร้าคุณมี: ${currentQty}, จะเพิ่มอีก: ${quantity})`
+      );
     }
 
-    // 1.5 บันทึก
+    // บันทึกข้อมูล
     if (existingItem) {
       existingItem.quantity += quantity;
-      // บวกจำนวนติดตั้งเพิ่มเข้าไป และบังคับว่าห้ามเกินจำนวนสินค้าทั้งหมด
       if (installationQty !== undefined) {
-         existingItem.installationQty += installationQty;
-         if (existingItem.installationQty > existingItem.quantity) {
-             existingItem.installationQty = existingItem.quantity;
-         }
+        existingItem.installationQty += installationQty;
+        if (existingItem.installationQty > existingItem.quantity) {
+          existingItem.installationQty = existingItem.quantity;
+        }
       }
       return await this.cartItemsRepository.save(existingItem);
     } else {
-      // ✅ 1.6 ถ้าไม่มี variant ให้ส่งเป็น undefined แทน null (TypeORM จะได้ไม่ Error)
       const newItem = this.cartItemsRepository.create({
         quantity,
-        installationQty: installationQty || 0, // ค่าเริ่มต้น
+        installationQty: installationQty || 0,
         product,
-        variant: variant || undefined, // ✅ แก้ Error Overload ที่นี่
+        variant: variant || undefined, // ส่ง undefined เพื่อป้องกัน TypeORM Error
         user,
       });
       return await this.cartItemsRepository.save(newItem);
     }
   }
 
-  // 2. ลบของออกจากตะกร้า 
+  // 2. ลบของออกจากตะกร้า
   async remove(id: string, userId: string) {
     const item = await this.cartItemsRepository.findOne({
-      where: { id, user: { id: userId } }, 
+      where: { id, user: { id: userId } },
     });
 
     if (!item) {
@@ -92,18 +89,22 @@ export class CartItemsService {
     return await this.cartItemsRepository.remove(item);
   }
 
-  // 3. ล้างตะกร้าทั้งหมด 
+  // 3. ล้างตะกร้าทั้งหมด
   async clearCart(userId: string) {
-    await this.cartItemsRepository.delete({ user: { id: userId } }); 
+    await this.cartItemsRepository.delete({ user: { id: userId } });
     return {
       message: 'Cart cleared successfully',
-      statusCode: 200
+      statusCode: 200,
     };
   }
 
-  // 4. แก้ไขจำนวน 
+  // 4. แก้ไขจำนวน
   async update(id: string, quantity: number | undefined, installationQty: number | undefined, userId: string) {
-    const cartItem = await this.cartItemsRepository.findOne({ where: { id }, relations: ['product', 'user', 'variant'] }); 
+    const cartItem = await this.cartItemsRepository.findOne({ 
+      where: { id }, 
+      relations: ['product', 'variant', 'user'] 
+    });
+    
     if (!cartItem) throw new NotFoundException('Item not found');
     if (cartItem.user.id !== userId) throw new ForbiddenException('คุณไม่มีสิทธิ์แก้ไขตะกร้าของคนอื่น');
 
@@ -114,15 +115,9 @@ export class CartItemsService {
       if (quantity > stockToCheck) throw new BadRequestException(`สินค้าหมด! เหลือเพียง ${stockToCheck} ชิ้น`);
       cartItem.quantity = quantity;
     }
-    
-    if (installationQty !== undefined) {
-      cartItem.installationQty = installationQty;
-    }
 
-    // เซฟตี้: ห้ามให้ติดตั้งเยอะกว่าจำนวนที่ซื้อ
-    if (cartItem.installationQty > cartItem.quantity) {
-      cartItem.installationQty = cartItem.quantity;
-    }
+    if (installationQty !== undefined) cartItem.installationQty = installationQty;
+    if (cartItem.installationQty > cartItem.quantity) cartItem.installationQty = cartItem.quantity;
 
     return await this.cartItemsRepository.save(cartItem);
   }
@@ -130,40 +125,39 @@ export class CartItemsService {
   // 5. ดึงข้อมูลตะกร้า
   async getCartSummary(userId: string) {
     const cartItems = await this.cartItemsRepository.find({
-      where: { user: { id: userId } }, 
-      relations: ['product', 'product.promotions', 'variant'], // ✅ ดึงโปรโมชันและ variant ออกมาด้วย
+      where: { user: { id: userId } },
+      relations: ['product', 'product.promotions', 'variant'],
     });
 
     let subTotal = 0;
-    let totalInstallQty = 0; 
+    let totalInstallQty = 0;
 
     const items = cartItems.map((item) => {
       let finalPrice = item.variant ? Number(item.variant.price) : Number(item.product.price);
-              
+
       // คำนวณราคาส่วนลดแสดงหน้าตะกร้า (ถ้ามี)
       if (item.product.promotions && item.product.promotions.length > 0) {
-          const activePromo = item.product.promotions.find(p => p.isActive);
-          if (activePromo) {
-              if (activePromo.discountType === 'PERCENTAGE') {
-                  finalPrice = finalPrice - (finalPrice * Number(activePromo.discountValue) / 100);
-              } else if (activePromo.discountType === 'FIXED_AMOUNT') {
-                  finalPrice = Math.max(0, finalPrice - Number(activePromo.discountValue));
-              }
+        const activePromo = item.product.promotions.find((p: any) => p.isActive);
+        if (activePromo) {
+          if (activePromo.discountType === 'PERCENTAGE') {
+            finalPrice = finalPrice - (finalPrice * Number(activePromo.discountValue) / 100);
+          } else if (activePromo.discountType === 'FIXED_AMOUNT') {
+            finalPrice = Math.max(0, finalPrice - Number(activePromo.discountValue));
           }
+        }
       }
 
       const totalLine = finalPrice * item.quantity;
       subTotal += totalLine;
-      
-      totalInstallQty += item.installationQty || 0; 
+      totalInstallQty += item.installationQty || 0;
 
       return {
-        id: item.id,            
+        id: item.id,
         quantity: item.quantity,
-        product: item.product,  
-        variant: item.variant, // ✅ ส่งข้อมูล Variant เผื่อหน้าบ้านต้องการใช้
-        installationQty: item.installationQty, 
-        total: totalLine        
+        product: item.product,
+        variant: item.variant,
+        installationQty: item.installationQty,
+        total: totalLine,
       };
     });
 
@@ -172,16 +166,20 @@ export class CartItemsService {
       totalInstallationFee = totalInstallQty >= 4 ? 990 : (totalInstallQty * 400);
     }
 
-    const shippingFee = subTotal >= 5000 ? 0 : 150; 
-    
+    // คิดค่าส่ง (ถ้าไม่มีของในตะกร้า = 0, ถ้ายอดถึง 5,000 = ส่งฟรี, ไม่ถึง = 150)
+    let shippingFee = 0;
+    if (cartItems.length > 0) {
+        shippingFee = subTotal >= 5000 ? 0 : 150;
+    }
+
     return {
       items: items,
       summary: {
         subTotal: subTotal,
         shippingFee: shippingFee,
-        installationFee: totalInstallationFee, 
-        grandTotal: subTotal + shippingFee + totalInstallationFee
-      }
+        installationFee: totalInstallationFee,
+        grandTotal: subTotal + shippingFee + totalInstallationFee,
+      },
     };
   }
 }

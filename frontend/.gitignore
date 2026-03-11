@@ -22,4 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# เพิ่มส่วนนี้ในไฟล์ .gitignore
 .env
+.env.local

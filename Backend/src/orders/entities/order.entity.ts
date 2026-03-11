@@ -54,4 +54,11 @@ export class Order {
   // ถ้าคุณต้องการให้บิลแต่ละใบเก็บที่อยู่ไว้ เผื่อ User เปลี่ยนที่อยู่ทีหลัง แนะนำให้ปลดคอมเมนต์เพิ่มอันนี้เข้าไปครับ
   @Column({ name: 'shipping_address', type: 'text', nullable: true })
   shippingAddress: string;
+
+  // Stripe payment fields
+  @Column({ name: 'stripe_session_id', type: 'varchar', length: 255, nullable: true })
+  stripeSessionId: string;
+
+  @Column({ name: 'stripe_receipt_url', type: 'text', nullable: true })
+  stripeReceiptUrl: string;
 }

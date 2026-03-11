@@ -33,7 +33,7 @@ export interface Material { id: number; name: string; }
 export interface Size { id: number; name: string; }
 
 export interface Variant {
-  id?: number;
+  id?: number; // ✅ เพิ่ม id ของ variant เผื่อต้องใช้งาน
   color: string;
   material: string;
   size: string;
@@ -237,8 +237,17 @@ export const getCart = async () => {
   return await api.get('/cart-items');
 };
 
+// ✅ แก้ไขให้รับ variantId ได้ และกรองค่าก่อนส่งให้ Backend
 export const addToCart = async (productId: string | number, quantity: number, installationQty: number = 0, variantId?: number) => {
-  return await api.post('/cart-items', { productId, quantity, installationQty, variantId });
+  // ✅ จัดเตรียมข้อมูลพื้นฐาน
+  const payload: any = { productId, quantity, installationQty };
+  
+  // ✅ ตรวจสอบว่าถ้ามี variantId จริงๆ ค่อยแนบไป (ป้องกันการส่ง null/undefined ไปให้ Backend)
+  if (variantId !== undefined && variantId !== null) {
+    payload.variantId = variantId;
+  }
+  
+  return await api.post('/cart-items', payload);
 };
 
 export const updateCartItem = async (id: number, data: { quantity?: number, installationQty?: number }) => {

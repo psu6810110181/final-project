@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Product } from '../../products/entities/product.entity';
-import { ProductVariant } from '../../products/entities/product-variant.entity';
+import { ProductVariant } from '../../products/entities/product-variant.entity'; // ✅ นำเข้า ProductVariant
 
 @Entity()
 export class CartItem {
@@ -22,7 +22,11 @@ export class CartItem {
   @ManyToOne(() => Product, (product) => product.cartItems, { onDelete: 'CASCADE' })
   product: Product;
 
-  @ManyToOne(() => ProductVariant, { nullable: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'variant_id' })
+  // ✅ เพิ่มความสัมพันธ์: ผูกกับ Variant (ตัวเลือกสินค้า)
+  // ใส่ nullable: true ไว้ เผื่อสินค้าชิ้นนั้นเป็นสินค้าเดี่ยวๆ ไม่มีตัวเลือก
+  @ManyToOne(() => ProductVariant, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'variant_id' }) // ระบุชื่อคอลัมน์ใน DB ให้ชัดเจน
+  variant: ProductVariant;
+}
   variant: ProductVariant;
 }

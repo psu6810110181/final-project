@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCart, calculateDiscountPrice } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import * as api from '../services/api';
-import toast from 'react-hot-toast'; // ✅ นำเข้า toast
+import toast from 'react-hot-toast';
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -45,17 +45,11 @@ const Cart = () => {
     setShowAddressModal(false);
   };
 
-  // ✅ แก้ให้ดึงรูปภาพของ Variant มาแสดงถ้ามี
-  const getImageUrl = (product: any, variant?: any) => {
+  // ✅ ดึงรูปภาพโดยตรวจสอบทั้งจาก Variant และ Product หลัก
+  const getImageUrl = (source: any) => {
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    
-    // ถ้ารูปแบบย่อย (Variant) มีรูปภาพของตัวเอง ให้ใช้รูปนั้นก่อน
-    if (variant && variant.image) {
-        return variant.image.startsWith('http') ? variant.image : `${baseUrl}/uploads/${variant.image}`;
-    }
-
-    if (!product) return "https://via.placeholder.com/150";
-    const raw = product.image || product.images;
+    if (!source) return "https://via.placeholder.com/150";
+    const raw = source.image || source.images || source.imageUrl;
     if (!raw) return "https://via.placeholder.com/150";
 
     let fileName = "";
@@ -70,7 +64,7 @@ const Cart = () => {
           fileName = raw;
         }
       } else {
-        fileName = raw;
+          fileName = raw;
       }
     }
 
@@ -92,11 +86,11 @@ const Cart = () => {
           window.location.href = checkoutRes.url;
         }, 100);
       } else {
-        toast.error("ไม่พบ URL ชำระเงิน กรุณาลองใหม่อีกครั้ง"); // ✅ เปลี่ยนจาก alert เป็น toast
+        toast.error("ไม่พบ URL ชำระเงิน กรุณาลองใหม่อีกครั้ง");
         navigate('/orders');
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "เกิดข้อผิดพลาดในการสั่งซื้อ"); // ✅ เปลี่ยนจาก alert เป็น toast
+      toast.error(error.response?.data?.message || "เกิดข้อผิดพลาดในการสั่งซื้อ");
     } finally {
       setIsProcessing(false);
     }
@@ -121,38 +115,53 @@ const Cart = () => {
               </div>
             ) : (
               cartItems.map((item: any) => {
-                // ✅ ดึงราคาจาก Variant (ถ้ามี) ถ้าไม่มีให้ใช้ราคาจาก Product หลัก
-                const basePrice = item.variant ? Number(item.variant.price) : Number(item.product?.price || 0);
+                if (!item?.product) return null;
 
-                return item?.product && (
-                  <div key={item.id} className="bg-white p-5 rounded-2xl shadow-sm flex items-center gap-6 relative animate-in slide-in-from-left duration-300">
-                    <div className="w-28 h-28 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 border border-gray-100">
+                // ✅ ดึงราคาจาก Variant (ถ้ามี) หรือ Product หลัก
+                const basePrice = item.variant ? Number(item.variant.price) : Number(item.product.price || 0);
+                const discountedPrice = calculateDiscountPrice(basePrice, item.product.promo);
+                
+                // ✅ เลือกว่าจะโชว์รูปของ Variant หรือรูปของ Product หลัก
+                const imageSource = (item.variant && item.variant.image) ? item.variant : item.product;
+
+                return (
+                  <div key={item.id} className="bg-white p-5 rounded-2xl shadow-sm flex items-start sm:items-center gap-4 sm:gap-6 relative animate-in slide-in-from-left duration-300 flex-col sm:flex-row">
+                    <div className="w-full sm:w-28 h-40 sm:h-28 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 border border-gray-100">
                       <img 
-                        src={getImageUrl(item.product, item.variant)} // ✅ ส่ง variant ไปหาภาพด้วย
+                        src={getImageUrl(imageSource)} 
                         alt={item.product.name}
                         className="w-full h-full object-cover" 
                       />
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 w-full">
                       <h3 className="font-bold text-gray-800 text-lg truncate">{item.product.name}</h3>
+                      <p className="text-gray-400 text-sm mb-1">{(item.product as any).category || "ทั่วไป"}</p>
                       
-                      {/* ✅ แสดงรายละเอียดตัวเลือกสินค้า (Variant) */}
-                      {item.variant && (
-                        <div className="flex flex-wrap gap-2 text-xs text-gray-500 mt-1 mb-1">
-                          {item.variant.color && <span className="bg-gray-50 px-2 py-0.5 rounded border border-gray-100">สี: {item.variant.color}</span>}
-                          {item.variant.material && <span className="bg-gray-50 px-2 py-0.5 rounded border border-gray-100">วัสดุ: {item.variant.material}</span>}
-                          {item.variant.size && <span className="bg-gray-50 px-2 py-0.5 rounded border border-gray-100">ขนาด: {item.variant.size}</span>}
-                        </div>
-                      )}
+                      {/* ✅ แสดงคุณสมบัติของสินค้า (รองรับทั้งแบบมี Variant และสินค้าหลัก) */}
+                      {(() => {
+                        const displayColor = item.variant?.color || item.product?.color || item.product?.mainColor;
+                        const displayMaterial = item.variant?.material || item.product?.material || item.product?.mainMaterial;
+                        const displaySize = item.variant?.size || item.product?.size || item.product?.mainSize;
+                        
+                        if (!displayColor && !displayMaterial && !displaySize) return null;
 
-                      <p className="text-gray-400 text-sm mb-2">{(item.product as any).category || "ทั่วไป"}</p>
-                      
+                        return (
+                          <div className="flex flex-wrap items-center gap-2 mb-2 text-xs text-gray-600 bg-gray-50 p-1.5 rounded-md inline-flex border border-gray-100">
+                            {displayColor && <span className="flex items-center gap-1">🎨 {displayColor}</span>}
+                            {displayColor && (displayMaterial || displaySize) && <span className="text-gray-300">|</span>}
+                            {displayMaterial && <span>🛠️ {displayMaterial}</span>}
+                            {displayMaterial && displaySize && <span className="text-gray-300">|</span>}
+                            {displaySize && <span>📏 {displaySize}</span>}
+                          </div>
+                        );
+                      })()}
+
+                      {/* ✅ แสดงราคาลดและป้ายโปรโมชัน */}
                       {item.product.promo ? (
                         <div className="mb-2 flex items-center flex-wrap gap-2">
-                           {/* ✅ ใช้ basePrice แทน item.product.price */}
                            <span className="text-gray-400 line-through text-sm">฿{basePrice.toLocaleString()}</span>
                            <span className="font-bold text-[#D65A31] text-lg">
-                               ฿{calculateDiscountPrice(basePrice, item.product.promo).toLocaleString()}
+                               ฿{discountedPrice.toLocaleString()}
                            </span>
                            <span className="text-[10px] text-red-600 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded font-bold">
                                ลด {item.product.promo.discountType === 'PERCENTAGE' ? `${item.product.promo.discountValue}%` : `฿${item.product.promo.discountValue}`}
@@ -162,7 +171,7 @@ const Cart = () => {
                         <div className="font-bold text-[#D65A31] text-lg mb-2">฿{basePrice.toLocaleString()}</div>
                       )}
                       
-                      {/* ✅ แก้ไข UI ปุ่มบริการติดตั้งที่ผิดพลาดให้อยู่ในแถวเดียวกัน */}
+                      {/* ✅ ปุ่มบริการติดตั้ง */}
                       <div className="flex items-center gap-2 mt-2">
                           <span className="text-xs text-[#148F96] font-bold">🔧 บริการติดตั้ง:</span>
                           <div className="flex items-center bg-white border border-gray-200 rounded-md">
@@ -174,18 +183,20 @@ const Cart = () => {
 
                     </div>
                     
-                    <div className="flex flex-col items-end gap-2">
-                        <button onClick={() => removeFromCart(item.id)} className="p-2 text-gray-300 hover:text-red-500 transition-colors">
-                            <Trash2 size={20} />
-                        </button>
-                        <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl p-1 shadow-inner mt-auto">
-                            <button onClick={() => updateCartItem(item.id, item.quantity - 1, Math.min(item.quantity - 1, item.installationQty || 0))} className="p-2 text-gray-400 hover:text-black transition-colors disabled:opacity-30" disabled={item.quantity <= 1}><Minus size={16}/></button>
-                            <span className="w-8 text-center font-bold text-sm">{item.quantity}</span>
-                            <button onClick={() => updateCartItem(item.id, item.quantity + 1, item.installationQty)} className="p-2 text-gray-400 hover:text-black transition-colors"><Plus size={16}/></button>
-                        </div>
+                    {/* ✅ ส่วนจัดการจำนวนสินค้าและปุ่มลบ (Responsive) */}
+                    <div className="flex sm:flex-col items-center justify-between sm:justify-center w-full sm:w-auto gap-4 sm:gap-0 mt-4 sm:mt-0">
+                      <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl p-1 shadow-inner">
+                        <button onClick={() => updateCartItem(item.id, item.quantity - 1, Math.min(item.quantity - 1, item.installationQty || 0))} className="p-2 text-gray-400 hover:text-black transition-colors disabled:opacity-30" disabled={item.quantity <= 1}><Minus size={16}/></button>
+                        <span className="w-8 text-center font-bold text-sm">{item.quantity}</span>
+                        <button onClick={() => updateCartItem(item.id, item.quantity + 1, item.installationQty)} className="p-2 text-gray-400 hover:text-black transition-colors"><Plus size={16}/></button>
+                      </div>
+
+                      <button onClick={() => removeFromCart(item.id)} className="p-2 text-gray-300 hover:text-red-500 transition-colors sm:mt-2 bg-white rounded-full sm:bg-transparent shadow-sm sm:shadow-none border border-gray-100 sm:border-none">
+                        <Trash2 size={20} />
+                      </button>
                     </div>
                   </div>
-                )
+                );
               })
             )}
           </div>
