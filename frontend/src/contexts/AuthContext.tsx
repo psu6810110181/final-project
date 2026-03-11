@@ -104,7 +104,7 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (credentials: any) => Promise<void>;
+  login: (credentials: any) => Promise<User>;
   register: (userData: any) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -117,14 +117,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  useEffect(() => {
+    useEffect(() => {
     const token = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user_data');
     if (token && savedUser) {
-      setUser(JSON.parse(savedUser));
+        try {
+        setUser(JSON.parse(savedUser));
+        } catch (error) {
+        console.error("Failed to parse user data", error);
+        localStorage.removeItem('user_data');
+        localStorage.removeItem('token');
+        }
     }
     setIsLoading(false);
-  }, []);
+    }, []);
 
   // --- ฟังก์ชัน Login ---
   const login = async (credentials: any) => {
@@ -138,6 +144,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(userData);
       localStorage.setItem('token', data.access_token);
       localStorage.setItem('user_data', JSON.stringify(userData));
+      return userData; // Return user data for immediate use
     } catch (error) {
       console.error("Login Failed:", error);
       throw error;

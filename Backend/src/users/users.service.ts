@@ -14,7 +14,6 @@ export class UsersService {
   ) {}
 
   // Helper function: ลบ password ออกจาก user object
-  // (ปรับให้รองรับการลบ field อื่นๆ ถ้าจำเป็นในอนาคต)
   private sanitizeUser(user: User): User {
     if (user) {
         delete (user as any).password;
@@ -23,7 +22,6 @@ export class UsersService {
   }
 
   async create(createUserDto: CreateUserDto) {
-    // 🚨 1. ตรวจสอบว่ามี username หรือ email นี้ในระบบหรือยัง
     const existingUser = await this.usersRepository.findOne({
       where: [
         { email: createUserDto.email },
@@ -31,7 +29,6 @@ export class UsersService {
       ]
     });
 
-    // 🚨 2. ถ้าเจอข้อมูลซ้ำ ให้โยน Error แจ้งเตือนแบบเจาะจง
     if (existingUser) {
       if (existingUser.email === createUserDto.email) {
         throw new ConflictException('อีเมลนี้ถูกใช้งานแล้ว กรุณาใช้อีเมลอื่น');
@@ -41,48 +38,48 @@ export class UsersService {
       }
     }
 
-    // 3. ถ้าไม่ซ้ำ ก็ดำเนินการสร้าง User ใหม่ตามปกติ
     const newUser = this.usersRepository.create(createUserDto);
-    // newUser.role = 'user'; // (ปกติ default ใน Entity จะเป็น user อยู่แล้ว)
     
     const salt = await bcrypt.genSalt();
     newUser.password = await bcrypt.hash(createUserDto.password, salt);
     
     const savedUser = await this.usersRepository.save(newUser);
-    return this.sanitizeUser(savedUser); // ✅ ส่งกลับแบบไม่มี password
+    return this.sanitizeUser(savedUser);
   }
 
   async findAll() { 
     const users = await this.usersRepository.find();
-    return users.map(user => this.sanitizeUser(user)); // ✅ ลบ password ทุกคน
+    return users.map(user => this.sanitizeUser(user));
   }
   
   async findOne(id: string) {
       const user = await this.usersRepository.findOneBy({ id });
       if (!user) throw new NotFoundException(`User not found`);
-      return this.sanitizeUser(user); // ✅ ลบ password
+      return this.sanitizeUser(user);
   }
 
-  // ใช้สำหรับ Login (ต้องการ Password) หรือเช็คภายใน
   async findOneByUsername(username: string) {
     return await this.usersRepository.findOneBy({ username });
+  }
+
+  // ✅ 1. เพิ่มฟังก์ชันหา User ด้วย Email
+  async findOneByEmail(email: string) {
+    return await this.usersRepository.findOneBy({ email });
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
     const user = await this.usersRepository.findOneBy({ id }); 
     if (!user) throw new NotFoundException('User not found');
 
-    // ถ้ามีการแก้รหัสผ่าน ต้อง Hash ใหม่ก่อน
     if (updateUserDto.password) {
       const salt = await bcrypt.genSalt();
       updateUserDto.password = await bcrypt.hash(updateUserDto.password, salt);
     }
 
-    // รวมร่างข้อมูล
     Object.assign(user, updateUserDto);
     
     const updatedUser = await this.usersRepository.save(user);
-    return this.sanitizeUser(updatedUser); // ✅ ส่งกลับแบบไม่มี password
+    return this.sanitizeUser(updatedUser);
   }
 
   async updateRole(id: string, role: string) {
@@ -100,19 +97,47 @@ export class UsersService {
     return await this.usersRepository.remove(user);
   }
 
-  // ✅ ฟังก์ชันอัปเดตรูปโปรไฟล์ (ที่คุณต้องการเพิ่ม)
   async updateProfileImage(userId: string, filename: string) {
-    // เรียก findOneBy ID ตรงๆ เพื่อให้ได้ Object เต็ม (รวม Password) มาก่อนบันทึก
-    // (ถ้าใช้ this.findOne มันจะลบ password ออก ทำให้ตอน save อาจมีปัญหาข้อมูลหาย)
     const user = await this.usersRepository.findOneBy({ id: userId });
     
     if (!user) {
         throw new NotFoundException('User not found');
     }
 
-    user.userImage = filename; // ✅ บันทึกชื่อไฟล์ลง DB
+    user.userImage = filename;
     
     const savedUser = await this.usersRepository.save(user);
-    return this.sanitizeUser(savedUser); // ลบ password ก่อนส่งกลับ
+    return this.sanitizeUser(savedUser);
+  }
+
+  // ✅ 2. เพิ่มฟังก์ชันบันทึก Token สำหรับรีเซ็ตรหัสผ่าน
+  async updateResetToken(id: string, token: string, expires: Date) {
+    const user = await this.usersRepository.findOneBy({ id });
+    if (!user) throw new NotFoundException('User not found');
+
+    // ต้องแน่ใจว่าใน Entity มี 2 column นี้นะครับ
+    (user as any).resetPasswordToken = token;
+    (user as any).resetPasswordExpires = expires;
+
+    await this.usersRepository.save(user);
+  }
+
+  // ✅ 3. เพิ่มฟังก์ชันค้นหา User จาก Token
+  async findByResetToken(token: string) {
+    return await this.usersRepository.findOne({
+      where: { resetPasswordToken: token } as any
+    });
+  }
+
+  // ✅ 4. เพิ่มฟังก์ชันอัปเดตรหัสผ่านใหม่และลบ Token ทิ้ง
+  async updatePasswordAndClearToken(id: string, hashedPassword: string) {
+    const user = await this.usersRepository.findOneBy({ id });
+    if (!user) throw new NotFoundException('User not found');
+
+    user.password = hashedPassword;
+    (user as any).resetPasswordToken = null;
+    (user as any).resetPasswordExpires = null;
+
+    await this.usersRepository.save(user);
   }
 }
