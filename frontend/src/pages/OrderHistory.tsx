@@ -1,6 +1,5 @@
 ﻿import { useState, useEffect } from 'react';
 import * as api from '../services/api';
-// ✅ นำเข้า Banknote (ไอคอนรูปเงิน) เพิ่มเข้ามา
 import { Package, Calendar, ChevronRight, Clock, CheckCircle, XCircle, MapPin, X, Truck, CreditCard, Banknote } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -42,9 +41,7 @@ const OrderHistory = () => {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('success') === 'true') {
-      // Refresh orders to get updated status after payment
       fetchOrders();
-      // Clean up the URL
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
@@ -178,7 +175,6 @@ const OrderHistory = () => {
                         </span>
                      </div>
                      
-                     {/* ✅ ตรวจสอบสถานะ: ถ้าจ่ายแล้วโชว์รถบรรทุก ถ้ายังไม่จ่ายโชว์ไอคอนเงินรอชำระ */}
                      {statusLower !== 'cancelled' && (
                         isPaidOrBeyond ? (
                           <div className="text-sm font-medium text-[#148F96] flex items-center gap-1.5 bg-teal-50/50 w-fit px-3 py-1.5 rounded-lg">
@@ -260,10 +256,28 @@ const OrderHistory = () => {
                 <p className="text-center text-gray-400 text-sm py-4">ไม่พบข้อมูลสินค้าในออเดอร์นี้</p>
               ) : (
                 <div className="space-y-4">
-                  {selectedOrder.items.map((item, index) => (
+                  {selectedOrder.items.map((item: any, index: number) => (
                     <div key={index} className="flex justify-between items-start gap-4">
                       <div className="flex-1">
                         <p className="font-semibold text-sm text-gray-800">{item.product?.name || 'สินค้าไม่ทราบชื่อ'}</p>
+                        
+                        {/* ✅ แสดงคุณสมบัติของสินค้า (รองรับทั้งแบบมี Variant และสินค้าหลัก) */}
+                        {(() => {
+                          const displayColor = item.variant?.color || item.product?.color || item.product?.mainColor;
+                          const displayMaterial = item.variant?.material || item.product?.material || item.product?.mainMaterial;
+                          const displaySize = item.variant?.size || item.product?.size || item.product?.mainSize;
+                          
+                          if (!displayColor && !displayMaterial && !displaySize) return null;
+
+                          return (
+                            <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-1">
+                              <span className="bg-gray-100 px-1.5 py-0.5 rounded">
+                                {[displayColor, displayMaterial, displaySize].filter(Boolean).join(' | ')}
+                              </span>
+                            </div>
+                          );
+                        })()}
+
                         <div className="text-xs text-gray-500 mt-1 flex gap-3">
                            <span>จำนวน: {item.quantity} ชิ้น</span>
                            {(item.installationQty ?? 0) > 0 && (
@@ -282,7 +296,6 @@ const OrderHistory = () => {
 
             <div className="p-6 border-t border-gray-100 bg-gray-50 space-y-3 flex-shrink-0">
               
-              {/* ✅ แสดงสถานะใน Modal ให้ตรงกันกับด้านนอก */}
               {selectedOrder.status.toLowerCase() !== 'cancelled' && (
                 ['paid', 'shipped', 'completed'].includes(selectedOrder.status.toLowerCase()) ? (
                   <div className="flex justify-between items-center text-sm font-medium text-[#148F96] bg-teal-50/70 p-2 rounded-lg mb-3">
@@ -317,7 +330,6 @@ const OrderHistory = () => {
                 </span>
               </div>
 
-              {/* ปุ่มชำระเงินต่อ ภายใน Modal */}
               {(selectedOrder.status === 'PENDING' || selectedOrder.status.toLowerCase() === 'pending') && (
                 <div className="pt-4 mt-2 border-t border-gray-200">
                    <button 
@@ -339,4 +351,3 @@ const OrderHistory = () => {
 };
 
 export default OrderHistory;
-

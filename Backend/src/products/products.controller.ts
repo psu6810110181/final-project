@@ -1,4 +1,3 @@
-// Backend/src/products/products.controller.ts
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFiles } from '@nestjs/common';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -20,30 +19,32 @@ export class ProductsController {
     }),
   }))
   create(@Body() body: any, @UploadedFiles() files: Array<Express.Multer.File>) {
-    // 📌 1. จัดการภาพหลัก ค้นหาไฟล์ที่ส่งมาด้วยชื่อ fieldname ว่า 'image'
     const mainImage = files?.find(f => f.fieldname === 'image');
     if (mainImage) body.image = mainImage.filename;
     
-    // ✅ แปลงข้อมูลที่ถูก FormData ทำเป็น String ให้กลับมาเป็นชนิดเดิม
-    if (body.price) body.price = Number(body.price);
-    if (body.stock) body.stock = Number(body.stock);
+    // ✅ แปลงค่าให้เป็นตัวเลข (เพิ่ม mainStock เข้ามาด้วย)
+    if (body.price !== undefined) body.price = Number(body.price);
+    if (body.stock !== undefined) body.stock = Number(body.stock);
+    if (body.mainStock !== undefined) body.mainStock = Number(body.mainStock); // 👈 เพิ่มบรรทัดนี้
+    
     if (typeof body.features === 'string') body.features = JSON.parse(body.features);
     if (typeof body.variants === 'string') {
         body.variants = JSON.parse(body.variants);
         
-        // 📌 2. จัดการภาพตัวเลือก (Variants) นำชื่อไฟล์ใส่กลับเข้าไปใน Object ของ variant ตาม index
         if (Array.isArray(body.variants)) {
             body.variants = body.variants.map((variant, index) => {
                 const variantImage = files?.find(f => f.fieldname === `variantImage_${index}`);
                 if (variantImage) {
                     variant.image = variantImage.filename;
                 }
+                // แปลงสต็อกของ variant เป็นตัวเลขเผื่อไว้ด้วย
+                if (variant.stock !== undefined) variant.stock = Number(variant.stock);
+                if (variant.price !== undefined) variant.price = Number(variant.price);
                 return variant;
             });
         }
     }
 
-    // โยนข้อมูลที่แปลงเสร็จแล้วเข้า Service (ซึ่งจะตรงกับโครงสร้าง CreateProductDto พอดี)
     return this.productsService.create(body);
   }
 
@@ -58,24 +59,26 @@ export class ProductsController {
     }),
   }))
   update(@Param('id') id: string, @Body() body: any, @UploadedFiles() files: Array<Express.Multer.File>) {
-    // 📌 1. จัดการภาพหลัก ค้นหาไฟล์ที่ส่งมาด้วยชื่อ fieldname ว่า 'image'
     const mainImage = files?.find(f => f.fieldname === 'image');
     if (mainImage) body.image = mainImage.filename;
 
-    // ✅ แปลงข้อมูลที่ถูก FormData ทำเป็น String ให้กลับมาเป็นชนิดเดิม
-    if (body.price) body.price = Number(body.price);
-    if (body.stock) body.stock = Number(body.stock);
+    // ✅ แปลงค่าให้เป็นตัวเลข (เพิ่ม mainStock เข้ามาด้วย)
+    if (body.price !== undefined) body.price = Number(body.price);
+    if (body.stock !== undefined) body.stock = Number(body.stock);
+    if (body.mainStock !== undefined) body.mainStock = Number(body.mainStock); // 👈 เพิ่มบรรทัดนี้
+
     if (typeof body.features === 'string') body.features = JSON.parse(body.features);
     if (typeof body.variants === 'string') {
         body.variants = JSON.parse(body.variants);
         
-        // 📌 2. จัดการภาพตัวเลือก (Variants) นำชื่อไฟล์ใส่กลับเข้าไปใน Object ของ variant ตาม index
         if (Array.isArray(body.variants)) {
             body.variants = body.variants.map((variant, index) => {
                 const variantImage = files?.find(f => f.fieldname === `variantImage_${index}`);
                 if (variantImage) {
                     variant.image = variantImage.filename;
                 }
+                if (variant.stock !== undefined) variant.stock = Number(variant.stock);
+                if (variant.price !== undefined) variant.price = Number(variant.price);
                 return variant;
             });
         }

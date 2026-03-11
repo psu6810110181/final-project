@@ -5,8 +5,24 @@ import { Order } from './entities/order.entity';
 import { OrderItem } from '../order_items/entities/order_item.entity';
 import { CartItem } from '../cart_items/entities/cart_item.entity';
 import { Product } from '../products/entities/product.entity';
+import { ProductVariant } from '../products/entities/product-variant.entity'; 
 import { User } from '../users/entities/user.entity';
 import Stripe from 'stripe'; 
+
+function getDiscountedPrice(product: any, variantPrice?: number): number {
+  let price = variantPrice ? Number(variantPrice) : Number(product.price);
+  if (product.promotions && product.promotions.length > 0) {
+    const activePromo = product.promotions.find((p: any) => p.isActive);
+    if (activePromo) {
+      if (activePromo.discountType === 'PERCENTAGE') {
+        price = price - (price * (activePromo.discountValue / 100));
+      } else if (activePromo.discountType === 'FIXED_AMOUNT') {
+        price = price - activePromo.discountValue;
+      }
+    }
+  }
+  return Math.max(0, price);
+}
 
 @Injectable()
 export class OrdersService {
@@ -15,14 +31,29 @@ export class OrdersService {
   constructor(
     @InjectRepository(Order) private ordersRepository: Repository<Order>,
     @InjectRepository(Product) private productsRepository: Repository<Product>,
+    @InjectRepository(ProductVariant) private variantsRepository: Repository<ProductVariant>, 
     @InjectRepository(CartItem) private cartItemsRepository: Repository<CartItem>,
     private dataSource: DataSource,
   ) {
-    // ✅ เติม as any เพื่อไม่ให้ TypeScript แจ้ง Error เรื่องเวอร์ชัน
     this.stripe = new Stripe(String(process.env.STRIPE_SECRET_KEY), { apiVersion: '2026-02-25.clover' as any });
   }
 
-  // ✅ ฟังก์ชันช่วยสร้างลิงก์จ่ายเงิน Stripe (ตั้งค่ากลับไปที่หน้า /orders เรียบร้อยแล้ว)
+  // ✅ เพิ่มฟังก์ชันช่วยคำนวณราคาล่าสุดสำหรับออเดอร์ PENDING เพื่อส่งไปแสดงผลให้ถูกต้องทันที
+  private syncPendingOrderPriceForDisplay(order: Order) {
+    if (order.status !== 'PENDING') return;
+
+    let totalAmountProduct = 0;
+    for (const item of order.items) {
+      const currentPrice = getDiscountedPrice(item.product, item.variant ? item.variant.price : undefined);
+      // แอบเปลี่ยนค่าใน Memory (ยังไม่เซฟลง DB) เพื่อส่งกลับไปให้ Frontend โชว์ของใหม่ล่าสุด
+      item.priceAtPurchase = currentPrice; 
+      totalAmountProduct += currentPrice * item.quantity;
+    }
+    
+    order.totalAmountProduct = totalAmountProduct;
+    order.totalAmount = totalAmountProduct + Number(order.totalAmountInstallation) + 150;
+  }
+
   async createStripeSession(orderId: string, totalAmount: number, userId: string) {
     const frontendUrl = process.env.FRONTEND_URL;
     return await this.stripe.checkout.sessions.create({
@@ -42,10 +73,10 @@ export class OrdersService {
     });
   }
 
-  // 1. Checkout (สร้างออเดอร์ ลบตะกร้า แต่ ❌ ยังไม่ตัดสต็อก)
   async checkout(user: User, address: string) {
     const cartItems = await this.cartItemsRepository.find({
-      where: { user: { id: user.id } }, relations: ['product'],
+      where: { user: { id: user.id } }, 
+      relations: ['product', 'product.promotions', 'variant'], 
     });
 
     if (cartItems.length === 0) throw new BadRequestException('ไม่มีสินค้าในตะกร้า');
@@ -59,10 +90,13 @@ export class OrdersService {
       let totalInstallQty = 0; 
 
       for (const item of cartItems) {
-        if (item.product.stock < item.quantity) {
+        const stockToCheck = item.variant ? item.variant.stock : (item.product.mainStock ?? item.product.stock);
+        if (stockToCheck < item.quantity) {
           throw new BadRequestException(`สินค้า ${item.product.name} เหลือไม่พอ`);
         }
-        totalAmountProduct += Number(item.product.price) * item.quantity;
+        
+        const finalPrice = getDiscountedPrice(item.product, item.variant ? item.variant.price : undefined);
+        totalAmountProduct += finalPrice * item.quantity;
         totalInstallQty += item.installationQty || 0; 
       }
 
@@ -76,11 +110,15 @@ export class OrdersService {
       });
       const savedOrder = await queryRunner.manager.save(order);
 
-      // สร้าง Order Items (ไม่ทำ -= item.quantity ตรงนี้แล้ว)
       for (const item of cartItems) {
+        const finalPrice = getDiscountedPrice(item.product, item.variant ? item.variant.price : undefined);
         const orderItem = queryRunner.manager.create(OrderItem, {
-          order: savedOrder, product: item.product, quantity: item.quantity,
-          priceAtPurchase: item.product.price, installationQty: item.installationQty || 0 
+          order: savedOrder, 
+          product: item.product, 
+          variant: item.variant, 
+          quantity: item.quantity,
+          priceAtPurchase: finalPrice, 
+          installationQty: item.installationQty || 0 
         });
         await queryRunner.manager.save(orderItem);
       }
@@ -98,27 +136,62 @@ export class OrdersService {
     }
   }
 
-  // 2. ดูรายละเอียด Order
+  async retryPayment(orderId: string, userId: string) {
+    const order = await this.ordersRepository.findOne({
+      where: { id: orderId },
+      relations: ['items', 'items.product', 'items.product.promotions', 'items.variant', 'user'], 
+    });
+
+    if (!order) throw new NotFoundException('ไม่พบคำสั่งซื้อ');
+    if (order.user.id !== userId) throw new ForbiddenException('ไม่มีสิทธิ์เข้าถึง');
+    if (order.status !== 'PENDING') throw new BadRequestException('ออเดอร์นี้ไม่ได้อยู่ในสถานะรอชำระเงิน');
+
+    let totalAmountProduct = 0;
+    for (const item of order.items) {
+      const currentPrice = getDiscountedPrice(item.product, item.variant ? item.variant.price : undefined);
+      item.priceAtPurchase = currentPrice;
+      totalAmountProduct += currentPrice * item.quantity;
+      await this.dataSource.getRepository(OrderItem).save(item); // บันทึกราคาใหม่ลง DB จริงๆ ตอนกดชำระเงิน
+    }
+
+    order.totalAmountProduct = totalAmountProduct;
+    order.totalAmount = totalAmountProduct + Number(order.totalAmountInstallation) + 150;
+    const updatedOrder = await this.ordersRepository.save(order);
+
+    const session = await this.createStripeSession(updatedOrder.id, updatedOrder.totalAmount, userId);
+    return { url: session.url };
+  }
+
   async findOne(orderId: string, userId: string, role: string) {
     const order = await this.ordersRepository.findOne({
-      where: { id: orderId }, relations: ['items', 'items.product', 'user'],
+      where: { id: orderId }, 
+      relations: ['items', 'items.product', 'items.product.promotions', 'items.variant', 'user'], // ✅ เพิ่มดึงโปรโมชั่นมาด้วย
     });
     if (!order) throw new NotFoundException('ไม่พบคำสั่งซื้อ');
     if (role !== 'admin' && order.user.id !== userId) throw new ForbiddenException('ไม่มีสิทธิ์เข้าถึง');
+    
+    // ✅ อัปเดตราคาใหม่ให้ตรงกับปัจจุบันก่อนส่งกลับไปแสดงผล
+    this.syncPendingOrderPriceForDisplay(order);
     return order;
   }
 
-  // 3. ดูประวัติการสั่งซื้อ
   async findMyOrders(userId: string) {
-    return this.ordersRepository.find({
+    const orders = await this.ordersRepository.find({
       where: { user: { id: userId } },
-      relations: ['items', 'items.product', 'reviews', 'reviews.product'],
+      relations: ['items', 'items.product', 'items.product.promotions', 'items.variant', 'reviews', 'reviews.product'], // ✅
       order: { orderDate: 'DESC' }
     });
+    
+    // ✅ วนลูปอัปเดตราคา PENDING ก่อนส่งกลับไปโชว์
+    orders.forEach(order => this.syncPendingOrderPriceForDisplay(order));
+    return orders;
   }
 
-  // 4. ดูออเดอร์ทั้งหมดในระบบ
   async findAll() {
+<<<<<<< backend
+    const orders = await this.ordersRepository.find({
+      relations: ['user', 'items', 'items.product', 'items.product.promotions', 'items.variant'], order: { orderDate: 'DESC' } // ✅
+=======
     return this.ordersRepository.find({
       relations: ['user', 'items', 'items.product'], 
       select: {
@@ -152,32 +225,58 @@ export class OrdersService {
         }
       },
       order: { orderDate: 'DESC' }
+>>>>>>> develop
     });
+
+    // ✅ วนลูปอัปเดตราคา PENDING ก่อนส่งกลับไปให้แอดมินดู
+    orders.forEach(order => this.syncPendingOrderPriceForDisplay(order));
+    return orders;
   }
 
-  // 5. อัปเดตสถานะ (✅ ตัดสต็อกเมื่อเป็น PAID ที่นี่!)
+ // เปลี่ยนโค้ดในช่วงฟังก์ชัน updateStatus ให้เป็นแบบนี้ครับ
+  // 5. อัปเดตสถานะ (แยกการตัดสต็อกและบันทึกยอดขาย 100%)
   async updateStatus(orderId: string, status: string) {
     const order = await this.ordersRepository.findOne({
-      where: { id: orderId }, relations: ['items', 'items.product'] 
+      where: { id: orderId }, relations: ['items', 'items.product', 'items.variant'] 
     });
 
     if (!order) throw new NotFoundException('ไม่พบคำสั่งซื้อ');
 
-    // ถ้าเพิ่งจ่ายเงินสำเร็จ ให้ตัดสต็อกเลย
     if (status === 'PAID' && order.status !== 'PAID') {
       for (const item of order.items) {
-        const product = item.product;
-        product.stock -= item.quantity; 
-        await this.productsRepository.save(product);
+        if (item.variant) {
+          // ✅ ซื้อตัวเลือก: หักสต็อกและบวกยอดขาย "เฉพาะตัวเลือกนั้น" 
+          item.variant.stock -= item.quantity; 
+          item.variant.sold = (item.variant.sold || 0) + item.quantity; 
+          await this.variantsRepository.save(item.variant);
+        } else {
+          // ✅ ซื้อสินค้าหลัก: หักสต็อกและบวกยอดขาย "เฉพาะสินค้าหลัก"
+          item.product.stock -= item.quantity; 
+          item.product.sold = (item.product.sold || 0) + item.quantity; 
+          if (item.product.mainStock !== null && item.product.mainStock !== undefined) {
+             item.product.mainStock -= item.quantity;
+          }
+          await this.productsRepository.save(item.product);
+        }
       }
     }
 
-    // ถ้ากดยกเลิกและ "เคยจ่ายเงิน(หักสต็อกไปแล้ว)" ค่อยคืนสต็อก
     if (status === 'CANCELLED' && order.status === 'PAID') {
       for (const item of order.items) {
-        const product = item.product;
-        product.stock += item.quantity; 
-        await this.productsRepository.save(product);
+        if (item.variant) {
+          // ✅ คืนสต็อกและหักยอดขาย "เฉพาะตัวเลือกนั้น"
+          item.variant.stock += item.quantity; 
+          item.variant.sold = Math.max(0, (item.variant.sold || 0) - item.quantity); 
+          await this.variantsRepository.save(item.variant);
+        } else {
+          // ✅ คืนสต็อกและหักยอดขาย "เฉพาะสินค้าหลัก"
+          item.product.stock += item.quantity; 
+          item.product.sold = Math.max(0, (item.product.sold || 0) - item.quantity); 
+          if (item.product.mainStock !== null && item.product.mainStock !== undefined) {
+             item.product.mainStock += item.quantity;
+          }
+          await this.productsRepository.save(item.product);
+        }
       }
     }
 
@@ -185,7 +284,6 @@ export class OrdersService {
     return this.ordersRepository.save(order);
   }
 
-  // 6. ยกเลิกออเดอร์โดยผู้ใช้งาน (สถานะ PENDING = ❌ ไม่ต้องคืนสต็อก เพราะไม่ได้หักแต่แรก)
   async cancelMyOrder(orderId: string, userId: string) {
     const order = await this.ordersRepository.findOne({
       where: { id: orderId }, relations: ['user', 'items', 'items.product'],
@@ -195,13 +293,11 @@ export class OrdersService {
     if (order.user.id !== userId) throw new ForbiddenException('ไม่มีสิทธิ์เข้าถึง');
     if (order.status !== 'PENDING') throw new BadRequestException('สถานะนี้ไม่สามารถยกเลิกได้');
 
-    // ไม่ต้องมี loop คืนสต็อกแล้ว!
     order.status = 'CANCELLED';
     await this.ordersRepository.save(order);
     return { message: 'ยกเลิกคำสั่งซื้อสำเร็จ' };
   }
 
-  // 7. ลบออเดอร์
   async removeOrder(orderId: string) {
     const order = await this.ordersRepository.findOne({ where: { id: orderId }, relations: ['items'] });
     if (!order) throw new NotFoundException('ไม่พบคำสั่งซื้อ');

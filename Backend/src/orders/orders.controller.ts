@@ -11,7 +11,8 @@ export class OrdersController {
   private stripe: Stripe;
 
   constructor(private readonly ordersService: OrdersService) {
-    this.stripe = new Stripe(String(process.env.STRIPE_SECRET_KEY), { apiVersion: '2026-02-25.clover' });
+    // ✅ เติม as any กัน Type Error แบบเดียวกับใน Service
+    this.stripe = new Stripe(String(process.env.STRIPE_SECRET_KEY), { apiVersion: '2026-02-25.clover' as any });
   }
 
   @Post('checkout')
@@ -20,15 +21,12 @@ export class OrdersController {
     return this.ordersService.checkout(req.user, address);
   }
 
-  // ✅ ฟังก์ชันใหม่! สร้างลิงก์จ่ายเงินต่อ
+  // ✅ แก้ไขฟังก์ชันชำระเงินต่อ ให้เรียก Service ที่จะไปอัปเดตราคาโปรโมชั่นก่อน
   @Post(':id/retry-payment')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   async retryPayment(@Param('id') id: string, @Req() req) {
-    const order = await this.ordersService.findOne(id, req.user.id, req.user.role);
-    if (order.status !== 'PENDING') throw new Error('ออเดอร์นี้ชำระเงินไปแล้วหรือถูกยกเลิก');
-    
-    const session = await this.ordersService.createStripeSession(order.id, Number(order.totalAmount), req.user.id);
-    return { url: session.url };
+    // โยนไปให้ Service จัดการอัปเดตราคาและขอ URL ใหม่ให้เลย
+    return this.ordersService.retryPayment(id, req.user.id);
   }
 
   @Get('my-orders')
@@ -47,7 +45,6 @@ export class OrdersController {
   async stripeWebhook(@Req() req: RawBodyRequest<Request>, @Res() res: Response, @Headers('stripe-signature') signature: string) {    
     let event;
     try {
-      // ✅ ใช้ req.rawBody ตามที่ NestJS ส่งมา
       event = this.stripe.webhooks.constructEvent(
         req.rawBody as Buffer, 
         signature,

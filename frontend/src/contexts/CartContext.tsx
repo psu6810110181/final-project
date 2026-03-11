@@ -1,7 +1,7 @@
 // frontend/src/contexts/CartContext.tsx
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import * as api from '../services/api'; 
-import type { Promotion } from '../services/api'; // ✅ นำเข้า Type Promotion
+import type { Promotion, Variant } from '../services/api'; // ✅ นำเข้า Variant ด้วย
 import toast from 'react-hot-toast';
 
 // ✅ ฟังก์ชันคำนวณราคาส่วนลด (ใช้ร่วมกัน)
@@ -16,6 +16,7 @@ export interface CartItem {
   id: number; 
   quantity: number;
   installationQty?: number; 
+  variant?: Variant; // ✅ เพิ่ม variant มารองรับระบบตัวเลือกสินค้า
   product: {
     id: string;   
     name: string;
@@ -23,13 +24,14 @@ export interface CartItem {
     description?: string;
     images: string[] | string; 
     stock: number;
-    promo?: Promotion; // ✅ เพิ่มเพื่อเก็บข้อมูลโปรโมชันของสินค้านั้นๆ
+    promo?: Promotion; 
   };
 }
 
 interface CartContextType {
   cartItems: CartItem[];
-  addToCart: (productId: string, quantity: number, installationQty?: number) => Promise<void>;
+  // ✅ เพิ่ม variantId เข้าไปที่นี่
+  addToCart: (productId: string, quantity: number, installationQty?: number, variantId?: number) => Promise<void>;
   removeFromCart: (id: number) => Promise<void>;
   updateCartItem: (id: number, quantity?: number, installationQty?: number) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -55,10 +57,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       setIsLoading(true);
-      // ✅ ดึงข้อมูลตะกร้า และ โปรโมชัน มาพร้อมๆ กัน
       const [cartRes, promoData] = await Promise.all([
           api.getCart(),
-          api.getAllPromotions().catch(() => []) // ดัก Error ไว้เผื่อดึงโปรโมชันไม่สำเร็จ
+          api.getAllPromotions().catch(() => []) 
       ]);
 
       let fetchedItems: CartItem[] = [];
@@ -70,7 +71,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
          fetchedItems = cartRes.data;
       }
 
-      // ✅ Map ข้อมูลโปรโมชัน (ลอจิกเดียวกับหน้า Home)
       const now = new Date();
       const promoMap = new Map<string, Promotion>();
       promoData.forEach((promo: Promotion) => {
@@ -84,7 +84,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           }
       });
 
-      // ✅ ยัดโปรโมชันใส่เข้าไปใน Product แต่ละตัวในตะกร้า
       const mappedItems = fetchedItems.map(item => {
           if (item.product) {
               item.product.promo = promoMap.get(item.product.id);
@@ -92,7 +91,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           return item;
       });
 
-      // เรียงลำดับตามชื่อ
       const sortedItems = mappedItems.sort((a, b) => {
           const nameA = a.product?.name || '';
           const nameB = b.product?.name || '';
@@ -113,14 +111,20 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     fetchCart();
   }, []);
 
-  const addToCart = async (productId: string, quantity: number, installationQty: number = 0) => {
+  // ✅ รับ variantId เข้ามาและส่งต่อให้ api.addToCart
+  const addToCart = async (productId: string, quantity: number, installationQty: number = 0, variantId?: number) => {
     try {
-      await api.addToCart(productId, quantity, installationQty);
+      await api.addToCart(productId, quantity, installationQty, variantId);
       toast.success('เพิ่มลงตะกร้าแล้ว!'); 
       await fetchCart(); 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Add to cart failed:', error);
-      toast.error('เกิดข้อผิดพลาดในการเพิ่มสินค้า'); 
+      
+      // ✅ ดึงข้อความ Error จริงๆ จาก Backend มาแสดง แทนคำว่า "เกิดข้อผิดพลาด..."
+      const backendError = error.response?.data?.message;
+      const errorMessage = Array.isArray(backendError) ? backendError[0] : (backendError || 'เกิดข้อผิดพลาดในการเพิ่มสินค้า');
+      
+      toast.error(`เพิ่มไม่สำเร็จ: ${errorMessage}`); 
       throw error; 
     }
   };
@@ -154,12 +158,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const safeCartItems = Array.isArray(cartItems) ? cartItems : [];
 
-  // ✅ คำนวณยอดรวม (cartTotal) โดยใช้ราคาที่หักส่วนลดแล้ว (ถ้ามี)
   const cartTotal = safeCartItems.reduce((total, item) => {
     if (!item || !item.product) return total; 
     
-    // ใช้ฟังก์ชันคำนวณส่วนลด
-    const finalPrice = calculateDiscountPrice(item.product.price, item.product.promo);
+    // ✅ ถ้ารายการนั้นซื้อ Variant ให้ใช้ราคา Variant ถ้าไม่มีก็ใช้ราคา Product หลัก
+    const basePrice = item.variant ? item.variant.price : item.product.price;
+    const finalPrice = calculateDiscountPrice(basePrice, item.product.promo);
     const quantity = Number(item.quantity) || 0;
     
     return total + (finalPrice * quantity);
