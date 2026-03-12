@@ -64,6 +64,17 @@ export class PromotionsService {
   async create(createPromotionDto: any): Promise<Promotion> {
     const { productIds, ...promotionData } = createPromotionDto;
     
+    // Validate percentage discount minimum and maximum
+    if (promotionData.discountType === 'PERCENTAGE') {
+      const discountValue = Number(promotionData.discountValue);
+      if (discountValue < 10) {
+        throw new ConflictException('ส่วนลดขั้นต่ำสำหรับเปอร์เซ็นต์คือ 10%');
+      }
+      if (discountValue > 90) {
+        throw new ConflictException('ส่วนลดสูงสุดสำหรับเปอร์เซ็นต์คือ 90%');
+      }
+    }
+    
     // Check if this is a seasonal promotion (isFlashSale = false)
     if (promotionData.isFlashSale === false) {
       // Check for existing active seasonal promotions
@@ -100,6 +111,17 @@ export class PromotionsService {
 
   async update(id: string, updatePromotionDto: any): Promise<Promotion> {
     const { productIds, ...promotionData } = updatePromotionDto;
+    
+    // Validate percentage discount minimum and maximum
+    if (promotionData.discountType === 'PERCENTAGE') {
+      const discountValue = Number(promotionData.discountValue);
+      if (discountValue < 10) {
+        throw new ConflictException('ส่วนลดขั้นต่ำสำหรับเปอร์เซ็นต์คือ 10%');
+      }
+      if (discountValue > 90) {
+        throw new ConflictException('ส่วนลดสูงสุดสำหรับเปอร์เซ็นต์คือ 90%');
+      }
+    }
     
     const promotion = await this.findOne(id);
     Object.assign(promotion, promotionData);

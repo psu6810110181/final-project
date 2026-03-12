@@ -366,7 +366,6 @@ const PromotionManager: React.FC = () => {
                 />
               ) : (
                 <div>
-                  {console.log('Seasonal dropdown - isFlashSale:', formData.isFlashSale, 'seasonOptions:', seasonOptions)}
                   <select
                     value={formData.season}
                     onChange={(e) => {
