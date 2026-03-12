@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
@@ -45,6 +45,56 @@ export class UsersService {
     
     const savedUser = await this.usersRepository.save(newUser);
     return this.sanitizeUser(savedUser);
+  }
+
+  // ---------------------------------------------------------
+  // 📧 Logic สำหรับขอเปลี่ยน Email
+  // ---------------------------------------------------------
+  async requestEmailChange(userId: string, currentPassword: string, newEmail: string) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('ไม่พบผู้ใช้งาน');
+
+    // ตรวจสอบรหัสผ่านปัจจุบัน
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isPasswordValid) {
+      throw new BadRequestException('รหัสผ่านปัจจุบันไม่ถูกต้อง');
+    }
+
+    // ตรวจสอบว่า Email ใหม่ซ้ำกับในระบบไหม
+    const existingEmail = await this.usersRepository.findOne({ where: { email: newEmail } });
+    if (existingEmail) {
+      throw new BadRequestException('อีเมลนี้มีผู้ใช้งานแล้ว');
+    }
+
+    // *จำลองการเปลี่ยนอีเมล (ในอนาคตอาจจะเพิ่มระบบส่งอีเมลยืนยัน)*
+    user.email = newEmail;
+    await this.usersRepository.save(user);
+
+    return { message: 'เปลี่ยนอีเมลสำเร็จ' };
+  }
+
+  // ---------------------------------------------------------
+  // 🔑 Logic สำหรับเปลี่ยนรหัสผ่าน
+  // ---------------------------------------------------------
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('ไม่พบผู้ใช้งาน');
+
+    // ตรวจสอบรหัสผ่านปัจจุบัน
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isPasswordValid) {
+      throw new BadRequestException('รหัสผ่านปัจจุบันไม่ถูกต้อง');
+    }
+
+    // เข้ารหัส (Hash) รหัสผ่านใหม่
+    const salt = await bcrypt.genSalt();
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // บันทึกลง Database
+    user.password = hashedPassword;
+    await this.usersRepository.save(user);
+
+    return { message: 'เปลี่ยนรหัสผ่านสำเร็จ' };
   }
 
   async findAll() { 

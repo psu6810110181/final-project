@@ -6,14 +6,14 @@ import {
   UserCircle, Armchair, LayoutDashboard, Shield
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useCart } from '../contexts/CartContext'; // เพิ่มการนำเข้า useCart
+import { useCart } from '../contexts/CartContext'; 
 
 // นำเข้าไฟล์โลโก้จากโฟลเดอร์ assets
 import logoImg from '../assets/HomeAlright_logo.webp';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
-  const { cartItems } = useCart(); // เรียกใช้ข้อมูลตะกร้าสินค้าจาก Context
+  const { cartItems } = useCart(); 
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -21,9 +21,17 @@ const Navbar = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // คำนวณจำนวนสินค้าทั้งหมดในตะกร้า (สมมติว่า cartItems มี property quantity)
-  // หากโครงสร้างของคุณเป็น array ธรรมดา สามารถใช้ cartItems?.length || 0 ได้
+  // คำนวณจำนวนสินค้าทั้งหมดในตะกร้า
   const cartItemCount = cartItems?.reduce((total: number, item: any) => total + (item.quantity || 1), 0) || 0;
+
+  // --- กำหนด URL สำหรับดึงรูปภาพโปรไฟล์ ---
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+  const getAvatarUrl = (img?: string) => {
+    if (!img) return null;
+    if (img.startsWith('http')) return img;
+    return `${API_BASE_URL}/uploads/profiles/${img}`; 
+  };
 
   // ปิด Dropdown เมื่อคลิกที่อื่นบนหน้าจอ
   useEffect(() => {
@@ -92,18 +100,27 @@ const Navbar = () => {
                 )}
               </Link>
 
-              {/* 3. ไอคอนโปรไฟล์ & Dropdown */}
+              {/* 3. ไอคอนรูปโปรไฟล์ & Dropdown */}
               <div className="relative" ref={dropdownRef}>
                 <button 
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className={`flex items-center gap-2 text-white hover:text-gray-200 transition-colors focus:outline-none p-1.5 rounded-lg border-2 ${
                     isProfileActive || isDropdownOpen 
-                      ? 'border-white' 
+                      ? 'border-white bg-white/10' 
                       : 'border-transparent hover:border-white/50'
                   }`}
                 >
                   <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center overflow-hidden border border-white/30">
-                    <User size={20} className="text-white" />
+                    {/* ✅ แก้ไข: แสดงรูปโปรไฟล์ถ้ามี ถ้าไม่มีให้ใช้ไอคอน User */}
+                    {user.userImage || (user as any).image ? (
+                      <img 
+                        src={getAvatarUrl(user.userImage || (user as any).image) as string} 
+                        alt="Profile" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User size={20} className="text-white" />
+                    )}
                   </div>
                   <span className="font-medium hidden sm:block">{user.username}</span>
                 </button>

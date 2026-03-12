@@ -63,6 +63,22 @@ const Home = () => {
 
   const isAdvancedFilterAllowed = selectedCategories.length > 0 || selectedRooms.length > 0 || selectedFeatures.length > 0;
 
+  // --- 🚀 เพิ่ม useEffect นี้เพื่อเก็บประวัติการพิมพ์ค้นหา ---
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchTerm.trim()) {
+        const searches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
+        const currentTerm = searchTerm.trim();
+        if (!searches.includes(currentTerm)) {
+          searches.unshift(currentTerm);
+          if (searches.length > 5) searches.pop(); // เก็บ 5 คำล่าสุด
+          localStorage.setItem('recentSearches', JSON.stringify(searches));
+        }
+      }
+    }, 1000); // หน่วง 1 วินาที
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm]);
+
   useEffect(() => {
     setIsVisible(true);
     const fetchData = async () => {
@@ -113,8 +129,57 @@ const Home = () => {
         setMaterials(Array.isArray(materialsData) ? materialsData : []);
         setSizes(Array.isArray(sizesData) ? sizesData : []);
 
-        const shuffled = [...productsWithPromo].sort(() => 0.5 - Math.random());
-        setRecommendedProducts(shuffled.slice(0, 10));
+        // --- 🚀 เริ่ม Algorithm แนะนำสินค้า ---
+        let purchasedIds: string[] = [];
+        const token = localStorage.getItem('token');
+        
+        // 1. ดึงประวัติการซื้อถ้าล็อกอินอยู่
+        if (token) {
+          try {
+            const myOrdersData = await api.getMyOrders();
+            if (Array.isArray(myOrdersData)) {
+              purchasedIds = myOrdersData.flatMap(order => 
+                order.items.map((item: any) => item.product?.id || item.productId)
+              );
+            }
+          } catch (e) {
+            console.error("ไม่สามารถดึงประวัติการสั่งซื้อได้", e);
+          }
+        }
+
+        // 2. ดึงประวัติการดูรายละเอียดสินค้า และ การค้นหา
+        const viewedIds: string[] = JSON.parse(localStorage.getItem('viewedProducts') || '[]');
+        const recentSearches: string[] = JSON.parse(localStorage.getItem('recentSearches') || '[]');
+
+        const hasHistory = purchasedIds.length > 0 || viewedIds.length > 0 || recentSearches.length > 0;
+
+        if (hasHistory) {
+          // โหมดมีประวัติ: กรองเอาเฉพาะสินค้าที่ ตรงกับคำค้นหา OR เคยดู OR เคยซื้อ
+          const personalizedProducts = productsWithPromo.filter(p => {
+            const isBought = purchasedIds.includes(p.id);
+            const isViewed = viewedIds.includes(p.id);
+            const isSearched = recentSearches.some(search => 
+              p.name.toLowerCase().includes(search.toLowerCase()) || 
+              (p.category && p.category.toLowerCase().includes(search.toLowerCase())) ||
+              (p.description && p.description.toLowerCase().includes(search.toLowerCase()))
+            );
+            return isBought || isViewed || isSearched;
+          });
+
+          if (personalizedProducts.length > 0) {
+            // สุ่มจัดเรียงภายในกลุ่มที่คัดมาแล้ว
+            setRecommendedProducts([...personalizedProducts].sort(() => 0.5 - Math.random()).slice(0, 10));
+          } else {
+            // Fallback: ถ้าประวัติเก่ามากให้ดึงสินค้าขายดีมาแทน
+            const bestSellersFallback = [...productsWithPromo].sort((a, b) => Number(a.stock) - Number(b.stock));
+            setRecommendedProducts(bestSellersFallback.slice(0, 10));
+          }
+        } else {
+          // โหมดบัญชีใหม่/ไม่มีประวัติ: แนะนำสินค้าขายดีที่สุด (จำลองโดยดึง stock ต่ำสุด)
+          const bestSellers = [...productsWithPromo].sort((a, b) => Number(a.stock) - Number(b.stock));
+          setRecommendedProducts(bestSellers.slice(0, 10));
+        }
+        // --- 🚀 จบ Algorithm แนะนำสินค้า ---
 
         const onSaleProducts = productsWithPromo.filter(p => p.promo);
         setPromoProducts(onSaleProducts.slice(0, 10));
@@ -126,7 +191,6 @@ const Home = () => {
         const normalProducts = productsWithPromo.filter(p => !p.promo);
         setGeneralProducts(normalProducts.slice(0, 10));
 
-        const token = localStorage.getItem('token');
         if (token) {
           try {
             const bookmarkData = await api.getBookmarks();
@@ -295,14 +359,15 @@ const Home = () => {
           </div>
         )}
         {items.length === 0 ? (
-          <div className="bg-white/50 backdrop-blur-md p-10 text-center rounded-3xl border border-white shadow-xl">
+          <div className="bg-white p-10 text-center rounded-3xl border border-gray-100 shadow-sm">
             <p className="text-slate-500 font-medium">ไม่พบสินค้า</p>
           </div>
         ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10">
                 {items.map((product) => (
                 <Link to={`/product/${product.id}`} key={product.id} className="group relative block">
-                    <div className="bg-white/70 backdrop-blur-xl rounded-[2rem] shadow-lg shadow-slate-200/50 hover:shadow-2xl hover:shadow-[#148F96]/20 transition-all duration-500 overflow-hidden border border-white/80 h-full flex flex-col relative translate-y-0 hover:-translate-y-2">
+                    {/* ✅ แก้ไข: พื้นหลังขาว, ขอบบางๆ, เงาฟุ้งๆ นุ่มนวล */}
+                    <div className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:shadow-[0_10px_40px_rgb(20,143,150,0.12)] transition-all duration-500 overflow-hidden border border-gray-100 h-full flex flex-col relative translate-y-0 hover:-translate-y-2">
                     
                     {product.promo && (
                         <div className="absolute top-4 left-4 bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-bold px-3 py-1.5 rounded-full z-20 shadow-lg tracking-wider">
@@ -312,22 +377,23 @@ const Home = () => {
 
                     <button 
                         onClick={(e) => toggleBookmark(e, product.id)}
-                        className="absolute top-4 right-4 p-2.5 bg-white/50 backdrop-blur-md hover:bg-white rounded-full z-20 shadow-md text-gray-400 hover:text-yellow-500 transition-all hover:scale-110"
+                        className="absolute top-4 right-4 p-2.5 bg-white/80 backdrop-blur-md hover:bg-white rounded-full z-20 shadow-sm text-gray-400 hover:text-yellow-500 transition-all hover:scale-110 border border-gray-100"
                     >
                         <Star size={20} fill={bookmarks.includes(product.id) ? "currentColor" : "none"} className={bookmarks.includes(product.id) ? "text-yellow-400" : ""} />
                     </button>
 
-                    <div className="h-60 overflow-hidden bg-slate-100 relative">
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/20 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
-                        <img src={getImageUrl(product)} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out" />
+                    <div className="h-60 overflow-hidden bg-slate-50 relative">
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/10 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
+                        <img src={getImageUrl(product)} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
                     </div>
 
                     <div className="p-6 flex flex-col flex-1">
                         <div className="text-xs text-[#148F96] font-bold tracking-widest uppercase mb-2">{product.category || 'GENERAL'}</div>
-                        <h3 className="font-bold text-slate-800 text-xl mb-2 line-clamp-2 group-hover:text-[#D65A31] transition-colors">{product.name}</h3>
+                        {/* ✅ แก้ไข: Font ชื่อสินค้าเป็น Semi-bold (font-semibold) */}
+                        <h3 className="font-semibold text-slate-800 text-xl mb-2 line-clamp-2 group-hover:text-[#D65A31] transition-colors leading-snug">{product.name}</h3>
                         <p className="text-slate-500 text-sm mb-6 line-clamp-2 leading-relaxed">{product.description || "ไม่มีรายละเอียด"}</p>
                         
-                        <div className="mt-auto flex items-end justify-between pt-4 border-t border-slate-100">
+                        <div className="mt-auto flex items-end justify-between pt-4 border-t border-gray-100">
                             <div>
                                 {product.promo ? (
                                     <>
@@ -346,7 +412,7 @@ const Home = () => {
                                 )}
                             </div>
 
-                            <button onClick={(e) => handleAddToCart(e, product)} className="bg-slate-100 hover:bg-[#148F96] hover:text-white text-slate-700 p-3 rounded-2xl transition-all hover:scale-105 hover:shadow-lg hover:shadow-[#148F96]/30">
+                            <button onClick={(e) => handleAddToCart(e, product)} className="bg-slate-50 hover:bg-[#148F96] hover:text-white text-slate-700 p-3 rounded-2xl transition-all hover:scale-105 hover:shadow-lg hover:shadow-[#148F96]/30 border border-gray-100 hover:border-transparent">
                                 <ShoppingCart size={20} />
                             </button>
                         </div>
@@ -359,13 +425,15 @@ const Home = () => {
     </div>
   );
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#F8FAFA]"><Loader size={48} className="animate-spin text-[#148F96]" /></div>;
+  // ✅ แก้ไข: พื้นหลังตอน Loading เป็นสีขาวเทาอ่อน #F9F9F9
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#F9F9F9]"><Loader size={48} className="animate-spin text-[#148F96]" /></div>;
 
   return (
-    <div className="bg-[#F8FAFA] min-h-screen pb-20 relative">
+    // ✅ แก้ไข: พื้นหลังหลักของเว็บเป็นสีขาวเทาอ่อน #F9F9F9
+    <div className="bg-[#F9F9F9] min-h-screen pb-20 relative">
       
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#148F96]/10 blur-[120px] rounded-full" />
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#148F96]/5 blur-[120px] rounded-full" />
         <div className="absolute bottom-1/4 right-0 w-[600px] h-[600px] bg-orange-500/5 blur-[150px] rounded-full" />
       </div>
 
@@ -376,7 +444,8 @@ const Home = () => {
       {/* --- 🎬 HERO SECTION CINEMATIC --- */}
       <div className="relative h-[60vh] min-h-[450px] flex flex-col justify-center items-center text-center overflow-hidden z-10">
         <div className="absolute inset-0 bg-slate-900/60 z-10" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#F8FAFA] via-transparent to-transparent z-10" />
+        {/* ✅ ปรับการไล่สี Gradient ด้านล่างให้กลืนกับ #F9F9F9 */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#F9F9F9] via-transparent to-transparent z-10" />
         <img src={heroBackground} alt="Banner" className="absolute inset-0 w-full h-full object-cover scale-105" />
         
         <div className={`relative z-20 container mx-auto px-4 transition-all duration-1000 transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
@@ -393,18 +462,20 @@ const Home = () => {
       </div>
 
       {/* --- 🎬 FLOATING FILTER BAR (Sticky) --- */}
-      {/* ✅ เปลี่ยน top-4 z-50 เป็น top-24 z-40 เพื่อให้เลื่อนแล้วไปอยู่ใต้ Navbar */}
       <div className="sticky top-20 z-40 container mx-auto px-4 -mt-10 mb-16 transition-all duration-300">
-        <div className="bg-white/95 backdrop-blur-2xl border border-white/80 shadow-2xl shadow-slate-200/50 rounded-[2rem] p-4 flex flex-col lg:flex-row gap-4 justify-between items-center">
+        <div className="bg-white/95 backdrop-blur-xl border border-gray-200 shadow-xl shadow-slate-200/50 rounded-[2rem] p-4 flex flex-col lg:flex-row gap-4 justify-between items-center">
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+            
+            {/* ✅ แก้ไข: ปุ่ม Filter ทั้งหมดปรับเป็นพื้นขาว ขอบบาง (bg-white border border-gray-200 text-gray-700) */}
+            
             {/* Category Dropdown */}
             <div className="relative">
-              <button onClick={() => toggleDropdown('category')} className={`px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all ${selectedCategories.length > 0 ? 'bg-[#148F96] text-white shadow-lg shadow-[#148F96]/30' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
+              <button onClick={() => toggleDropdown('category')} className={`px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all border ${selectedCategories.length > 0 ? 'bg-[#148F96] text-white border-[#148F96] shadow-md shadow-[#148F96]/20' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300'}`}>
                 หมวดหมู่สินค้า {selectedCategories.length > 0 && `(${selectedCategories.length})`}
                 <ChevronDown size={16} className={`transition-transform duration-200 ${activeDropdown === 'category' ? 'rotate-180' : ''}`} />
               </button>
               {activeDropdown === 'category' && (
-                <div className="absolute top-full left-0 mt-3 w-64 bg-white/95 backdrop-blur-2xl border border-gray-100 rounded-2xl shadow-2xl p-5 z-50">
+                <div className="absolute top-full left-0 mt-3 w-64 bg-white border border-gray-100 rounded-2xl shadow-2xl p-5 z-50">
                   <ul className="max-h-60 overflow-y-auto space-y-4">
                     {categories.map((cat) => (
                       <li key={cat.id} className="flex items-center gap-3 text-slate-600 hover:text-[#148F96] cursor-pointer" onClick={() => handleToggle(cat.name, selectedCategories, setSelectedCategories)}>
@@ -416,14 +487,15 @@ const Home = () => {
                 </div>
               )}
             </div>
+
             {/* Room Dropdown */}
             <div className="relative">
-              <button onClick={() => toggleDropdown('room')} className={`px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all ${selectedRooms.length > 0 ? 'bg-[#148F96] text-white shadow-lg shadow-[#148F96]/30' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
+              <button onClick={() => toggleDropdown('room')} className={`px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all border ${selectedRooms.length > 0 ? 'bg-[#148F96] text-white border-[#148F96] shadow-md shadow-[#148F96]/20' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300'}`}>
                 ห้อง {selectedRooms.length > 0 && `(${selectedRooms.length})`}
                 <ChevronDown size={16} className={`transition-transform duration-200 ${activeDropdown === 'room' ? 'rotate-180' : ''}`} />
               </button>
               {activeDropdown === 'room' && (
-                <div className="absolute top-full left-0 mt-3 w-64 bg-white/95 backdrop-blur-2xl border border-gray-100 rounded-2xl shadow-2xl p-5 z-50">
+                <div className="absolute top-full left-0 mt-3 w-64 bg-white border border-gray-100 rounded-2xl shadow-2xl p-5 z-50">
                   <ul className="max-h-60 overflow-y-auto space-y-4">
                     {rooms.map((room) => (
                       <li key={room.id} className="flex items-center gap-3 text-slate-600 hover:text-[#148F96] cursor-pointer" onClick={() => handleToggle(room.name, selectedRooms, setSelectedRooms)}>
@@ -435,14 +507,15 @@ const Home = () => {
                 </div>
               )}
             </div>
+
             {/* Feature Dropdown */}
             <div className="relative">
-              <button onClick={() => toggleDropdown('feature')} className={`px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all ${selectedFeatures.length > 0 ? 'bg-[#148F96] text-white shadow-lg shadow-[#148F96]/30' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
+              <button onClick={() => toggleDropdown('feature')} className={`px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all border ${selectedFeatures.length > 0 ? 'bg-[#148F96] text-white border-[#148F96] shadow-md shadow-[#148F96]/20' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300'}`}>
                 คุณสมบัติเพิ่มเติม {selectedFeatures.length > 0 && `(${selectedFeatures.length})`}
                 <ChevronDown size={16} className={`transition-transform duration-200 ${activeDropdown === 'feature' ? 'rotate-180' : ''}`} />
               </button>
               {activeDropdown === 'feature' && (
-                <div className="absolute top-full left-0 mt-3 w-64 bg-white/95 backdrop-blur-2xl border border-gray-100 rounded-2xl shadow-2xl p-5 z-50">
+                <div className="absolute top-full left-0 mt-3 w-64 bg-white border border-gray-100 rounded-2xl shadow-2xl p-5 z-50">
                   <ul className="max-h-60 overflow-y-auto space-y-4">
                     {features.map((feat) => (
                       <li key={feat.id} className="flex items-center gap-3 text-slate-600 hover:text-[#148F96] cursor-pointer" onClick={() => handleToggle(feat.name, selectedFeatures, setSelectedFeatures)}>
@@ -454,21 +527,23 @@ const Home = () => {
                 </div>
               )}
             </div>
-            {/* Price Filter */}
-            <div className="flex items-center gap-2 bg-slate-50 rounded-full px-5 py-2 focus-within:ring-2 ring-[#148F96]/30 transition-all border border-slate-200/50">
+
+            {/* Price Filter (กล่องขาว ขอบบาง) */}
+            <div className="flex items-center gap-2 bg-white rounded-full px-5 py-2 focus-within:ring-2 ring-[#148F96]/30 transition-all border border-gray-200 shadow-sm">
               <span className="text-sm font-bold text-slate-500">ราคา:</span>
               <input type="number" placeholder="ต่ำสุด" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} className="w-20 text-sm outline-none bg-transparent text-center font-medium" min="0" />
               <span className="text-slate-300">-</span>
               <input type="number" placeholder="สูงสุด" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} className="w-20 text-sm outline-none bg-transparent text-center font-medium" min="0" />
             </div>
+
             {/* Color Filter */}
             <div className="relative">
-              <button onClick={() => toggleDropdown('color')} className={`px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all ${!isAdvancedFilterAllowed ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400' : selectedColors.length > 0 ? 'bg-[#148F96] text-white shadow-lg shadow-[#148F96]/30' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
+              <button onClick={() => toggleDropdown('color')} className={`px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all border ${!isAdvancedFilterAllowed ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-200 text-gray-400' : selectedColors.length > 0 ? 'bg-[#148F96] text-white border-[#148F96] shadow-md shadow-[#148F96]/20' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300'}`}>
                 สี {selectedColors.length > 0 && `(${selectedColors.length})`}
                 <ChevronDown size={16} className={`transition-transform duration-200 ${activeDropdown === 'color' ? 'rotate-180' : ''}`} />
               </button>
               {activeDropdown === 'color' && isAdvancedFilterAllowed && (
-                <div className="absolute top-full left-0 mt-3 w-48 bg-white/95 backdrop-blur-2xl border border-gray-100 rounded-2xl shadow-2xl p-5 z-50">
+                <div className="absolute top-full left-0 mt-3 w-48 bg-white border border-gray-100 rounded-2xl shadow-2xl p-5 z-50">
                   <ul className="max-h-60 overflow-y-auto space-y-4">
                     {colors.map((color) => (
                       <li key={color.id} className="flex items-center gap-3 text-slate-600 hover:text-[#148F96] cursor-pointer" onClick={() => handleToggle(color.name, selectedColors, setSelectedColors)}>
@@ -480,14 +555,15 @@ const Home = () => {
                 </div>
               )}
             </div>
+
             {/* Material Filter */}
             <div className="relative">
-              <button onClick={() => toggleDropdown('material')} className={`px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all ${!isAdvancedFilterAllowed ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400' : selectedMaterials.length > 0 ? 'bg-[#148F96] text-white shadow-lg shadow-[#148F96]/30' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
+              <button onClick={() => toggleDropdown('material')} className={`px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all border ${!isAdvancedFilterAllowed ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-200 text-gray-400' : selectedMaterials.length > 0 ? 'bg-[#148F96] text-white border-[#148F96] shadow-md shadow-[#148F96]/20' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300'}`}>
                 วัสดุ {selectedMaterials.length > 0 && `(${selectedMaterials.length})`}
                 <ChevronDown size={16} className={`transition-transform duration-200 ${activeDropdown === 'material' ? 'rotate-180' : ''}`} />
               </button>
               {activeDropdown === 'material' && isAdvancedFilterAllowed && (
-                <div className="absolute top-full left-0 mt-3 w-48 bg-white/95 backdrop-blur-2xl border border-gray-100 rounded-2xl shadow-2xl p-5 z-50">
+                <div className="absolute top-full left-0 mt-3 w-48 bg-white border border-gray-100 rounded-2xl shadow-2xl p-5 z-50">
                   <ul className="max-h-60 overflow-y-auto space-y-4">
                     {materials.map((mat) => (
                       <li key={mat.id} className="flex items-center gap-3 text-slate-600 hover:text-[#148F96] cursor-pointer" onClick={() => handleToggle(mat.name, selectedMaterials, setSelectedMaterials)}>
@@ -499,14 +575,15 @@ const Home = () => {
                 </div>
               )}
             </div>
+
             {/* Size Filter */}
             <div className="relative">
-              <button onClick={() => toggleDropdown('size')} className={`px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all ${!isAdvancedFilterAllowed ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400' : selectedSizes.length > 0 ? 'bg-[#148F96] text-white shadow-lg shadow-[#148F96]/30' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
+              <button onClick={() => toggleDropdown('size')} className={`px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all border ${!isAdvancedFilterAllowed ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-200 text-gray-400' : selectedSizes.length > 0 ? 'bg-[#148F96] text-white border-[#148F96] shadow-md shadow-[#148F96]/20' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300'}`}>
                 ขนาด {selectedSizes.length > 0 && `(${selectedSizes.length})`}
                 <ChevronDown size={16} className={`transition-transform duration-200 ${activeDropdown === 'size' ? 'rotate-180' : ''}`} />
               </button>
               {activeDropdown === 'size' && isAdvancedFilterAllowed && (
-                <div className="absolute top-full left-0 mt-3 w-48 bg-white/95 backdrop-blur-2xl border border-gray-100 rounded-2xl shadow-2xl p-5 z-50">
+                <div className="absolute top-full left-0 mt-3 w-48 bg-white border border-gray-100 rounded-2xl shadow-2xl p-5 z-50">
                   <ul className="max-h-60 overflow-y-auto space-y-4">
                     {sizes.map((size) => (
                       <li key={size.id} className="flex items-center gap-3 text-slate-600 hover:text-[#148F96] cursor-pointer" onClick={() => handleToggle(size.name, selectedSizes, setSelectedSizes)}>
@@ -518,6 +595,7 @@ const Home = () => {
                 </div>
               )}
             </div>
+
             {/* Clear Filters Button */}
             {hasAnyFilter && (
               <button onClick={clearAllFilters} className="px-4 py-2 text-red-500 text-sm font-bold flex items-center gap-2 hover:bg-red-50 rounded-full transition-colors ml-auto lg:ml-0">
@@ -525,10 +603,11 @@ const Home = () => {
               </button>
             )}
           </div>
-          {/* Search Bar */}
+          
+          {/* Search Bar (กล่องขาว ขอบบาง) */}
           <div className="flex flex-col items-end w-full lg:w-80 flex-shrink-0 mt-2 lg:mt-0">
             <div className="relative w-full group">
-              <input type="text" placeholder="ค้นหาชื่อ รายละเอียด..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200/50 rounded-full focus:outline-none focus:ring-2 focus:ring-[#148F96]/50 transition-all text-sm font-medium" />
+              <input type="text" placeholder="ค้นหาชื่อ รายละเอียด..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 shadow-sm rounded-full focus:outline-none focus:ring-2 focus:ring-[#148F96]/50 transition-all text-sm font-medium" />
               <Search className="absolute left-4 top-3.5 text-slate-400 group-focus-within:text-[#148F96] transition-colors" size={18} />
             </div>
             {hasAnyFilter && (

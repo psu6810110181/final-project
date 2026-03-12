@@ -66,6 +66,22 @@ const ProductDetail = () => {
     fetchProductAndReviews();
   }, [id]);
 
+  // --- 🚀 เพิ่ม useEffect เพื่อเก็บประวัติการเข้าชมสินค้าลง LocalStorage ---
+  useEffect(() => {
+    if (product && product.id) {
+      const viewedProducts = JSON.parse(localStorage.getItem('viewedProducts') || '[]');
+      
+      // ถ้าไม่มี ID นี้ในประวัติ ให้ดันเข้าเป็นตัวแรก
+      if (!viewedProducts.includes(product.id)) {
+        viewedProducts.unshift(product.id);
+        // เก็บประวัติการดูสูงสุดแค่ 15 ชิ้นล่าสุด
+        if (viewedProducts.length > 15) viewedProducts.pop();
+        localStorage.setItem('viewedProducts', JSON.stringify(viewedProducts));
+      }
+    }
+  }, [product]);
+  // -----------------------------------------------------------------
+
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
   const getImageUrl = (img: string) => {
      if (!img) return "https://via.placeholder.com/600x400?text=No+Path";

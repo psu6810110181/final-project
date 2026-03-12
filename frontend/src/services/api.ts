@@ -373,5 +373,15 @@ export const addBookmark = async (productId: string) => {
 export const removeBookmark = async (productId: string) => {
   return await api.delete(`/bookmarks/${productId}`);
 };
+// เพิ่มฟังก์ชันสำหรับขอเปลี่ยน Email
+export const requestEmailChange = async (data: { currentPassword: string; newEmail: string }) => {
+  const response = await api.post('/users/change-email-request', data);
+  return response.data;
+};
 
+// เพิ่มฟังก์ชันสำหรับขอเปลี่ยน Password
+export const changePassword = async (data: { currentPassword: string; newPassword: string }) => {
+  const response = await api.post('/users/change-password', data);
+  return response.data;
+};
 export default api;
