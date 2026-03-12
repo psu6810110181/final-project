@@ -6,18 +6,32 @@ import {
   UserCircle, Armchair, LayoutDashboard, Shield
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useCart } from '../contexts/CartContext'; 
 
 // นำเข้าไฟล์โลโก้จากโฟลเดอร์ assets
 import logoImg from '../assets/HomeAlright_logo.webp';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
+  const { cartItems } = useCart(); 
   const navigate = useNavigate();
-  const location = useLocation(); // เรียกใช้ useLocation เพื่อเช็ค Path ปัจจุบัน
+  const location = useLocation();
   
   // --- STATE สำหรับ Dropdown โปรไฟล์ ---
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // คำนวณจำนวนสินค้าทั้งหมดในตะกร้า
+  const cartItemCount = cartItems?.reduce((total: number, item: any) => total + (item.quantity || 1), 0) || 0;
+
+  // --- กำหนด URL สำหรับดึงรูปภาพโปรไฟล์ ---
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+  const getAvatarUrl = (img?: string) => {
+    if (!img) return null;
+    if (img.startsWith('http')) return img;
+    return `${API_BASE_URL}/uploads/profiles/${img}`; 
+  };
 
   // ปิด Dropdown เมื่อคลิกที่อื่นบนหน้าจอ
   useEffect(() => {
@@ -40,18 +54,18 @@ const Navbar = () => {
   const getNavStyle = (path: string) => {
     const isActive = location.pathname === path;
     return isActive
-      ? "text-white border-2 border-white rounded-lg p-1.5 transition-all duration-300" // สไตล์ตอนกด (มีกรอบสีขาว)
-      : "text-white hover:text-gray-200 border-2 border-transparent hover:border-white/50 rounded-lg p-1.5 transition-all duration-300"; // สไตล์ปกติ
+      ? "text-white border-2 border-white rounded-lg p-1.5 transition-all duration-300 relative" 
+      : "text-white hover:text-gray-200 border-2 border-transparent hover:border-white/50 rounded-lg p-1.5 transition-all duration-300 relative"; 
   };
 
-  // ตรวจสอบว่าอยู่หน้าหมวดหมู่ที่เกี่ยวข้องกับโปรไฟล์หรือไม่ (เพื่อให้ปุ่ม User Active)
+  // ตรวจสอบว่าอยู่หน้าหมวดหมู่ที่เกี่ยวข้องกับโปรไฟล์หรือไม่
   const isProfileActive = ['/profile', '/orders', '/review', '/policy', '/admin'].includes(location.pathname);
 
   return (
     <nav className="bg-[#148F96] shadow-md sticky top-0 z-50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         
-        {/* โลโก้แบบใหม่: มีรูปวงกลม ขอบสี #04A5E3 และข้อความ */}
+        {/* โลโก้แบบใหม่ */}
         <Link to="/" className="flex items-center gap-3 text-2xl font-bold text-white hover:text-gray-200 transition-colors">
           <img 
             src={logoImg} 
@@ -65,28 +79,48 @@ const Navbar = () => {
         <div className="flex items-center gap-6">
           {user ? (
             <>
-              {/* 1. ไอคอนเฟอร์นิเจอร์ (ไปหน้า Home) */}
-              <Link to="/" className={getNavStyle('/')} title="หน้าแรก">
+              {/* 1. ไอคอนเฟอร์นิเจอร์ (ไปหน้า Home) + เพิ่มข้อความ */}
+              <Link 
+                to="/" 
+                className={`${getNavStyle('/')} flex items-center gap-2 sm:px-3`} 
+                title="หน้าแรก"
+              >
                 <Armchair size={24} />
+                <span className="font-medium text-sm hidden sm:block">เฟอร์นิเจอร์</span>
               </Link>
 
-              {/* 2. ไอคอนตะกร้า */}
+              {/* 2. ไอคอนตะกร้า + Badge แสดงจำนวนสินค้า */}
               <Link to="/cart" className={getNavStyle('/cart')} title="ตะกร้าสินค้า">
                 <ShoppingCart size={24} />
+                {/* แสดง Badge สีแดงเมื่อมีสินค้าในตะกร้า */}
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold min-w-[20px] h-[20px] flex items-center justify-center rounded-full px-1 border-2 border-[#148F96] shadow-sm">
+                    {cartItemCount > 99 ? '99+' : cartItemCount}
+                  </span>
+                )}
               </Link>
 
-              {/* 3. ไอคอนโปรไฟล์ & Dropdown */}
+              {/* 3. ไอคอนรูปโปรไฟล์ & Dropdown */}
               <div className="relative" ref={dropdownRef}>
                 <button 
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className={`flex items-center gap-2 text-white hover:text-gray-200 transition-colors focus:outline-none p-1.5 rounded-lg border-2 ${
                     isProfileActive || isDropdownOpen 
-                      ? 'border-white' // หากอยู่หน้า Profile/เมนูย่อย หรือเปิด Dropdown ให้โชว์กรอบสีขาว
+                      ? 'border-white bg-white/10' 
                       : 'border-transparent hover:border-white/50'
                   }`}
                 >
                   <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center overflow-hidden border border-white/30">
-                    <User size={20} className="text-white" />
+                    {/* ✅ แก้ไข: แสดงรูปโปรไฟล์ถ้ามี ถ้าไม่มีให้ใช้ไอคอน User */}
+                    {user.userImage || (user as any).image ? (
+                      <img 
+                        src={getAvatarUrl(user.userImage || (user as any).image) as string} 
+                        alt="Profile" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User size={20} className="text-white" />
+                    )}
                   </div>
                   <span className="font-medium hidden sm:block">{user.username}</span>
                 </button>
@@ -95,7 +129,6 @@ const Navbar = () => {
                 {isDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg py-2 border border-gray-100 transform origin-top-right transition-all">
                     
-                    {/* --- เช็คสิทธิ์ Admin เพื่อแสดง Admin Dashboard --- */}
                     {user.role === 'admin' && (
                       <>
                         <Link 
@@ -137,7 +170,6 @@ const Navbar = () => {
                       รีวิวของฉัน
                     </Link>
 
-                    {/* เมนูนโยบายความเป็นส่วนตัว */}
                     <Link 
                       to="/policy" 
                       onClick={() => setIsDropdownOpen(false)}
@@ -164,7 +196,6 @@ const Navbar = () => {
           ) : (
             /* กรณีที่ยังไม่ได้ Login */
             <div className="flex items-center gap-4">
-              {/* ปุ่มเข้าสู่ระบบ */}
               <Link 
                 to="/login" 
                 className={`font-medium text-sm transition-all duration-300 px-4 py-2 rounded-lg border-2 ${
@@ -175,8 +206,6 @@ const Navbar = () => {
               >
                 เข้าสู่ระบบ
               </Link>
-
-              {/* ปุ่มสมัครสมาชิก */}
               <Link 
                 to="/register" 
                 className={`font-medium text-sm transition-all duration-300 px-4 py-2 rounded-lg border-2 ${

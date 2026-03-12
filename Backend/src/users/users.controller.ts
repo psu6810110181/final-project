@@ -1,7 +1,6 @@
 import { 
   Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, ForbiddenException,
-  UseInterceptors, UploadedFile, BadRequestException, ParseFilePipe, 
-  MaxFileSizeValidator, FileTypeValidator
+  UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -11,7 +10,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
-import sharp from 'sharp';
+import sharp from 'sharp'; 
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -26,52 +25,70 @@ export class UsersController {
   }
 
   // ---------------------------------------------------------
-  // ✅ แก้ไขโปรไฟล์ตัวเอง + อัปโหลดรูปภาพ (มี Sharp Resize) 🖼️
+  // ✅ แก้ไขโปรไฟล์ตัวเอง + อัปโหลดรูปภาพ 🖼️
   // ---------------------------------------------------------
   @Patch('profile')
   @UseGuards(AuthGuard('jwt'))
-  @UseInterceptors(FileInterceptor('file')) // รับไฟล์ชื่อ 'file' (ไม่ต้องใช้ storage diskStorage แล้ว เพราะเราจะจัดการเอง)
+  @UseInterceptors(FileInterceptor('file')) 
   async updateProfile(
     @Req() req, 
     @Body() body: UpdateUserDto, 
     @UploadedFile(
       new ParseFilePipe({
-        fileIsRequired: false, // ไม่บังคับว่าต้องมีรูป (เผื่อแก้แค่ชื่อ)
+        fileIsRequired: false, 
         validators: [
-          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // Max 5MB
-          new FileTypeValidator({ fileType: '.(png|jpeg|jpg|webp)' }), // รูปเท่านั้น
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), 
+          new FileTypeValidator({ fileType: '.(png|jpeg|jpg|webp)' }), 
         ],
       }),
     ) file?: Express.Multer.File 
   ) {
-    // ถ้ามีการอัปโหลดไฟล์มาด้วย ให้ทำการ Resize
     if (file) {
       const filename = `user-${req.user.id}-${Date.now()}.jpeg`;
       const uploadPath = path.join('./uploads/profiles', filename);
 
-      // สร้างโฟลเดอร์ถ้ายังไม่มี
       if (!fs.existsSync('./uploads/profiles')) {
         fs.mkdirSync('./uploads/profiles', { recursive: true });
       }
 
-      // ✅ ใช้ Sharp ย่อรูปและบันทึก
       await sharp(file.buffer)
-        .resize(300, 300, { // บังคับขนาด 300x300
-          fit: 'cover',
-        })
+        .resize(300, 300, { fit: 'cover' })
         .toFormat('jpeg')
-        .jpeg({ quality: 80 })
+        .jpeg({ quality: 80 }) 
         .toFile(uploadPath);
       
-      // เอาชื่อไฟล์ใส่เข้าไปใน DTO เพื่อไปอัปเดตลง DB
       body.userImage = filename;
     }
-    
-    // อัปเดตข้อมูล (ID เอาจาก Token เสมอ)
     return this.usersService.update(req.user.id, body); 
   }
 
-  // 2. ดูรายชื่อ User ทั้งหมด (Admin)
+  // ---------------------------------------------------------
+  // 📧 1. ขอเปลี่ยน Email (ส่งอีเมลยืนยัน)
+  // ---------------------------------------------------------
+  @Post('change-email-request')
+  @UseGuards(AuthGuard('jwt'))
+  async requestEmailChange(@Req() req, @Body() body: { currentPassword: string; newEmail: string }) {
+    return this.usersService.requestEmailChange(req.user.id, body.currentPassword, body.newEmail);
+  }
+
+  // ---------------------------------------------------------
+  // 📧 2. ยืนยันการเปลี่ยน Email ผ่าน Token (ไม่ต้องใช้ AuthGuard)
+  // ---------------------------------------------------------
+  @Post('verify-email')
+  async verifyEmailChange(@Body() body: { token: string }) {
+    return this.usersService.verifyEmailChange(body.token);
+  }
+
+  // ---------------------------------------------------------
+  // 🔑 เปลี่ยนรหัสผ่าน
+  // ---------------------------------------------------------
+  @Post('change-password')
+  @UseGuards(AuthGuard('jwt'))
+  async changePassword(@Req() req, @Body() body: { currentPassword: string; newPassword: string }) {
+    return this.usersService.changePassword(req.user.id, body.currentPassword, body.newPassword);
+  }
+
+  // 2. ดูรายชื่อ User ทั้งหมด (Admin เท่านั้น)
   @Get()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
@@ -79,14 +96,14 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
-  // ✅ เพิ่ม Endpoint ดึง Profile ของตัวเอง (ที่ Frontend ต้องใช้)
+  // ✅ เพิ่ม Endpoint ดึง Profile ของตัวเอง
   @Get('profile/me')
   @UseGuards(AuthGuard('jwt'))
   getProfile(@Req() req) {
     return this.usersService.findOne(req.user.id);
   }
 
-  // 3. ดูข้อมูล User ตาม ID (Secure 🔒)
+  // 3. ดูข้อมูล User ตาม ID
   @Get(':id')
   @UseGuards(AuthGuard('jwt')) 
   findOne(@Param('id') id: string, @Req() req) {
@@ -96,11 +113,11 @@ export class UsersController {
     return this.usersService.findOne(id);
   }
 
-  // 4. แก้ไขข้อมูลโดย Admin (แบบมี Sharp ด้วยก็ได้ ถ้าขยันทำ)
+  // 4. แก้ไขข้อมูลผู้ใช้โดย Admin 
   @Patch(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
-  @UseInterceptors(FileInterceptor('file')) // ใช้ Sharp เหมือนกัน
+  @UseInterceptors(FileInterceptor('file')) 
   async update(
     @Param('id') id: string, 
     @Body() updateUserDto: UpdateUserDto,
@@ -110,7 +127,9 @@ export class UsersController {
       const filename = `user-${id}-${Date.now()}.jpeg`;
       const uploadPath = path.join('./uploads/profiles', filename);
       
-      if (!fs.existsSync('./uploads/profiles')) fs.mkdirSync('./uploads/profiles', { recursive: true });
+      if (!fs.existsSync('./uploads/profiles')) {
+        fs.mkdirSync('./uploads/profiles', { recursive: true });
+      }
 
       await sharp(file.buffer)
         .resize(300, 300, { fit: 'cover' })
@@ -137,7 +156,7 @@ export class UsersController {
   @Roles('admin')
   updateRole(@Param('id') id: string, @Body() updateRoleDto: UpdateRoleDto, @Req() req: any) {
     if (id === req.user.id) { 
-      throw new ForbiddenException('Admin cannot change their own role');
+      throw new ForbiddenException('ไม่สามารถเปลี่ยนสถานะบัญชีของตัวเองได้');
     }
     return this.usersService.updateRole(id, updateRoleDto.role);
   }

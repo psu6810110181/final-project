@@ -1,398 +1,234 @@
-// import { useState,type ChangeEvent,type FormEvent } from 'react';
-// import { registerUser } from '../services/api';
-// import { useNavigate, Link } from 'react-router-dom';
-
-// const Register = () => {
-//   const navigate = useNavigate();
-  
-//   // เพิ่ม state confirmPassword
-//   const [formData, setFormData] = useState({
-//     username: '',
-//     password: '',
-//     confirmPassword: '', // ✅ เพิ่มช่องนี้
-//     email: '',
-//     phone: '',
-//     address: ''
-//   });
-  
-//   const [error, setError] = useState('');
-//   const [isLoading, setIsLoading] = useState(false);
-
-//   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-//     setFormData({
-//       ...formData,
-//       [e.target.name]: e.target.value
-//     });
-//   };
-
-//   const handleSubmit = async (e: FormEvent) => {
-//     e.preventDefault();
-//     setError('');
-
-//     // ✅ ตรวจสอบว่ารหัสผ่านตรงกันหรือไม่
-//     if (formData.password !== formData.confirmPassword) {
-//       setError("รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน");
-//       return;
-//     }
-
-//     setIsLoading(true);
-
-//     try {
-//       // ✅ ตัด confirmPassword ออกก่อนส่งไป Backend (เพราะ DTO ไม่ได้รับค่านี้)
-//       const { confirmPassword, ...dataToSend } = formData;
-      
-//       await registerUser(dataToSend);
-      
-//       alert("สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ");
-//       navigate('/login');
-      
-//     } catch (err: any) {
-//       console.error("Registration Error:", err);
-//       let errorMessage = "เกิดข้อผิดพลาดในการสมัครสมาชิก กรุณาลองใหม่อีกครั้ง";
-      
-//       if (err.response && err.response.data) {
-//          const msg = err.response.data.message;
-//          errorMessage = Array.isArray(msg) ? msg[0] : msg;
-//       }
-      
-//       setError(errorMessage);
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   };
-
-//   return (
-//     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-//       <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-md">
-//         <div>
-//           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-//             สมัครสมาชิกใหม่
-//           </h2>
-//           <p className="mt-2 text-center text-sm text-gray-600">
-//             หรือ{' '}
-//             <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
-//               เข้าสู่ระบบบัญชีที่มีอยู่
-//             </Link>
-//           </p>
-//         </div>
-
-//         {error && (
-//           <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
-//             <div className="flex">
-//               <div className="flex-shrink-0">
-//                 <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-//                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-//                 </svg>
-//               </div>
-//               <div className="ml-3">
-//                 <p className="text-sm text-red-700">{error}</p>
-//               </div>
-//             </div>
-//           </div>
-//         )}
-
-//         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-//           <div className="rounded-md shadow-sm space-y-4">
-//             {/* Username */}
-//             <div>
-//               <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
-//                 ชื่อผู้ใช้ <span className="text-red-500">*</span>
-//               </label>
-//               <input
-//                 id="username"
-//                 name="username"
-//                 type="text"
-//                 required
-//                 minLength={3}
-//                 maxLength={50}
-//                 className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-//                 placeholder="Username"
-//                 value={formData.username}
-//                 onChange={handleChange}
-//               />
-//             </div>
-
-//             {/* Email */}
-//             <div>
-//               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-//                 อีเมล <span className="text-red-500">*</span>
-//               </label>
-//               <input
-//                 id="email"
-//                 name="email"
-//                 type="email"
-//                 required
-//                 maxLength={100}
-//                 className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-//                 placeholder="example@mail.com"
-//                 value={formData.email}
-//                 onChange={handleChange}
-//               />
-//             </div>
-
-//             {/* Password */}
-//             <div>
-//               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-//                 รหัสผ่าน <span className="text-red-500">*</span>
-//               </label>
-//               <input
-//                 id="password"
-//                 name="password"
-//                 type="password"
-//                 required
-//                 minLength={6}
-//                 maxLength={100}
-//                 className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-//                 placeholder="รหัสผ่าน (ขั้นต่ำ 6 ตัวอักษร)"
-//                 value={formData.password}
-//                 onChange={handleChange}
-//               />
-//             </div>
-
-//             {/* ✅ Confirm Password */}
-//             <div>
-//               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-//                 ยืนยันรหัสผ่าน <span className="text-red-500">*</span>
-//               </label>
-//               <input
-//                 id="confirmPassword"
-//                 name="confirmPassword"
-//                 type="password"
-//                 required
-//                 minLength={6}
-//                 maxLength={100}
-//                 className={`appearance-none rounded-md relative block w-full px-3 py-2 border placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm ${
-//                   formData.confirmPassword && formData.password !== formData.confirmPassword 
-//                     ? 'border-red-500 focus:ring-red-500 focus:border-red-500' // สีแดงถ้าไม่ตรง
-//                     : 'border-gray-300'
-//                 }`}
-//                 placeholder="กรอกรหัสผ่านอีกครั้ง"
-//                 value={formData.confirmPassword}
-//                 onChange={handleChange}
-//               />
-//                {/* แสดงข้อความเตือนทันทีที่พิมพ์ไม่ตรง */}
-//                {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-//                 <p className="text-xs text-red-500 mt-1">รหัสผ่านไม่ตรงกัน</p>
-//               )}
-//             </div>
-
-//             {/* Phone */}
-//             <div>
-//               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-//                 เบอร์โทรศัพท์ (ถ้ามี)
-//               </label>
-//               <input
-//                 id="phone"
-//                 name="phone"
-//                 type="tel"
-//                 maxLength={15}
-//                 className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-//                 placeholder="08xxxxxxxx"
-//                 value={formData.phone}
-//                 onChange={handleChange}
-//               />
-//             </div>
-
-//             {/* Address */}
-//             <div>
-//               <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
-//                 ที่อยู่ (ถ้ามี)
-//               </label>
-//               <textarea
-//                 id="address"
-//                 name="address"
-//                 rows={3}
-//                 maxLength={255}
-//                 className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-//                 placeholder="ที่อยู่สำหรับจัดส่ง..."
-//                 value={formData.address}
-//                 onChange={handleChange}
-//               />
-//             </div>
-//           </div>
-
-//           <div>
-//             <button
-//               type="submit"
-//               disabled={isLoading}
-//               className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white ${
-//                 isLoading
-//                   ? 'bg-gray-400 cursor-not-allowed'
-//                   : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
-//               }`}
-//             >
-//               {isLoading ? 'กำลังบันทึก...' : 'สมัครสมาชิก'}
-//             </button>
-//           </div>
-//         </form>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default Register;
-// frontend/src/pages/Register.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import logoImg from '../assets/HomeAlright_logo.webp';
-import { Check, X } from 'lucide-react';
+import { Check, X, Mail, User, Lock, ArrowRight, AlertCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+import loginbackground from '../assets/login.jpeg'; 
 
 const Register = () => {
   const [formData, setFormData] = useState({ email: '', username: '', password: '', confirmPassword: '' });
-  // เพิ่ม State สำหรับ Checkbox นโยบายความเป็นส่วนตัว
   const [isPolicyAccepted, setIsPolicyAccepted] = useState(false); 
+  const [isVisible, setIsVisible] = useState(false);
   
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  // --- ฟังก์ชันเช็คเงื่อนไขรหัสผ่าน 5 ข้อ ---
+  useEffect(() => {
+    setIsVisible(true);
+  }, []);
+
   const passwordRules = {
     length: formData.password.length >= 12,
     uppercase: /[A-Z]/.test(formData.password),
     lowercase: /[a-z]/.test(formData.password),
     number: /[0-9]/.test(formData.password),
-    specialChar: /[!@#$%^&*-_]/.test(formData.password),
+    // ✅ แก้ไข Regex: ใส่ \- เพื่อไม่ให้ระบบมองเป็น Range
+    specialChar: /[!@#$%^&*_\-]/.test(formData.password),
   };
 
   const isPasswordValid = Object.values(passwordRules).every(Boolean);
-  const isPasswordMatch = formData.password === formData.confirmPassword;
+  const isPasswordMatch = formData.password === formData.confirmPassword && formData.password !== '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // ดักจับกรณีผู้ใช้ปลดล็อกปุ่มผ่าน HTML แล้วพยายามกด Submit
     if (!isPolicyAccepted) {
-      alert('กรุณายอมรับนโยบายความเป็นส่วนตัวก่อนดำเนินการต่อ');
+      toast.error('กรุณายอมรับนโยบายความเป็นส่วนตัวก่อนดำเนินการต่อ');
       return;
     }
-
     if (!isPasswordValid) {
-      alert('กรุณาตั้งรหัสผ่านให้ตรงตามเงื่อนไขความปลอดภัยที่กำหนด');
+      toast.error('กรุณาตั้งรหัสผ่านให้ตรงตามเงื่อนไขความปลอดภัยที่กำหนด');
       return;
     }
-    
     if (!isPasswordMatch) {
-      alert('รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน');
+      toast.error('รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน');
       return;
     }
 
     try {
       await register(formData);
-      alert('สมัครสมาชิกสำเร็จ!');
+      toast.success('สมัครสมาชิกสำเร็จ!');
       navigate('/login');
     } catch (err) {
-      alert('เกิดข้อผิดพลาดในการสมัครสมาชิก');
+      toast.error('เกิดข้อผิดพลาดในการสมัครสมาชิก');
     }
   };
 
-  const RuleItem = ({ isValid, text }: { isValid: boolean, text: string }) => (
-    <div className={`flex items-center gap-1.5 transition-colors duration-300 ${isValid ? 'text-green-600' : 'text-red-500'}`}>
-      {isValid ? <Check size={14} className="stroke-[3]" /> : <X size={14} className="stroke-[3]" />}
-      <span>{text}</span>
-    </div>
-  );
+  // ✅ ปรับ UI เงื่อนไข: ถ้าเริ่มพิมพ์แล้วยังไม่ผ่านให้เป็นสีแดง ถ้าผ่านแล้วเป็นสีเขียว
+  const RuleItem = ({ isValid, text }: { isValid: boolean, text: string }) => {
+    const hasInput = formData.password.length > 0;
+    const textColor = !hasInput ? 'text-slate-400' : (isValid ? 'text-emerald-500' : 'text-red-500');
+    
+    return (
+      <div className={`flex items-center gap-2 text-[11px] font-medium transition-colors duration-300 ${textColor}`}>
+        {!hasInput ? (
+          <div className="w-1.5 h-1.5 rounded-full bg-slate-300 mx-1"/>
+        ) : isValid ? (
+          <Check size={14} className="stroke-[3]" />
+        ) : (
+          <X size={14} className="stroke-[3]" />
+        )}
+        <span>{text}</span>
+      </div>
+    );
+  };
 
   return (
-    <div className="flex min-h-screen">
-      {/* ฝั่งซ้าย: รูปภาพและข้อความ */}
-      <div className="hidden lg:flex lg:w-3/4 relative">
+    <div className="flex min-h-screen bg-white font-sans overflow-hidden">
+      
+      {/* --- ฝั่งซ้าย: Cinematic Image --- */}
+      <div className="hidden lg:flex lg:w-2/3 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-white/90 z-10 pointer-events-none" />
+        <div className="absolute inset-0 bg-slate-900/30 mix-blend-multiply z-10 pointer-events-none" />
+        
         <img 
-          src="https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&q=80&w=1974" 
+          src={loginbackground} 
           alt="Interior"
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover scale-105"
         />
-        <div className="absolute inset-0 bg-black/30 flex flex-col justify-center px-20">
-          <h1 className="text-white text-4xl font-bold leading-tight max-w-2xl">
-            "ยกระดับประสบการณ์การใช้ชีวิตของคุณ"
+        
+        <div className={`absolute bottom-20 left-20 z-20 transition-all duration-1000 transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+          <div className="w-16 h-1.5 bg-[#D65A31] mb-6 shadow-lg"></div>
+          <h1 className="text-white text-5xl font-extrabold leading-tight max-w-2xl drop-shadow-2xl tracking-tight mb-4">
+            เริ่มต้นประสบการณ์ <br/>
+            การใช้ชีวิต <span className="text-[#D65A31]">เหนือระดับ</span>
           </h1>
-          <p className="text-gray-200 mt-4">homealright.com</p>
+          <p className="text-slate-100 text-xl font-medium max-w-xl leading-relaxed drop-shadow-md">
+            สมัครสมาชิกวันนี้ เพื่อรับสิทธิพิเศษและติดตามออเดอร์ของคุณได้อย่างง่ายดาย
+          </p>
         </div>
       </div>
 
-      {/* ฝั่งขวา: ฟอร์ม */}
-      <div className="w-full lg:w-1/4 bg-[#99C4C8] flex items-center justify-center p-8 overflow-y-auto">
-        <div className="bg-white rounded-[2rem] p-8 w-full max-w-sm shadow-xl flex flex-col items-center my-auto">
+      {/* --- ฝั่งขวา: Light Cinematic Form Panel --- */}
+      <div className="w-full lg:w-1/3 relative flex items-center justify-center p-6 md:p-8 bg-white z-20 shadow-[-20px_0_50px_rgba(0,0,0,0.05)] overflow-y-auto custom-scrollbar">
+        
+        <div className="absolute top-1/4 right-0 w-96 h-96 bg-[#D65A31]/10 blur-[100px] rounded-full pointer-events-none" />
+        
+        <div className={`w-full max-w-sm transition-all duration-1000 delay-300 transform ${isVisible ? 'translate-x-0 opacity-100' : 'translate-x-12 opacity-0'} my-auto py-8`}>
           
-          <img 
-            src={logoImg} 
-            alt="HomeAlright Logo" 
-            className="w-24 h-24 rounded-full border-[3px] border-[#04A5E3] bg-white object-contain p-2 shadow-sm mb-4 shrink-0"
-          />
-
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">ลงทะเบียน</h2>
-
-          <form onSubmit={handleSubmit} className="w-full space-y-3">
-            <input 
-              type="email" placeholder="อีเมล" required
-              className="w-full p-3 bg-gray-50 border rounded-full outline-none focus:ring-2 focus:ring-orange-500" 
-              onChange={(e) => setFormData({...formData, email: e.target.value})} 
+          <div className="flex flex-col items-center mb-8 relative z-10">
+            <img 
+              src={logoImg} 
+              alt="HomeAlright Logo" 
+              className="w-24 h-24 rounded-full border-4 border-white bg-white object-contain p-2 shadow-xl mb-4"
             />
-            <input 
-              type="text" placeholder="ชื่อผู้ใช้" required
-              className="w-full p-3 bg-gray-50 border rounded-full outline-none focus:ring-2 focus:ring-orange-500" 
-              onChange={(e) => setFormData({...formData, username: e.target.value})} 
-            />
-            <input 
-              type="password" placeholder="รหัสผ่าน" required
-              className={`w-full p-3 bg-gray-50 border rounded-full outline-none focus:ring-2 focus:ring-orange-500 ${formData.password && !isPasswordValid ? 'border-red-300' : ''}`} 
-              onChange={(e) => setFormData({...formData, password: e.target.value})} 
-            />
+            <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">สร้างบัญชีใหม่</h2>
+          </div>
 
-            <div className="w-full bg-gray-50/80 p-3 rounded-2xl border border-gray-100 text-xs flex flex-col gap-1.5 shadow-sm">
-              <p className="font-bold text-gray-700 mb-1">ความปลอดภัยของรหัสผ่าน:</p>
-              <RuleItem isValid={passwordRules.length} text="ควรมีความยาวอย่างน้อย 12 ตัวอักษร" />
-              <RuleItem isValid={passwordRules.uppercase} text="อักษรตัวพิมพ์ใหญ่ (A-Z)" />
-              <RuleItem isValid={passwordRules.lowercase} text="อักษรตัวพิมพ์เล็ก (a-z)" />
-              <RuleItem isValid={passwordRules.number} text="ตัวเลข (0-9)" />
-              <RuleItem isValid={passwordRules.specialChar} text="สัญลักษณ์พิเศษ (! @ # $ % ^ & * - _)" />
+          <form onSubmit={handleSubmit} className="w-full space-y-4 relative z-10">
+            
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                <Mail size={18} className="text-slate-400 group-focus-within:text-[#D65A31] transition-colors" />
+              </div>
+              <input 
+                type="email" placeholder="อีเมล" required
+                className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:ring-4 focus:ring-[#D65A31]/20 focus:border-[#D65A31] text-slate-800 placeholder:text-slate-400 transition-all font-medium shadow-sm" 
+                onChange={(e) => setFormData({...formData, email: e.target.value})} 
+              />
             </div>
 
-            <div className="space-y-1">
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                <User size={18} className="text-slate-400 group-focus-within:text-[#D65A31] transition-colors" />
+              </div>
               <input 
-                type="password" placeholder="ยืนยันรหัสผ่าน" required
-                className={`w-full p-3 bg-gray-50 border rounded-full outline-none focus:ring-2 focus:ring-orange-500 ${formData.confirmPassword && !isPasswordMatch ? 'border-red-500 focus:ring-red-500' : ''}`} 
-                onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} 
+                type="text" placeholder="ชื่อผู้ใช้" required
+                className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:ring-4 focus:ring-[#D65A31]/20 focus:border-[#D65A31] text-slate-800 placeholder:text-slate-400 transition-all font-medium shadow-sm" 
+                onChange={(e) => setFormData({...formData, username: e.target.value})} 
               />
+            </div>
+
+            <div>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                  <Lock size={18} className="text-slate-400 group-focus-within:text-[#D65A31] transition-colors" />
+                </div>
+                <input 
+                  type="password" placeholder="รหัสผ่าน" required
+                  className={`w-full pl-12 pr-4 py-3.5 bg-slate-50 border rounded-xl outline-none focus:bg-white focus:ring-4 transition-all font-medium shadow-sm text-slate-800 placeholder:text-slate-400
+                    ${formData.password && !isPasswordValid ? 'border-red-300 focus:ring-red-200 focus:border-red-400' : 'border-slate-200 focus:ring-[#D65A31]/20 focus:border-[#D65A31]'}
+                  `} 
+                  onChange={(e) => setFormData({...formData, password: e.target.value})} 
+                />
+              </div>
+
+              {/* Password Rules Box */}
+              <div className="w-full bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col gap-1.5 shadow-inner mt-2">
+                <p className="text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">ความปลอดภัยของรหัสผ่าน:</p>
+                <div className="grid grid-cols-2 gap-y-2 gap-x-1">
+                  <RuleItem isValid={passwordRules.length} text="ยาว 12 ตัวอักษรขึ้นไป" />
+                  <RuleItem isValid={passwordRules.uppercase} text="พิมพ์ใหญ่ (A-Z)" />
+                  <RuleItem isValid={passwordRules.lowercase} text="พิมพ์เล็ก (a-z)" />
+                  <RuleItem isValid={passwordRules.number} text="ตัวเลข (0-9)" />
+                  <div className="col-span-2">
+                    <RuleItem isValid={passwordRules.specialChar} text="สัญลักษณ์ (!@#$%^&*-_)" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                  <Lock size={18} className="text-slate-400 group-focus-within:text-[#D65A31] transition-colors" />
+                </div>
+                <input 
+                  type="password" placeholder="ยืนยันรหัสผ่าน" required
+                  className={`w-full pl-12 pr-4 py-3.5 bg-slate-50 border rounded-xl outline-none focus:bg-white focus:ring-4 transition-all font-medium shadow-sm text-slate-800 placeholder:text-slate-400
+                    ${formData.confirmPassword && !isPasswordMatch ? 'border-red-300 focus:ring-red-200 focus:border-red-400' : 'border-slate-200 focus:ring-[#D65A31]/20 focus:border-[#D65A31]'}
+                  `} 
+                  onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} 
+                />
+              </div>
+              
+              {/* ✅ เพิ่มข้อความแจ้งเตือนรหัสผ่านตรงกัน (เหมือนหน้า Profile) */}
               {formData.confirmPassword && !isPasswordMatch && (
-                <p className="text-red-500 text-xs px-3 py-1 font-medium">รหัสผ่านไม่ตรงกัน</p>
+                <p className="text-red-500 text-xs mt-1.5 px-1 flex items-center gap-1"><AlertCircle size={12}/> รหัสผ่านไม่ตรงกัน</p>
+              )}
+              {formData.confirmPassword && isPasswordMatch && (
+                <p className="text-emerald-500 text-xs mt-1.5 px-1 flex items-center gap-1"><Check size={12}/> รหัสผ่านตรงกัน</p>
               )}
             </div>
 
-            {/* --- Checkbox ยอมรับนโยบายความเป็นส่วนตัว --- */}
-            <div className="flex items-start gap-2 px-2 pt-2">
+            <div className="flex items-start gap-2 px-1 pt-2">
               <input 
                 type="checkbox" 
                 id="policy" 
                 required
                 checked={isPolicyAccepted}
                 onChange={(e) => setIsPolicyAccepted(e.target.checked)}
-                className="mt-1 cursor-pointer accent-[#D65A31]" 
+                className="mt-1 cursor-pointer w-4 h-4 rounded border-gray-300 text-[#D65A31] focus:ring-[#D65A31]" 
               />
-              <label htmlFor="policy" className="text-xs text-gray-600 leading-tight">
+              <label htmlFor="policy" className="text-xs text-slate-600 font-medium leading-relaxed cursor-pointer">
                 ฉันยอมรับ
-                <Link to="/policy" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700 font-bold underline mx-1">
+                <Link to="/policy" target="_blank" rel="noopener noreferrer" className="text-[#148F96] hover:text-[#107378] font-bold underline mx-1 transition-colors">
                   นโยบายความเป็นส่วนตัว
                 </Link>
-                ของทางเว็บไซต์
+                ของเว็บไซต์
               </label>
             </div>
             
             <button 
               type="submit" 
-              // เช็คเงื่อนไข ปิดปุ่มถ้ายังไม่ติ๊ก หรือรหัสไม่ผ่าน
               disabled={!isPolicyAccepted || !formData.password || !isPasswordValid || !isPasswordMatch} 
-              className="w-full bg-[#D65A31] text-white py-3 rounded-full font-bold mt-4 shadow-lg hover:bg-[#b54622] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-[#D65A31] hover:bg-[#b54622] text-white py-4 rounded-xl font-black text-base flex justify-center items-center gap-2 mt-4 shadow-lg shadow-[#D65A31]/30 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
             >
-              ลงทะเบียน
+              สมัครสมาชิก <ArrowRight size={18} />
             </button>
           </form>
 
-          <p className="mt-6 text-xs text-gray-500">
-            มีบัญชีผู้ใช้แล้ว? <Link to="/login" className="text-blue-500 font-bold underline">ลงชื่อเข้าใช้</Link>
+          <p className="mt-8 text-sm text-center text-slate-500 font-medium relative z-10">
+            มีบัญชีผู้ใช้แล้ว? 
+            <Link to="/login" className="text-[#D65A31] font-bold hover:text-[#b54622] transition-colors ml-2 border-b-2 border-transparent hover:border-[#D65A31] pb-0.5">
+              ลงชื่อเข้าใช้
+            </Link>
           </p>
         </div>
       </div>
+
     </div>
   );
 };

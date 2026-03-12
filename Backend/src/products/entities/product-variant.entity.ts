@@ -21,6 +21,13 @@ export class ProductVariant {
   @Column('int')
   stock: number;
 
+  // แทรกโค้ดบรรทัดนี้ลงไปในคลาส ProductVariant
+  @Column({ type: 'int', default: 0 })
+  sold: number;
+
+  @Column({ nullable: true })
+  image: string;
+
   @ManyToOne(() => Product, (product) => product.variants, { onDelete: 'CASCADE' })
   product: Product;
 }

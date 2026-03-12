@@ -37,6 +37,12 @@ export class User {
   @Column({ length: 15, default: 'user' })
   role: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  resetPasswordToken: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  resetPasswordExpires: Date;
+
   @CreateDateColumn()
   createdAt: Date;
 
@@ -49,8 +55,9 @@ export class User {
   orders: Order[];
 
   // [cite: 38] User "writes" Review
-  //@OneToMany(() => Review, (review) => review.user)
- // reviews: Review[];
+  @OneToMany(() => Review, (review) => review.user)
+ reviews: Review[];
+ 
   @OneToMany(() => CartItem, (cartItem) => cartItem.user)
   cartItems: CartItem[];
 }

@@ -11,25 +11,58 @@ import OrderHistory from './pages/OrderHistory';
 import { CartProvider } from './contexts/CartContext';
 import { AuthProvider } from './contexts/AuthContext';
 import Policy from './pages/Policy';
+import { Toaster } from 'react-hot-toast';
+import ReviewPage from './pages/Review';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import ProtectedRoute from './components/ProtectedRoute';
+import HomepagePromotion from './pages/HomepagePromotion';
+import BookmarkPage from './pages/Bookmark';
+import VerifyEmail from './pages/VerifyEmail';
+
+// ✅ นำเข้าหน้า AuthCallback ที่คุณเผลอลบไปกลับมา
+import AuthCallback from './pages/AuthCallback'; 
 
 function App() {
   return (
-    <BrowserRouter> {/* ✅ 1. เอา Router ไว้บนสุด */}
-      <AuthProvider> {/* ✅ 2. AuthProvider ครอบทุกอย่าง */}
-        <CartProvider> {/* ✅ 3. CartProvider อยู่ข้างในเพื่อให้ดึง Token จาก Auth มาใช้ได้ */}
+    <BrowserRouter> 
+      <AuthProvider> 
+        <CartProvider> 
+          <Toaster 
+            position="top-center" 
+            reverseOrder={false} 
+            toastOptions={{
+              duration: 3000,
+              style: {
+                borderRadius: '10px',
+                background: '#333',
+                color: '#fff',
+              },
+            }} 
+          />
           <Navbar /> 
           <div className="min-h-screen bg-gray-50">
             <Routes>  
               <Route path="/home" element={<Home />} />
-              <Route path="/" element={<Home />} /> {/* เพิ่ม path ว่างไว้ด้วยกันหน้าขาวเวลาเข้าเว็บ */}
+              <Route path="/promotions" element={<HomepagePromotion />} />
+              <Route path="/bookmarks" element={<BookmarkPage />} />
+              <Route path="/" element={<Home />} /> 
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/product/:id" element={<ProductDetail />} />
-              <Route path="/cart" element={<Cart />} />
-              <Route path="/orders" element={<OrderHistory />} />
+              <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
+              <Route path="/orders" element={<ProtectedRoute><OrderHistory /></ProtectedRoute>} />
               <Route path="/policy" element={<Policy />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password/:token" element={<ResetPassword />} />
+              <Route path="/review" element={<ProtectedRoute><ReviewPage /></ProtectedRoute>} />
+              <Route path="/verify-email" element={<VerifyEmail />} />
+
+              {/* ✅ เพิ่ม Route นี้เพื่อให้ระบบ Google Login ส่งข้อมูลกลับมาที่หน้าเว็บได้ */}
+              <Route path="/auth/callback" element={<AuthCallback />} />
+
             </Routes>
           </div>
         </CartProvider>
