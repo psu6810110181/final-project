@@ -37,14 +37,10 @@ const SeasonalPromotion: React.FC<SeasonalPromotionProps> = ({ products, title, 
   const detectedSeason = season || (title ? getSeasonFromPromoTitle(title) : 'summer');
   const theme = seasonalThemes[detectedSeason] || seasonalThemes.summer;
   
-// ✅ 1. แมพไอคอนที่มีทั้งหมด
   const iconMap = { Sun, Waves, Sparkles, Leaf, Wind, Snowflake, Flower };
-  
-  // ✅ 2. กำหนดชื่อไอคอนที่จะใช้ (ดึงจาก theme)
   const iconName = theme.themeIcon || theme.iconComponent[0]; 
-
-  // ✅ 3. นำ iconName (ที่เคยแจ้งว่าไม่ได้ใช้) มาใส่ตรงนี้เพื่อดึง Component ออกมา
   const HeaderIcon = iconMap[iconName as keyof typeof iconMap] || Sparkles;
+  
   const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number }>({
     days: 0, hours: 0, minutes: 0, seconds: 0
@@ -132,11 +128,11 @@ const SeasonalPromotion: React.FC<SeasonalPromotionProps> = ({ products, title, 
 
   const getBadgeStyle = () => {
     switch (detectedSeason) {
-      case 'spring': return 'bg-gradient-to-r from-pink-500 to-rose-600';
-      case 'summer': return 'bg-gradient-to-r from-orange-500 to-red-500';
-      case 'autumn': return 'bg-gradient-to-r from-orange-600 to-amber-800';
-      case 'winter': return 'bg-gradient-to-r from-cyan-500 to-blue-600';
-      default: return 'bg-gradient-to-r from-[#148F96] to-[#0a4d52]';
+      case 'spring': return 'from-pink-500 to-rose-600';
+      case 'summer': return 'from-[#ff8f53] to-[#D65A31]';
+      case 'autumn': return 'from-orange-600 to-amber-800';
+      case 'winter': return 'from-cyan-500 to-blue-600';
+      default: return 'from-[#148F96] to-[#0a4d52]';
     }
   };
 
@@ -163,7 +159,6 @@ const SeasonalPromotion: React.FC<SeasonalPromotionProps> = ({ products, title, 
   if (products.length === 0) return null;
 
   return (
-    // 🎨 ปรับ Opacity เพิ่มขึ้นเพื่อให้สีเด่นขึ้นจากเดิม
     <div className="relative overflow-hidden rounded-[2.5rem] shadow-[0_20px_50px_rgba(20,143,150,0.15)] border border-white p-8 md:p-12 my-12 group font-sans bg-white isolate">
       
       <div 
@@ -196,25 +191,26 @@ const SeasonalPromotion: React.FC<SeasonalPromotionProps> = ({ products, title, 
 
       <div className="relative z-10 flex flex-col lg:flex-row justify-between items-center mb-10 gap-8 border-b border-[#148F96]/20 pb-8">
         <div className="text-center lg:text-left">
-          {/* 🎨 แก้ไข: เพิ่ม py-2 เพื่อให้สระด้านบนไม่ขาด และเปลี่ยน leading เป็น normal */}
-            <h2 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-800 to-[#148F96] mb-3 tracking-tight flex flex-wrap items-center justify-center lg:justify-start gap-5 py-6 leading-relaxed">
+          
+          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-5 mb-3">
+            
             {/* กล่องไอคอน */}
-            <div className={`p-4 rounded-[1.5rem] bg-white shadow-2xl flex items-center justify-center animate-bounce ${getBadgeStyle().replace('bg-gradient-to-r', 'text').split(' ')[0]}`} style={{ animationDuration: '3s' }}>
+            <div className="p-4 rounded-[1.5rem] bg-white shadow-xl flex items-center justify-center animate-bounce text-[#ff8f53]" style={{ animationDuration: '3s' }}>
                 <HeaderIcon size={40} strokeWidth={2.5} />
             </div>
 
-            {/* ตัวหนังสือแคมเปญ */}
-            <span className="pb-2 block">
+            {/* ✅ แก้ไข: เพิ่ม py-4 (Padding บนล่าง) และ leading-tight เพื่อให้สระไม่ขาด */}
+            <h2 className={`text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r ${getBadgeStyle()} tracking-tight leading-tight py-4 overflow-visible drop-shadow-sm`}>
                 {title || `แคมเปญ${theme.nameTh}`}
-            </span>
             </h2>
-          {/* 🎨 เพิ่ม py-1 ให้กับคำอธิบายด้วยเพื่อความสวยงาม */}
+            
+          </div>
+
           <p className="text-slate-600 font-bold text-lg py-1">
             {theme.description}
           </p>
         </div>
         
-        {/* 🎨 ส่วนกล่องนับเวลา (คงเดิมตามที่คุณปรับให้เด่นขึ้น) */}
         <div className="bg-white/90 backdrop-blur-xl rounded-2xl p-4 shadow-xl shadow-[#148F96]/10 border-2 border-white flex items-center gap-4">
           <div className="text-[#D65A31] text-sm font-black uppercase tracking-widest flex items-center gap-2">
             <Clock size={20} /> สิ้นสุดใน
@@ -250,10 +246,9 @@ const SeasonalPromotion: React.FC<SeasonalPromotionProps> = ({ products, title, 
 
           return (
             <Link to={`/product/${product.id}`} key={product.id} className="group relative block text-left">
-                {/* 🎨 สีขอบและเงาตอน Hover สดขึ้น */}
                 <div className={`bg-white rounded-[2rem] shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border-2 h-full flex flex-col relative transform hover:-translate-y-2 isolate ${getBorderColor()}`}>
                 
-                <div className={`absolute top-4 left-4 ${getBadgeStyle()} text-white text-[11px] font-black px-3.5 py-1.5 rounded-full z-20 shadow-lg tracking-widest flex items-center gap-1 border border-white/30`}>
+                <div className={`absolute top-4 left-4 bg-gradient-to-r ${getBadgeStyle()} text-white text-[11px] font-black px-3.5 py-1.5 rounded-full z-20 shadow-lg tracking-widest flex items-center gap-1 border border-white/30`}>
                     <Sparkles size={14} /> {product.promo.title.toUpperCase()}
                 </div>
 
