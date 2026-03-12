@@ -26,3 +26,4 @@ dist-ssr
 # เพิ่มส่วนนี้ในไฟล์ .gitignore
 .env
 .env.local
+node_modules/
