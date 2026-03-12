@@ -29,6 +29,8 @@ function calculateDiscountPrice(price: string | number, promo: Promotion) {
   return Math.max(0, p - promo.discountValue);
 }
 
+const ITEMS_PER_PAGE = 12; // ✅ กำหนดจำนวนสินค้าต่อ 1 หน้า
+
 const Home = () => {
   const [products, setProducts] = useState<ProductWithPromo[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -58,10 +60,18 @@ const Home = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [activeDropdown, setActiveDropdown] = useState<'category' | 'room' | 'feature' | 'color' | 'material' | 'size' | null>(null);
 
+  // ✅ เพิ่ม State สำหรับจัดการหน้า (Pagination)
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
   const { addToCart } = useCart();
   const navigate = useNavigate();
 
   const isAdvancedFilterAllowed = selectedCategories.length > 0 || selectedRooms.length > 0 || selectedFeatures.length > 0;
+
+  // รีเซ็ตหน้ากลับไปหน้า 1 เสมอเมื่อมีการกด Filter หรือค้นหา
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategories, selectedRooms, selectedFeatures, selectedColors, selectedMaterials, selectedSizes, minPrice, maxPrice, searchTerm]);
 
   // --- 🚀 เพิ่ม useEffect นี้เพื่อเก็บประวัติการพิมพ์ค้นหา ---
   useEffect(() => {
@@ -115,8 +125,10 @@ const Home = () => {
             });
         }
 
-        const validProducts = Array.isArray(productsData) ? productsData : [];
-        const productsWithPromo: ProductWithPromo[] = validProducts.map(p => ({
+        // รองรับกรณีที่ Backend อาจจะส่งข้อมูลเป็น { data: [...] } มาให้
+        const validProducts = Array.isArray(productsData) ? productsData : ((productsData as any)?.data || []);
+        
+        const productsWithPromo: ProductWithPromo[] = validProducts.map((p: Product) => ({
             ...p,
             promo: promoMap.get(p.id)
         }));
@@ -133,7 +145,6 @@ const Home = () => {
         let purchasedIds: string[] = [];
         const token = localStorage.getItem('token');
         
-        // 1. ดึงประวัติการซื้อถ้าล็อกอินอยู่
         if (token) {
           try {
             const myOrdersData = await api.getMyOrders();
@@ -147,14 +158,12 @@ const Home = () => {
           }
         }
 
-        // 2. ดึงประวัติการดูรายละเอียดสินค้า และ การค้นหา
         const viewedIds: string[] = JSON.parse(localStorage.getItem('viewedProducts') || '[]');
         const recentSearches: string[] = JSON.parse(localStorage.getItem('recentSearches') || '[]');
 
         const hasHistory = purchasedIds.length > 0 || viewedIds.length > 0 || recentSearches.length > 0;
 
         if (hasHistory) {
-          // โหมดมีประวัติ: กรองเอาเฉพาะสินค้าที่ ตรงกับคำค้นหา OR เคยดู OR เคยซื้อ
           const personalizedProducts = productsWithPromo.filter(p => {
             const isBought = purchasedIds.includes(p.id);
             const isViewed = viewedIds.includes(p.id);
@@ -167,15 +176,12 @@ const Home = () => {
           });
 
           if (personalizedProducts.length > 0) {
-            // สุ่มจัดเรียงภายในกลุ่มที่คัดมาแล้ว
             setRecommendedProducts([...personalizedProducts].sort(() => 0.5 - Math.random()).slice(0, 10));
           } else {
-            // Fallback: ถ้าประวัติเก่ามากให้ดึงสินค้าขายดีมาแทน
             const bestSellersFallback = [...productsWithPromo].sort((a, b) => Number(a.stock) - Number(b.stock));
             setRecommendedProducts(bestSellersFallback.slice(0, 10));
           }
         } else {
-          // โหมดบัญชีใหม่/ไม่มีประวัติ: แนะนำสินค้าขายดีที่สุด (จำลองโดยดึง stock ต่ำสุด)
           const bestSellers = [...productsWithPromo].sort((a, b) => Number(a.stock) - Number(b.stock));
           setRecommendedProducts(bestSellers.slice(0, 10));
         }
@@ -184,7 +190,6 @@ const Home = () => {
         const onSaleProducts = productsWithPromo.filter(p => p.promo);
         setPromoProducts(onSaleProducts.slice(0, 10));
 
-        // Filter seasonal promotions (non-flash sale promotions)
         const seasonalPromoProducts = productsWithPromo.filter(p => p.promo && !p.promo.isFlashSale);
         setSeasonalProducts(seasonalPromoProducts.slice(0, 5));
 
@@ -269,6 +274,13 @@ const Home = () => {
     return matchCategory && matchRoom && matchFeature && matchColor && matchMaterial && matchSize && matchSearch && matchMinPrice && matchMaxPrice; 
   });
 
+  // ✅ คำนวณข้อมูลสำหรับ Pagination
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
   const handleToggle = (value: string, selectedList: string[], setList: React.Dispatch<React.SetStateAction<string[]>>) => {
     if (selectedList.includes(value)) setList(selectedList.filter((item) => item !== value));
     else setList([...selectedList, value]);
@@ -350,7 +362,16 @@ const Home = () => {
     await addToCart(product.id, 1); 
   };
 
-  const ProductGrid = ({ title, items }: { title?: string, items: ProductWithPromo[] }) => (
+  // ✅ อัปเดต ProductGrid ให้รองรับการแสดงปุ่ม Pagination
+  const ProductGrid = ({ 
+    title, 
+    items, 
+    showPagination = false 
+  }: { 
+    title?: string, 
+    items: ProductWithPromo[],
+    showPagination?: boolean 
+  }) => (
     <div className="mb-16">
         {title && (
           <div className="flex items-center gap-4 mb-8">
@@ -363,73 +384,102 @@ const Home = () => {
             <p className="text-slate-500 font-medium">ไม่พบสินค้า</p>
           </div>
         ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10">
-                {items.map((product) => (
-                <Link to={`/product/${product.id}`} key={product.id} className="group relative block">
-                    {/* ✅ แก้ไข: พื้นหลังขาว, ขอบบางๆ, เงาฟุ้งๆ นุ่มนวล */}
-                    <div className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:shadow-[0_10px_40px_rgb(20,143,150,0.12)] transition-all duration-500 overflow-hidden border border-gray-100 h-full flex flex-col relative translate-y-0 hover:-translate-y-2">
-                    
-                    {product.promo && (
-                        <div className="absolute top-4 left-4 bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-bold px-3 py-1.5 rounded-full z-20 shadow-lg tracking-wider">
-                            {product.promo.title.toUpperCase()}
-                        </div>
-                    )}
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10">
+                  {items.map((product) => (
+                  <Link to={`/product/${product.id}`} key={product.id} className="group relative block">
+                      <div className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:shadow-[0_10px_40px_rgb(20,143,150,0.12)] transition-all duration-500 overflow-hidden border border-gray-100 h-full flex flex-col relative translate-y-0 hover:-translate-y-2">
+                      
+                      {product.promo && (
+                          <div className="absolute top-4 left-4 bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-bold px-3 py-1.5 rounded-full z-20 shadow-lg tracking-wider">
+                              {product.promo.title.toUpperCase()}
+                          </div>
+                      )}
 
-                    <button 
-                        onClick={(e) => toggleBookmark(e, product.id)}
-                        className="absolute top-4 right-4 p-2.5 bg-white/80 backdrop-blur-md hover:bg-white rounded-full z-20 shadow-sm text-gray-400 hover:text-yellow-500 transition-all hover:scale-110 border border-gray-100"
-                    >
-                        <Star size={20} fill={bookmarks.includes(product.id) ? "currentColor" : "none"} className={bookmarks.includes(product.id) ? "text-yellow-400" : ""} />
-                    </button>
+                      <button 
+                          onClick={(e) => toggleBookmark(e, product.id)}
+                          className="absolute top-4 right-4 p-2.5 bg-white/80 backdrop-blur-md hover:bg-white rounded-full z-20 shadow-sm text-gray-400 hover:text-yellow-500 transition-all hover:scale-110 border border-gray-100"
+                      >
+                          <Star size={20} fill={bookmarks.includes(product.id) ? "currentColor" : "none"} className={bookmarks.includes(product.id) ? "text-yellow-400" : ""} />
+                      </button>
 
-                    <div className="h-60 overflow-hidden bg-slate-50 relative">
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/10 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
-                        <img src={getImageUrl(product)} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
-                    </div>
+                      <div className="h-60 overflow-hidden bg-slate-50 relative">
+                          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/10 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
+                          <img src={getImageUrl(product)} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
+                      </div>
 
-                    <div className="p-6 flex flex-col flex-1">
-                        <div className="text-xs text-[#148F96] font-bold tracking-widest uppercase mb-2">{product.category || 'GENERAL'}</div>
-                        {/* ✅ แก้ไข: Font ชื่อสินค้าเป็น Semi-bold (font-semibold) */}
-                        <h3 className="font-semibold text-slate-800 text-xl mb-2 line-clamp-2 group-hover:text-[#D65A31] transition-colors leading-snug">{product.name}</h3>
-                        <p className="text-slate-500 text-sm mb-6 line-clamp-2 leading-relaxed">{product.description || "ไม่มีรายละเอียด"}</p>
-                        
-                        <div className="mt-auto flex items-end justify-between pt-4 border-t border-gray-100">
-                            <div>
-                                {product.promo ? (
-                                    <>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="text-slate-400 line-through text-sm">฿{Number(product.price).toLocaleString()}</span>
-                                            <span className="text-[10px] text-red-600 bg-red-50 px-2 py-0.5 rounded-md font-bold">
-                                                ลด {product.promo.discountType === 'PERCENTAGE' ? `${product.promo.discountValue}%` : `฿${product.promo.discountValue}`}
-                                            </span>
-                                        </div>
-                                        <div className="text-2xl font-black text-red-600 drop-shadow-sm">
-                                            ฿{calculateDiscountPrice(product.price, product.promo).toLocaleString()}
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div className="text-2xl font-black text-slate-800 drop-shadow-sm">฿{Number(product.price).toLocaleString()}</div>
-                                )}
-                            </div>
+                      <div className="p-6 flex flex-col flex-1">
+                          <div className="text-xs text-[#148F96] font-bold tracking-widest uppercase mb-2">{product.category || 'GENERAL'}</div>
+                          <h3 className="font-semibold text-slate-800 text-xl mb-2 line-clamp-2 group-hover:text-[#D65A31] transition-colors leading-snug">{product.name}</h3>
+                          <p className="text-slate-500 text-sm mb-6 line-clamp-2 leading-relaxed">{product.description || "ไม่มีรายละเอียด"}</p>
+                          
+                          <div className="mt-auto flex items-end justify-between pt-4 border-t border-gray-100">
+                              <div>
+                                  {product.promo ? (
+                                      <>
+                                          <div className="flex items-center gap-2 mb-1">
+                                              <span className="text-slate-400 line-through text-sm">฿{Number(product.price).toLocaleString()}</span>
+                                              <span className="text-[10px] text-red-600 bg-red-50 px-2 py-0.5 rounded-md font-bold">
+                                                  ลด {product.promo.discountType === 'PERCENTAGE' ? `${product.promo.discountValue}%` : `฿${product.promo.discountValue}`}
+                                              </span>
+                                          </div>
+                                          <div className="text-2xl font-black text-red-600 drop-shadow-sm">
+                                              ฿{calculateDiscountPrice(product.price, product.promo).toLocaleString()}
+                                          </div>
+                                      </>
+                                  ) : (
+                                      <div className="text-2xl font-black text-slate-800 drop-shadow-sm">฿{Number(product.price).toLocaleString()}</div>
+                                  )}
+                              </div>
 
-                            <button onClick={(e) => handleAddToCart(e, product)} className="bg-slate-50 hover:bg-[#148F96] hover:text-white text-slate-700 p-3 rounded-2xl transition-all hover:scale-105 hover:shadow-lg hover:shadow-[#148F96]/30 border border-gray-100 hover:border-transparent">
-                                <ShoppingCart size={20} />
-                            </button>
-                        </div>
-                    </div>
-                    </div>
-                </Link>
-                ))}
-            </div>
+                              <button onClick={(e) => handleAddToCart(e, product)} className="bg-slate-50 hover:bg-[#148F96] hover:text-white text-slate-700 p-3 rounded-2xl transition-all hover:scale-105 hover:shadow-lg hover:shadow-[#148F96]/30 border border-gray-100 hover:border-transparent">
+                                  <ShoppingCart size={20} />
+                              </button>
+                          </div>
+                      </div>
+                      </div>
+                  </Link>
+                  ))}
+              </div>
+
+              {/* ✅ แถบปุ่ม Pagination จะโชว์เฉพาะเวลาค้นหา/กรองสินค้า และมีมากกว่า 1 หน้า */}
+              {showPagination && totalPages > 1 && (
+                <div className="flex justify-center items-center gap-4 mt-12">
+                  <button 
+                    onClick={() => {
+                      setCurrentPage(prev => prev - 1);
+                      window.scrollTo({ top: 500, behavior: 'smooth' }); // เลื่อนจอกลับมาด้านบน
+                    }}
+                    disabled={currentPage === 1}
+                    className={`px-5 py-2.5 rounded-xl font-bold transition-all ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white border border-gray-200 text-[#148F96] hover:bg-[#148F96] hover:text-white shadow-sm'}`}
+                  >
+                    ก่อนหน้า
+                  </button>
+
+                  <div className="text-slate-600 font-medium bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm">
+                    หน้า <span className="text-[#148F96] font-bold">{currentPage}</span> จาก {totalPages}
+                  </div>
+
+                  <button 
+                    onClick={() => {
+                      setCurrentPage(prev => prev + 1);
+                      window.scrollTo({ top: 500, behavior: 'smooth' });
+                    }}
+                    disabled={currentPage === totalPages}
+                    className={`px-5 py-2.5 rounded-xl font-bold transition-all ${currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-[#148F96] text-white hover:bg-[#0f6f75] shadow-md shadow-[#148F96]/20'}`}
+                  >
+                    ถัดไป
+                  </button>
+                </div>
+              )}
+            </>
         )}
     </div>
   );
 
-  // ✅ แก้ไข: พื้นหลังตอน Loading เป็นสีขาวเทาอ่อน #F9F9F9
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#F9F9F9]"><Loader size={48} className="animate-spin text-[#148F96]" /></div>;
 
   return (
-    // ✅ แก้ไข: พื้นหลังหลักของเว็บเป็นสีขาวเทาอ่อน #F9F9F9
     <div className="bg-[#F9F9F9] min-h-screen pb-20 relative">
       
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
@@ -444,7 +494,6 @@ const Home = () => {
       {/* --- 🎬 HERO SECTION CINEMATIC --- */}
       <div className="relative h-[60vh] min-h-[450px] flex flex-col justify-center items-center text-center overflow-hidden z-10">
         <div className="absolute inset-0 bg-slate-900/60 z-10" />
-        {/* ✅ ปรับการไล่สี Gradient ด้านล่างให้กลืนกับ #F9F9F9 */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#F9F9F9] via-transparent to-transparent z-10" />
         <img src={heroBackground} alt="Banner" className="absolute inset-0 w-full h-full object-cover scale-105" />
         
@@ -465,8 +514,6 @@ const Home = () => {
       <div className="sticky top-20 z-40 container mx-auto px-4 -mt-10 mb-16 transition-all duration-300">
         <div className="bg-white/95 backdrop-blur-xl border border-gray-200 shadow-xl shadow-slate-200/50 rounded-[2rem] p-4 flex flex-col lg:flex-row gap-4 justify-between items-center">
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-            
-            {/* ✅ แก้ไข: ปุ่ม Filter ทั้งหมดปรับเป็นพื้นขาว ขอบบาง (bg-white border border-gray-200 text-gray-700) */}
             
             {/* Category Dropdown */}
             <div className="relative">
@@ -528,7 +575,7 @@ const Home = () => {
               )}
             </div>
 
-            {/* Price Filter (กล่องขาว ขอบบาง) */}
+            {/* Price Filter */}
             <div className="flex items-center gap-2 bg-white rounded-full px-5 py-2 focus-within:ring-2 ring-[#148F96]/30 transition-all border border-gray-200 shadow-sm">
               <span className="text-sm font-bold text-slate-500">ราคา:</span>
               <input type="number" placeholder="ต่ำสุด" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} className="w-20 text-sm outline-none bg-transparent text-center font-medium" min="0" />
@@ -604,7 +651,7 @@ const Home = () => {
             )}
           </div>
           
-          {/* Search Bar (กล่องขาว ขอบบาง) */}
+          {/* Search Bar */}
           <div className="flex flex-col items-end w-full lg:w-80 flex-shrink-0 mt-2 lg:mt-0">
             <div className="relative w-full group">
               <input type="text" placeholder="ค้นหาชื่อ รายละเอียด..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 shadow-sm rounded-full focus:outline-none focus:ring-2 focus:ring-[#148F96]/50 transition-all text-sm font-medium" />
@@ -623,7 +670,8 @@ const Home = () => {
       <div className="container mx-auto px-4 relative z-20">
         <main>
           {hasAnyFilter ? (
-             <ProductGrid title="ผลการค้นหา" items={filteredProducts} />
+             // ✅ ส่ง paginatedProducts แทน filteredProducts และสั่งให้แสดงปุ่มเปลี่ยนหน้า
+             <ProductGrid title="ผลการค้นหา" items={paginatedProducts} showPagination={true} />
           ) : (
              <>
                 <SeasonalPromotion products={seasonalProducts} title={seasonalProducts[0]?.promo?.title} season={seasonalProducts[0]?.promo?.title ? getSeasonFromPromoTitle(seasonalProducts[0].promo.title) : undefined} />

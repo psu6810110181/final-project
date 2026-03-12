@@ -389,4 +389,10 @@ export const verifyEmailChange = async (token: string) => {
   const response = await api.post('/users/verify-email', { token });
   return response.data;
 };
+
+// เพิ่มฟังก์ชันดึงสินค้าแบบรับหน้า
+export const getProducts = async (page: number = 1, limit: number = 12) => {
+  const response = await api.get(`/products?page=${page}&limit=${limit}`);
+  return response.data;
+};
 export default api;

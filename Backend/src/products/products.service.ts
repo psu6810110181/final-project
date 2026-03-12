@@ -18,11 +18,27 @@ export class ProductsService {
     return await this.productsRepository.save(product);
   }
 
-  async findAll(): Promise<Product[]> {
-    // ✅ เพิ่ม relations: ['variants'] เพื่อให้ดึงข้อมูลตัวเลือกสินค้าออกมาด้วย
-    return await this.productsRepository.find({
-      relations: ['variants']
+  // Backend/src/products/products.service.ts
+
+  async findAll(page: number = 1, limit: number = 12) {
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await this.productsRepository.findAndCount({
+      // ✅ แก้ไข: ใส่เฉพาะชื่อ Property ที่มี @OneToMany, @ManyToMany ใน entity เท่านั้น
+      relations: ['variants', 'promotions', 'reviews'], 
+      skip: skip,
+      take: limit,
+      order: { createdAt: 'DESC' }, // หรือ order: { id: 'DESC' }
     });
+
+    return {
+      data,
+      meta: {
+        total, 
+        page, 
+        lastPage: Math.ceil(total / limit),
+      },
+    };
   }
 
   // ✅ เปลี่ยน Return Type เป็น Promise<any> เพื่อให้ส่งค่า soldCount พ่วงไปได้โดยไม่ติด Error
