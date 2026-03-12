@@ -120,7 +120,7 @@ const ManageOrders: React.FC = () => {
     switch(status) {
       case 'COMPLETED': return { bg: colors.successLight, color: colors.success };
       case 'CANCELLED': return { bg: colors.dangerLight, color: colors.danger };
-      case 'WAITING_FOR_VERIFICATION': return { bg: colors.infoLight, color: colors.info };
+      case 'WAITING_FOR_VERIFICATION': return { bg: colors.warningLight, color: colors.warning };
       default: return { bg: colors.warningLight, color: colors.warning };
     }
   };
@@ -161,7 +161,7 @@ const ManageOrders: React.FC = () => {
   };
 
   const statusOptions = [
-    { value: "WAITING_FOR_VERIFICATION", label: "WAITING (รอตรวจสอบ)" },
+    { value: "WAITING_FOR_VERIFICATION", label: "PENDING (รอตรวจสอบ)" },
     { value: "COMPLETED", label: "COMPLETED (สำเร็จ)" },
     { value: "CANCELLED", label: "CANCELLED (ยกเลิก)" }
   ];
@@ -275,7 +275,7 @@ const ManageOrders: React.FC = () => {
                           display: 'inline-block', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600',
                           background: statusStyle.bg, color: statusStyle.color, border: `1px solid ${statusStyle.color}40`
                         }}>
-                          {order.status === 'WAITING_FOR_VERIFICATION' ? 'WAITING' : 
+                          {order.status === 'WAITING_FOR_VERIFICATION' ? 'PENDING' : 
                            order.status === 'COMPLETED' ? 'COMPLETED' : 
                            order.status === 'CANCELLED' ? 'CANCELLED' : 
                            order.status}
