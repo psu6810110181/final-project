@@ -110,7 +110,6 @@ const Profile: React.FC = () => {
       formData.append('phone', editData.phone);
       formData.append('address', editData.address);
       
-      // แนบไฟล์รูปภาพไปด้วยถ้ามีการเลือกใหม่ (ใช้ชื่อฟิลด์ 'file' ตาม backend ที่ตั้งไว้)
       if (selectedImage) {
         formData.append('file', selectedImage);
       }
@@ -142,13 +141,13 @@ const Profile: React.FC = () => {
     }
     setIsEmailSaving(true);
     try {
-      if (typeof (api as any).requestEmailChange === 'function') {
-        await (api as any).requestEmailChange({
-          currentPassword: emailForm.currentPassword,
-          newEmail: emailForm.newEmail
-        });
-      }
-      setEmailStep(2);
+      // ✅ เรียกใช้งาน API ของจริง
+      await api.requestEmailChange({
+        currentPassword: emailForm.currentPassword,
+        newEmail: emailForm.newEmail
+      });
+      
+      setEmailStep(2); // เปลี่ยนหน้าต่างแจ้งเตือนให้ไปเช็คอีเมล
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'รหัสผ่านปัจจุบันไม่ถูกต้อง หรือเกิดข้อผิดพลาด');
     } finally {
@@ -184,12 +183,11 @@ const Profile: React.FC = () => {
 
     setIsPwdSaving(true);
     try {
-      if (typeof (api as any).changePassword === 'function') {
-        await (api as any).changePassword({
-          currentPassword: pwdForm.currentPassword,
-          newPassword: pwdForm.newPassword
-        });
-      }
+      // ✅ เรียกใช้งาน API เปลี่ยนรหัสผ่านของจริง
+      await api.changePassword({
+        currentPassword: pwdForm.currentPassword,
+        newPassword: pwdForm.newPassword
+      });
 
       toast.success('เปลี่ยนรหัสผ่านสำเร็จ');
       setShowPwdModal(false);

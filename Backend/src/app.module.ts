@@ -1,7 +1,10 @@
-// app.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { MailerModule } from '@nestjs-modules/mailer'; // 👈 นำเข้า MailerModule
+import { join } from 'path';
+
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
@@ -11,20 +14,13 @@ import { OrderItemsModule } from './order_items/order_items.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { CartItemsModule } from './cart_items/cart_items.module';
 import { AuthModule } from './auth/auth.module';
-// 👇 1. Import เพิ่มสำหรับ Serve Static Files
-import { ServeStaticModule } from '@nestjs/serve-static';
-import { join } from 'path';
 import { CategoriesModule } from './categories/categories.module';
 import { RoomsModule } from './rooms/rooms.module';
 import { FeaturesModule } from './features/features.module';
-
-// 👇 เพิ่ม Import สำหรับ Colors, Materials, Sizes ที่เราเพิ่งสร้าง
 import { ColorsModule } from './colors/colors.module';
 import { MaterialsModule } from './materials/materials.module';
 import { SizesModule } from './sizes/sizes.module';
 import { PromotionsModule } from './promotions/promotions.module';
-
-// 👇 เพิ่ม Import สำหรับ Bookmarks Module (สินค้าที่สนใจ)
 import { BookmarksModule } from './bookmarks/bookmarks.module';
 
 @Module({
@@ -34,13 +30,33 @@ import { BookmarksModule } from './bookmarks/bookmarks.module';
       isGlobal: true,
     }),
 
-    // 2. เพิ่มส่วนนี้: เปิดให้เข้าถึงโฟลเดอร์ uploads ผ่าน URL
-    ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'uploads'), // ชี้ไปที่โฟลเดอร์ uploads (อยู่นอก src)
-      serveRoot: '/uploads', // เรียกผ่าน http://localhost:3000/uploads/...
+    // 2. ตั้งค่าระบบส่งอีเมล (ดึงข้อมูลจาก .env)
+    MailerModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        transport: {
+          host: configService.get<string>('MAIL_HOST', 'smtp.gmail.com'),
+          port: configService.get<number>('MAIL_PORT', 587),
+          secure: false, // ใช้ false สำหรับพอร์ต 587
+          auth: {
+            user: configService.get<string>('MAIL_USER'),
+            pass: configService.get<string>('MAIL_PASS'),
+          },
+        },
+        defaults: {
+          from: '"HomeAlright" <noreply@homealright.com>', // ชื่อผู้ส่งเริ่มต้น
+        },
+      }),
+      inject: [ConfigService],
     }),
 
-    // 3. เชื่อมต่อ Database - รองรับทั้ง PostgreSQL และ SQLite
+    // 3. เปิดให้เข้าถึงโฟลเดอร์ uploads ผ่าน URL
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
+    }),
+
+    // 4. เชื่อมต่อ Database
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
@@ -54,15 +70,14 @@ import { BookmarksModule } from './bookmarks/bookmarks.module';
             username: configService.get<string>('DB_USERNAME'),
             password: configService.get<string>('DB_PASSWORD'),
             database: configService.get<string>('DB_DATABASE'),
-            autoLoadEntities: true, // 💡 จุดนี้คือตัวจัดการโหลด Bookmark ให้เองอัตโนมัติ
+            autoLoadEntities: true,
             synchronize: true,
           };
         } else {
-          // SQLite (default)
           return {
             type: 'sqlite',
             database: configService.get<string>('DB_DATABASE', './data/finalproject.db'),
-            autoLoadEntities: true, // 💡 โหลด Entity อัตโนมัติเช่นกัน
+            autoLoadEntities: true,
             synchronize: true,
           };
         }
@@ -80,14 +95,10 @@ import { BookmarksModule } from './bookmarks/bookmarks.module';
     CategoriesModule,
     RoomsModule,
     FeaturesModule,
-    
-    // 👇 นำ Module ลงทะเบียนใช้งานในระบบ
     ColorsModule,
     MaterialsModule,
     SizesModule,
     PromotionsModule,
-
-    // 👇 ลงทะเบียน BookmarksModule ในระบบ
     BookmarksModule,
   ],
   controllers: [AppController],

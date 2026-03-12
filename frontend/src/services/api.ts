@@ -384,4 +384,9 @@ export const changePassword = async (data: { currentPassword: string; newPasswor
   const response = await api.post('/users/change-password', data);
   return response.data;
 };
+
+export const verifyEmailChange = async (token: string) => {
+  const response = await api.post('/users/verify-email', { token });
+  return response.data;
+};
 export default api;

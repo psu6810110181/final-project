@@ -10,7 +10,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
-import sharp from 'sharp'; // ใช้ sharp แบบนี้ตามที่คุณแก้ไว้
+import sharp from 'sharp'; 
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -25,58 +25,58 @@ export class UsersController {
   }
 
   // ---------------------------------------------------------
-  // ✅ แก้ไขโปรไฟล์ตัวเอง + อัปโหลดรูปภาพ (มี Sharp Resize) 🖼️
+  // ✅ แก้ไขโปรไฟล์ตัวเอง + อัปโหลดรูปภาพ 🖼️
   // ---------------------------------------------------------
   @Patch('profile')
   @UseGuards(AuthGuard('jwt'))
-  @UseInterceptors(FileInterceptor('file')) // รับไฟล์จาก Frontend ที่ชื่อฟิลด์ 'file'
+  @UseInterceptors(FileInterceptor('file')) 
   async updateProfile(
     @Req() req, 
     @Body() body: UpdateUserDto, 
     @UploadedFile(
       new ParseFilePipe({
-        fileIsRequired: false, // ไม่บังคับว่าต้องมีรูป (เผื่อแก้แค่ชื่อ/เบอร์โทร)
+        fileIsRequired: false, 
         validators: [
-          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // Max 5MB
-          new FileTypeValidator({ fileType: '.(png|jpeg|jpg|webp)' }), // เฉพาะไฟล์รูป
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), 
+          new FileTypeValidator({ fileType: '.(png|jpeg|jpg|webp)' }), 
         ],
       }),
     ) file?: Express.Multer.File 
   ) {
-    // ถ้ามีการอัปโหลดไฟล์มาด้วย ให้ทำการ Resize
     if (file) {
       const filename = `user-${req.user.id}-${Date.now()}.jpeg`;
       const uploadPath = path.join('./uploads/profiles', filename);
 
-      // สร้างโฟลเดอร์ถ้ายังไม่มี
       if (!fs.existsSync('./uploads/profiles')) {
         fs.mkdirSync('./uploads/profiles', { recursive: true });
       }
 
-      // ✅ ใช้ Sharp ย่อรูปและบันทึก
       await sharp(file.buffer)
-        .resize(300, 300, { // บังคับขนาด 300x300 pixel เพื่อให้เป็นสี่เหลี่ยมจัตุรัสพอดี
-          fit: 'cover',
-        })
+        .resize(300, 300, { fit: 'cover' })
         .toFormat('jpeg')
-        .jpeg({ quality: 80 }) // ลดขนาดไฟล์ลงเล็กน้อยเพื่อความเร็ว
+        .jpeg({ quality: 80 }) 
         .toFile(uploadPath);
       
-      // เอาชื่อไฟล์ใส่เข้าไปใน DTO เพื่อไปอัปเดตลง DB (เก็บแค่ชื่อไฟล์พอ)
       body.userImage = filename;
     }
-    
-    // อัปเดตข้อมูล (ใช้ ID จาก Token ที่ล็อกอินอยู่)
     return this.usersService.update(req.user.id, body); 
   }
 
   // ---------------------------------------------------------
-  // 📧 ขอเปลี่ยน Email
+  // 📧 1. ขอเปลี่ยน Email (ส่งอีเมลยืนยัน)
   // ---------------------------------------------------------
   @Post('change-email-request')
   @UseGuards(AuthGuard('jwt'))
   async requestEmailChange(@Req() req, @Body() body: { currentPassword: string; newEmail: string }) {
     return this.usersService.requestEmailChange(req.user.id, body.currentPassword, body.newEmail);
+  }
+
+  // ---------------------------------------------------------
+  // 📧 2. ยืนยันการเปลี่ยน Email ผ่าน Token (ไม่ต้องใช้ AuthGuard)
+  // ---------------------------------------------------------
+  @Post('verify-email')
+  async verifyEmailChange(@Body() body: { token: string }) {
+    return this.usersService.verifyEmailChange(body.token);
   }
 
   // ---------------------------------------------------------
@@ -96,14 +96,14 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
-  // ✅ เพิ่ม Endpoint ดึง Profile ของตัวเอง (ที่ Frontend ต้องใช้แสดงข้อมูล)
+  // ✅ เพิ่ม Endpoint ดึง Profile ของตัวเอง
   @Get('profile/me')
   @UseGuards(AuthGuard('jwt'))
   getProfile(@Req() req) {
     return this.usersService.findOne(req.user.id);
   }
 
-  // 3. ดูข้อมูล User ตาม ID (ดูได้เฉพาะตัวเอง หรือ Admin)
+  // 3. ดูข้อมูล User ตาม ID
   @Get(':id')
   @UseGuards(AuthGuard('jwt')) 
   findOne(@Param('id') id: string, @Req() req) {
@@ -117,7 +117,7 @@ export class UsersController {
   @Patch(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
-  @UseInterceptors(FileInterceptor('file')) // ให้ Admin อัปโหลดรูปให้ User ได้ด้วย
+  @UseInterceptors(FileInterceptor('file')) 
   async update(
     @Param('id') id: string, 
     @Body() updateUserDto: UpdateUserDto,
@@ -142,7 +142,7 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto);
   }
 
-  // 5. ลบ User (Admin เท่านั้น)
+  // 5. ลบ User (Admin)
   @Delete(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
@@ -150,12 +150,11 @@ export class UsersController {
     return this.usersService.remove(id);
   }
 
-  // 6. เปลี่ยน Role (Admin เท่านั้น)
+  // 6. เปลี่ยน Role (Admin)
   @Patch(':id/role')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
   updateRole(@Param('id') id: string, @Body() updateRoleDto: UpdateRoleDto, @Req() req: any) {
-    // ป้องกันไม่ให้ Admin ลดสิทธิ์ตัวเองโดยไม่ได้ตั้งใจ
     if (id === req.user.id) { 
       throw new ForbiddenException('ไม่สามารถเปลี่ยนสถานะบัญชีของตัวเองได้');
     }
