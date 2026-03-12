@@ -48,6 +48,22 @@ export class PromotionsService {
     });
   }
 
+  async findAnyActiveSeasonalPromotion(): Promise<Promotion | null> {
+    const currentDate = new Date(); 
+    
+    const promotion = await this.promotionsRepository.findOne({
+      where: {
+        isActive: true,
+        isFlashSale: false, // Seasonal promotions have isFlashSale = false
+        startDate: LessThanOrEqual(currentDate),
+        endDate: MoreThanOrEqual(currentDate)
+      },
+      relations: ['products'],
+    });
+    
+    return promotion || null;
+  }
+
   async findOne(id: string): Promise<Promotion> {
     const promotion = await this.promotionsRepository.findOne({
       where: { id },
@@ -78,11 +94,12 @@ export class PromotionsService {
     // Check if this is a seasonal promotion (isFlashSale = false)
     if (promotionData.isFlashSale === false) {
       // Check for existing active seasonal promotions
-      const activeSeasonalPromotions = await this.findActiveSeasonalPromotions();
+      const existingActiveSeasonal = await this.findAnyActiveSeasonalPromotion();
       
-      if (activeSeasonalPromotions.length > 0) {
+      if (existingActiveSeasonal) {
         throw new ConflictException(
           'ไม่สามารถสร้าง Seasonal Promotion ใหม่ได้ เนื่องจากมี Seasonal Promotion ที่กำลังทำงานอยู่แล้ว ' +
+          `(${existingActiveSeasonal.title}) ` +
           'กรุณาปิด Seasonal Promotion ปัจจุบันก่อนสร้างใหม่'
         );
       }
@@ -129,12 +146,12 @@ export class PromotionsService {
     // Check if trying to activate a seasonal promotion
     if (promotionData.isActive === true && promotion.isFlashSale === false) {
       // Check for existing active seasonal promotions (excluding this one)
-      const activeSeasonalPromotions = await this.findActiveSeasonalPromotions();
-      const otherActiveSeasonalPromotions = activeSeasonalPromotions.filter(p => p.id !== id);
+      const existingActiveSeasonal = await this.findAnyActiveSeasonalPromotion();
       
-      if (otherActiveSeasonalPromotions.length > 0) {
+      if (existingActiveSeasonal && existingActiveSeasonal.id !== id) {
         throw new ConflictException(
           'ไม่สามารถเปิดใช้งาน Seasonal Promotion นี้ได้ เนื่องจากมี Seasonal Promotion อื่นที่กำลังทำงานอยู่แล้ว ' +
+          `(${existingActiveSeasonal.title}) ` +
           'กรุณาปิด Seasonal Promotion ปัจจุบันก่อนเปิดใช้งานอันนี้'
         );
       }
@@ -177,12 +194,12 @@ export class PromotionsService {
     // Check if trying to activate a seasonal promotion
     if (isActive === true && promotion.isFlashSale === false) {
       // Check for existing active seasonal promotions (excluding this one)
-      const activeSeasonalPromotions = await this.findActiveSeasonalPromotions();
-      const otherActiveSeasonalPromotions = activeSeasonalPromotions.filter(p => p.id !== id);
+      const existingActiveSeasonal = await this.findAnyActiveSeasonalPromotion();
       
-      if (otherActiveSeasonalPromotions.length > 0) {
+      if (existingActiveSeasonal && existingActiveSeasonal.id !== id) {
         throw new ConflictException(
           'ไม่สามารถเปิดใช้งาน Seasonal Promotion นี้ได้ เนื่องจากมี Seasonal Promotion อื่นที่กำลังทำงานอยู่แล้ว ' +
+          `(${existingActiveSeasonal.title}) ` +
           'กรุณาปิด Seasonal Promotion ปัจจุบันก่อนเปิดใช้งานอันนี้'
         );
       }

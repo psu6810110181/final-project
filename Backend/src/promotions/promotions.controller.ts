@@ -27,6 +27,12 @@ export class PromotionsController {
     return this.promotionsService.findActiveFlashSales();
   }
 
+  @Get('active-seasonal')
+  @UseGuards(JwtAuthGuard)
+  findActiveSeasonalPromotions() {
+    return this.promotionsService.findActiveSeasonalPromotions();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.promotionsService.findOne(id);
