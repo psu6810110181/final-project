@@ -144,10 +144,11 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
   return (
     <div className="relative overflow-hidden rounded-[3rem] shadow-[0_20px_50px_rgba(20,143,150,0.15)] border border-white/50 p-8 md:p-12 mb-16 mt-8 font-sans isolate">
       
-      <div className="absolute inset-0 bg-gradient-to-br from-[#148F96]/10 via-white to-[#ff8e53]/10 -z-10 pointer-events-none"></div>
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#ff8e53]/20 blur-[150px] rounded-full pointer-events-none animate-pulse -z-10" style={{ animationDuration: '6s' }} />
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-[#148F96]/20 blur-[150px] rounded-full pointer-events-none animate-pulse -z-10" style={{ animationDuration: '8s' }} />
-      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03] mix-blend-overlay pointer-events-none -z-10"></div>
+      {/* ปรับความเข้มสีพื้นหลังและ Orbs ขึ้น 80% */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#148F96]/35 via-white to-[#ff8e53]/35 -z-10 pointer-events-none"></div>
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#ff8e53]/45 blur-[150px] rounded-full pointer-events-none animate-pulse -z-10" style={{ animationDuration: '6s' }} />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-[#148F96]/45 blur-[150px] rounded-full pointer-events-none animate-pulse -z-10" style={{ animationDuration: '8s' }} />
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.08] mix-blend-overlay pointer-events-none -z-10"></div>
 
       <div className="relative z-10 flex flex-col lg:flex-row justify-between items-center mb-10 gap-8 border-b border-[#148F96]/10 pb-8">
         <div className="flex items-center gap-4 text-center lg:text-left">
@@ -199,7 +200,6 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
 
           return (
             <Link to={`/product/${product.id}`} key={product.id} className="group relative block text-left">
-                {/* ✅ เพิ่ม isolate สำหรับ Card เพื่อล็อกขอบไม่ให้กระพริบ */}
                 <div className="bg-white/90 backdrop-blur-xl border border-white rounded-[2rem] shadow-xl hover:shadow-2xl hover:shadow-[#ff8e53]/20 transition-all duration-500 overflow-hidden h-full flex flex-col relative transform hover:-translate-y-2 isolate">
                 
                 <div className="absolute top-4 left-4 bg-gradient-to-r from-[#ff8e53] to-[#D65A31] text-white text-[11px] font-black px-3.5 py-1.5 rounded-full z-20 shadow-md tracking-widest flex items-center gap-1 border border-white/50">
@@ -213,7 +213,6 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
                     <Star size={18} fill={bookmarks.includes(product.id) ? "currentColor" : "none"} className={bookmarks.includes(product.id) ? "text-yellow-400" : ""} />
                 </button>
 
-                {/* ✅ เพิ่ม translateZ(0) และ rounded เข้าไปในกรอบรูป */}
                 <div className="h-60 overflow-hidden bg-slate-50 relative rounded-t-[2rem]" style={{ transform: 'translateZ(0)' }}>
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900/5 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
                     <img src={getImageUrl(product)} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out mix-blend-multiply" />

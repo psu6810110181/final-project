@@ -37,7 +37,14 @@ const SeasonalPromotion: React.FC<SeasonalPromotionProps> = ({ products, title, 
   const detectedSeason = season || (title ? getSeasonFromPromoTitle(title) : 'summer');
   const theme = seasonalThemes[detectedSeason] || seasonalThemes.summer;
   
+// ✅ 1. แมพไอคอนที่มีทั้งหมด
   const iconMap = { Sun, Waves, Sparkles, Leaf, Wind, Snowflake, Flower };
+  
+  // ✅ 2. กำหนดชื่อไอคอนที่จะใช้ (ดึงจาก theme)
+  const iconName = theme.themeIcon || theme.iconComponent[0]; 
+
+  // ✅ 3. นำ iconName (ที่เคยแจ้งว่าไม่ได้ใช้) มาใส่ตรงนี้เพื่อดึง Component ออกมา
+  const HeaderIcon = iconMap[iconName as keyof typeof iconMap] || Sparkles;
   const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number }>({
     days: 0, hours: 0, minutes: 0, seconds: 0
@@ -125,48 +132,49 @@ const SeasonalPromotion: React.FC<SeasonalPromotionProps> = ({ products, title, 
 
   const getBadgeStyle = () => {
     switch (detectedSeason) {
-      case 'spring': return 'bg-gradient-to-r from-pink-400 to-rose-500';
-      case 'summer': return 'bg-gradient-to-r from-orange-400 to-amber-500';
-      case 'autumn': return 'bg-gradient-to-r from-orange-600 to-amber-700';
-      case 'winter': return 'bg-gradient-to-r from-cyan-400 to-blue-500';
-      default: return 'bg-gradient-to-r from-[#148F96] to-[#0f6f75]';
+      case 'spring': return 'bg-gradient-to-r from-pink-500 to-rose-600';
+      case 'summer': return 'bg-gradient-to-r from-orange-500 to-red-500';
+      case 'autumn': return 'bg-gradient-to-r from-orange-600 to-amber-800';
+      case 'winter': return 'bg-gradient-to-r from-cyan-500 to-blue-600';
+      default: return 'bg-gradient-to-r from-[#148F96] to-[#0a4d52]';
     }
   };
 
   const getBorderColor = () => {
     switch (detectedSeason) {
-      case 'spring': return 'border-pink-200/50 hover:shadow-pink-500/20';
-      case 'summer': return 'border-orange-200/50 hover:shadow-orange-500/20';
-      case 'autumn': return 'border-amber-200/50 hover:shadow-amber-700/20';
-      case 'winter': return 'border-cyan-200/50 hover:shadow-cyan-500/20';
-      default: return 'border-slate-100 hover:shadow-[#148F96]/20';
+      case 'spring': return 'border-pink-300 hover:shadow-pink-500/30';
+      case 'summer': return 'border-orange-300 hover:shadow-orange-500/30';
+      case 'autumn': return 'border-amber-300 hover:shadow-amber-700/30';
+      case 'winter': return 'border-cyan-300 hover:shadow-cyan-500/30';
+      default: return 'border-[#148F96]/30 hover:shadow-[#148F96]/30';
     }
   };
 
   const getIconColor = () => {
     switch (detectedSeason) {
-      case 'spring': return 'text-pink-400/20';
-      case 'summer': return 'text-orange-400/20';
-      case 'autumn': return 'text-amber-600/20';
-      case 'winter': return 'text-cyan-400/20';
-      default: return 'text-[#148F96]/10';
+      case 'spring': return 'text-pink-500/30';
+      case 'summer': return 'text-orange-500/30';
+      case 'autumn': return 'text-amber-700/30';
+      case 'winter': return 'text-cyan-500/30';
+      default: return 'text-[#148F96]/20';
     }
   };
 
   if (products.length === 0) return null;
 
   return (
-    <div className="relative overflow-hidden rounded-[2.5rem] shadow-[0_20px_50px_rgba(20,143,150,0.05)] border border-white/80 p-8 md:p-12 my-12 group font-sans bg-white isolate">
+    // 🎨 ปรับ Opacity เพิ่มขึ้นเพื่อให้สีเด่นขึ้นจากเดิม
+    <div className="relative overflow-hidden rounded-[2.5rem] shadow-[0_20px_50px_rgba(20,143,150,0.15)] border border-white p-8 md:p-12 my-12 group font-sans bg-white isolate">
       
       <div 
-        className="absolute inset-0 opacity-[0.15] pointer-events-none transition-opacity duration-1000 group-hover:opacity-[0.25] -z-10"
+        className="absolute inset-0 opacity-[0.25] pointer-events-none transition-opacity duration-1000 group-hover:opacity-[0.35] -z-10"
         style={{
           background: theme.gradient,
           backgroundSize: '400% 400%',
           animation: theme.animation || 'gradient 15s ease infinite',
         }}
       />
-      <div className="absolute inset-0 bg-white/70 backdrop-blur-3xl pointer-events-none -z-10" />
+      <div className="absolute inset-0 bg-white/60 backdrop-blur-3xl pointer-events-none -z-10" />
 
       <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
         {[...Array(5)].map((_, i) => {
@@ -174,11 +182,11 @@ const SeasonalPromotion: React.FC<SeasonalPromotionProps> = ({ products, title, 
           if (!IconComponent) return null;
           return (
             <IconComponent 
-              key={i} size={40 + Math.random() * 40} 
+              key={i} size={40 + Math.random() * 50} 
               className={`absolute animate-pulse ${getIconColor()}`}
               style={{ 
                 top: `${Math.random() * 100}%`, left: `${Math.random() * 100}%`,
-                animationDelay: `${i * 0.5}s`, animationDuration: '6s',
+                animationDelay: `${i * 0.5}s`, animationDuration: '4s',
                 transform: `translateY(${Math.random() * 10}px)`
               }} 
             />
@@ -186,39 +194,49 @@ const SeasonalPromotion: React.FC<SeasonalPromotionProps> = ({ products, title, 
         })}
       </div>
 
-      <div className="relative z-10 flex flex-col lg:flex-row justify-between items-center mb-10 gap-8 border-b border-slate-100 pb-8">
+      <div className="relative z-10 flex flex-col lg:flex-row justify-between items-center mb-10 gap-8 border-b border-[#148F96]/20 pb-8">
         <div className="text-center lg:text-left">
-          <h2 className="text-3xl md:text-4xl font-extrabold text-slate-800 mb-2 tracking-tight flex flex-wrap items-center justify-center lg:justify-start gap-3">
-            <span className="text-3xl drop-shadow-sm animate-bounce" style={{ animationDuration: '3s' }}>{theme.emoji[0]}</span>
-            {title || `แคมเปญ${theme.nameTh}`}
-          </h2>
-          <p className="text-slate-500 font-medium text-base">
+          {/* 🎨 แก้ไข: เพิ่ม py-2 เพื่อให้สระด้านบนไม่ขาด และเปลี่ยน leading เป็น normal */}
+            <h2 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-800 to-[#148F96] mb-3 tracking-tight flex flex-wrap items-center justify-center lg:justify-start gap-5 py-6 leading-relaxed">
+            {/* กล่องไอคอน */}
+            <div className={`p-4 rounded-[1.5rem] bg-white shadow-2xl flex items-center justify-center animate-bounce ${getBadgeStyle().replace('bg-gradient-to-r', 'text').split(' ')[0]}`} style={{ animationDuration: '3s' }}>
+                <HeaderIcon size={40} strokeWidth={2.5} />
+            </div>
+
+            {/* ตัวหนังสือแคมเปญ */}
+            <span className="pb-2 block">
+                {title || `แคมเปญ${theme.nameTh}`}
+            </span>
+            </h2>
+          {/* 🎨 เพิ่ม py-1 ให้กับคำอธิบายด้วยเพื่อความสวยงาม */}
+          <p className="text-slate-600 font-bold text-lg py-1">
             {theme.description}
           </p>
         </div>
         
-        <div className="bg-slate-50/80 backdrop-blur-xl rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center gap-4">
-          <div className="text-slate-500 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-            <Clock size={16} className="text-[#D65A31]" /> สิ้นสุดใน
+        {/* 🎨 ส่วนกล่องนับเวลา (คงเดิมตามที่คุณปรับให้เด่นขึ้น) */}
+        <div className="bg-white/90 backdrop-blur-xl rounded-2xl p-4 shadow-xl shadow-[#148F96]/10 border-2 border-white flex items-center gap-4">
+          <div className="text-[#D65A31] text-sm font-black uppercase tracking-widest flex items-center gap-2">
+            <Clock size={20} /> สิ้นสุดใน
           </div>
           <div className="flex gap-2">
             {timeLeft.days > 0 && (
-              <div className="bg-white border border-slate-100 px-3 py-2 rounded-xl min-w-[50px] text-center shadow-sm">
-                <div className="text-lg font-black text-slate-700">{timeLeft.days}</div>
-                <div className="text-[9px] font-bold text-slate-400 uppercase">Days</div>
+              <div className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl min-w-[50px] text-center shadow-sm">
+                <div className="text-lg font-black text-slate-800">{timeLeft.days}</div>
+                <div className="text-[10px] font-bold text-slate-500 uppercase">Days</div>
               </div>
             )}
-            <div className="bg-white border border-slate-100 px-3 py-2 rounded-xl min-w-[50px] text-center shadow-sm">
-              <div className="text-lg font-black text-slate-700">{String(timeLeft.hours).padStart(2, '0')}</div>
-              <div className="text-[9px] font-bold text-slate-400 uppercase">Hrs</div>
+            <div className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl min-w-[50px] text-center shadow-sm">
+              <div className="text-lg font-black text-slate-800">{String(timeLeft.hours).padStart(2, '0')}</div>
+              <div className="text-[10px] font-bold text-slate-500 uppercase">Hrs</div>
             </div>
-            <div className="bg-white border border-slate-100 px-3 py-2 rounded-xl min-w-[50px] text-center shadow-sm">
-              <div className="text-lg font-black text-slate-700">{String(timeLeft.minutes).padStart(2, '0')}</div>
-              <div className="text-[9px] font-bold text-slate-400 uppercase">Mins</div>
+            <div className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl min-w-[50px] text-center shadow-sm">
+              <div className="text-lg font-black text-slate-800">{String(timeLeft.minutes).padStart(2, '0')}</div>
+              <div className="text-[10px] font-bold text-slate-500 uppercase">Mins</div>
             </div>
-            <div className="bg-[#D65A31]/5 border border-[#D65A31]/20 px-3 py-2 rounded-xl min-w-[50px] text-center shadow-sm animate-pulse">
-              <div className="text-lg font-black text-[#D65A31]">{String(timeLeft.seconds).padStart(2, '0')}</div>
-              <div className="text-[9px] font-bold text-[#D65A31] uppercase">Secs</div>
+            <div className="bg-[#D65A31] border border-[#b54622] px-3 py-2 rounded-xl min-w-[50px] text-center shadow-md animate-pulse">
+              <div className="text-lg font-black text-white">{String(timeLeft.seconds).padStart(2, '0')}</div>
+              <div className="text-[10px] font-bold text-orange-100 uppercase">Secs</div>
             </div>
           </div>
         </div>
@@ -232,52 +250,51 @@ const SeasonalPromotion: React.FC<SeasonalPromotionProps> = ({ products, title, 
 
           return (
             <Link to={`/product/${product.id}`} key={product.id} className="group relative block text-left">
-                {/* ✅ เพิ่ม isolate และ overflow-hidden ให้ Card หลักเพื่อป้องกันขอบกระพริบ */}
-                <div className={`bg-white rounded-[2rem] shadow-md hover:shadow-2xl transition-all duration-500 overflow-hidden border h-full flex flex-col relative transform hover:-translate-y-2 isolate ${getBorderColor()}`}>
+                {/* 🎨 สีขอบและเงาตอน Hover สดขึ้น */}
+                <div className={`bg-white rounded-[2rem] shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border-2 h-full flex flex-col relative transform hover:-translate-y-2 isolate ${getBorderColor()}`}>
                 
-                <div className={`absolute top-4 left-4 ${getBadgeStyle()} text-white text-[10px] font-bold px-3 py-1.5 rounded-full z-20 shadow-md tracking-wider flex items-center gap-1`}>
-                    <Sparkles size={12} /> {product.promo.title.toUpperCase()}
+                <div className={`absolute top-4 left-4 ${getBadgeStyle()} text-white text-[11px] font-black px-3.5 py-1.5 rounded-full z-20 shadow-lg tracking-widest flex items-center gap-1 border border-white/30`}>
+                    <Sparkles size={14} /> {product.promo.title.toUpperCase()}
                 </div>
 
                 <button 
                     onClick={(e) => toggleBookmark(e, product.id)}
-                    className="absolute top-4 right-4 p-2.5 bg-white/90 backdrop-blur-md hover:bg-white rounded-full z-20 shadow-sm text-slate-300 hover:text-yellow-400 transition-all hover:scale-110 border border-slate-100"
+                    className="absolute top-4 right-4 p-2.5 bg-white/95 backdrop-blur-md hover:bg-white rounded-full z-20 shadow-md text-slate-400 hover:text-yellow-500 transition-all hover:scale-110 border border-slate-200"
                 >
-                    <Star size={18} fill={bookmarks.includes(product.id) ? "currentColor" : "none"} className={bookmarks.includes(product.id) ? "text-yellow-400" : ""} />
+                    <Star size={20} fill={bookmarks.includes(product.id) ? "currentColor" : "none"} className={bookmarks.includes(product.id) ? "text-yellow-500" : ""} />
                 </button>
 
-                {/* ✅ ใส่โค้ดกันมุมภาพเหลี่ยม (translateZ) */}
-                <div className="h-60 overflow-hidden bg-slate-50 relative rounded-t-[2rem]" style={{ transform: 'translateZ(0)' }}>
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/5 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
+                <div className="h-60 overflow-hidden bg-slate-100 relative rounded-t-[2rem]" style={{ transform: 'translateZ(0)' }}>
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/10 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
                     <img src={getImageUrl(product)} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out mix-blend-multiply" />
                 </div>
 
                 <div className="p-6 flex flex-col flex-1 bg-white relative z-10">
-                    <div className="text-[10px] text-slate-400 font-bold tracking-widest uppercase mb-2">
+                    <div className="text-[11px] text-[#148F96] font-black tracking-widest uppercase mb-2">
                       {product.category || 'SPECIAL'}
                     </div>
-                    <h3 className="font-bold text-slate-800 text-lg mb-2 line-clamp-2 transition-colors">
+                    <h3 className="font-bold text-slate-900 text-xl mb-2 line-clamp-2 transition-colors">
                       {product.name}
                     </h3>
                     
-                    <div className="mt-auto flex items-end justify-between pt-4 border-t border-slate-50">
+                    <div className="mt-auto flex items-end justify-between pt-4 border-t border-slate-100">
                         <div>
                             <div className="flex items-center gap-2 mb-1">
-                                <span className="text-slate-400 line-through text-xs font-medium">฿{originalPrice.toLocaleString()}</span>
-                                <span className="text-[10px] text-red-500 bg-red-50 px-2 py-0.5 rounded-md font-bold">
+                                <span className="text-slate-400 line-through text-xs font-bold">฿{originalPrice.toLocaleString()}</span>
+                                <span className="text-[11px] text-white bg-red-500 px-2 py-0.5 rounded-md font-bold shadow-sm">
                                     ลด {product.promo.discountType === 'PERCENTAGE' ? `${product.promo.discountValue}%` : `฿${product.promo.discountValue}`}
                                 </span>
                             </div>
-                            <div className="text-xl font-black text-slate-800">
+                            <div className="text-2xl font-black text-slate-800">
                                 ฿{discountedPrice.toLocaleString()}
                             </div>
                         </div>
 
                         <button 
                             onClick={(e) => handleAddToCart(e, product)} 
-                            className="bg-slate-50 hover:bg-[#148F96] text-slate-600 hover:text-white p-3 rounded-2xl transition-all duration-300 shadow-sm hover:shadow-lg hover:shadow-[#148F96]/30 transform hover:scale-105" 
+                            className="bg-[#148F96]/10 hover:bg-[#148F96] text-[#148F96] hover:text-white p-3.5 rounded-2xl transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-[#148F96]/40 transform hover:scale-105" 
                         >
-                            <ShoppingCart size={18} />
+                            <ShoppingCart size={20} />
                         </button>
                     </div>
                 </div>

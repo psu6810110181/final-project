@@ -3,8 +3,6 @@ import { useAuth } from '../contexts/AuthContext';
 import * as api from '../services/api'; 
 import toast from 'react-hot-toast';
 import { User, Mail, Phone, MapPin, Edit3, Check, X, Star, Key, Lock, Eye, EyeOff, AlertCircle, ArrowRight, Camera } from 'lucide-react';
-
-// นำเข้า Background แบบ Cinematic
 import heroBackground from '../assets/background.jpg';
 
 interface UserProfile {
@@ -23,23 +21,19 @@ const Profile: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
 
-  // --- 📸 States สำหรับรูปภาพโปรไฟล์ ---
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
-  // Edit Main Profile States
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({ phone: '', address: '' });
   const [isSaving, setIsSaving] = useState(false);
 
-  // --- 📧 States สำหรับการเปลี่ยน Email ---
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailStep, setEmailStep] = useState<1 | 2>(1);
   const [emailForm, setEmailForm] = useState({ currentPassword: '', newEmail: '' });
   const [isEmailSaving, setIsEmailSaving] = useState(false);
   const [showEmailCurrentPwd, setShowEmailCurrentPwd] = useState(false);
 
-  // --- 🔑 States สำหรับการเปลี่ยนรหัสผ่าน ---
   const [showPwdModal, setShowPwdModal] = useState(false);
   const [pwdForm, setPwdForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [isPwdSaving, setIsPwdSaving] = useState(false);
@@ -51,7 +45,6 @@ const Profile: React.FC = () => {
 
   useEffect(() => {
     fetchProfileData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
   const fetchProfileData = async () => {
@@ -73,19 +66,14 @@ const Profile: React.FC = () => {
     }
   };
 
-  // ดึง URL รูปภาพให้ถูกต้อง
   const getAvatarUrl = (img?: string) => {
     if (!img) return null;
     if (img.startsWith('http')) return img;
     return `${API_BASE_URL}/uploads/profiles/${img}`; 
   };
 
-  // --- 📝 Handlers ข้อมูลทั่วไป และ รูปภาพ ---
   const handleEditClick = () => {
-    setEditData({
-      phone: profile?.phone || '',
-      address: profile?.address || ''
-    });
+    setEditData({ phone: profile?.phone || '', address: profile?.address || '' });
     setIsEditing(true);
   };
 
@@ -109,10 +97,7 @@ const Profile: React.FC = () => {
       const formData = new FormData();
       formData.append('phone', editData.phone);
       formData.append('address', editData.address);
-      
-      if (selectedImage) {
-        formData.append('file', selectedImage);
-      }
+      if (selectedImage) formData.append('file', selectedImage);
 
       await api.updateProfile(formData);
       await fetchProfileData();
@@ -132,7 +117,6 @@ const Profile: React.FC = () => {
     setEditData(prev => ({ ...prev, [name]: value }));
   };
 
-  // --- 📧 Handlers เปลี่ยน Email ---
   const handleEmailChangeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!emailForm.currentPassword || !emailForm.newEmail) {
@@ -141,13 +125,11 @@ const Profile: React.FC = () => {
     }
     setIsEmailSaving(true);
     try {
-      // ✅ เรียกใช้งาน API ของจริง
-      await api.requestEmailChange({
+      await (api as any).requestEmailChange({
         currentPassword: emailForm.currentPassword,
         newEmail: emailForm.newEmail
       });
-      
-      setEmailStep(2); // เปลี่ยนหน้าต่างแจ้งเตือนให้ไปเช็คอีเมล
+      setEmailStep(2);
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'รหัสผ่านปัจจุบันไม่ถูกต้อง หรือเกิดข้อผิดพลาด');
     } finally {
@@ -155,40 +137,29 @@ const Profile: React.FC = () => {
     }
   };
 
-  // --- 🔑 Handlers เปลี่ยนรหัสผ่าน ---
+  // ✅ แก้ไข Regex ในส่วนของรหัสผ่าน
   const pwdReq = {
     length: pwdForm.newPassword.length >= 12,
     uppercase: /[A-Z]/.test(pwdForm.newPassword),
     lowercase: /[a-z]/.test(pwdForm.newPassword),
     number: /[0-9]/.test(pwdForm.newPassword),
-    specialChar: /[!@#$%^&*-_]/.test(pwdForm.newPassword),
+    specialChar: /[!@#$%^&*_\-]/.test(pwdForm.newPassword),
   };
   const isNewPwdValid = Object.values(pwdReq).every(Boolean);
   const isPwdMatch = pwdForm.newPassword === pwdForm.confirmPassword && pwdForm.newPassword !== '';
 
   const handlePwdChangeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pwdForm.currentPassword) {
-      toast.error('กรุณากรอกรหัสผ่านปัจจุบัน');
-      return;
-    }
-    if (!isNewPwdValid) {
-      toast.error('รหัสผ่านใหม่ยังไม่ตรงตามเงื่อนไข');
-      return;
-    }
-    if (!isPwdMatch) {
-      toast.error('รหัสผ่านใหม่ทั้ง 2 ช่องไม่ตรงกัน');
-      return;
-    }
+    if (!pwdForm.currentPassword) { toast.error('กรุณากรอกรหัสผ่านปัจจุบัน'); return; }
+    if (!isNewPwdValid) { toast.error('รหัสผ่านใหม่ยังไม่ตรงตามเงื่อนไข'); return; }
+    if (!isPwdMatch) { toast.error('รหัสผ่านใหม่ทั้ง 2 ช่องไม่ตรงกัน'); return; }
 
     setIsPwdSaving(true);
     try {
-      // ✅ เรียกใช้งาน API เปลี่ยนรหัสผ่านของจริง
-      await api.changePassword({
+      await (api as any).changePassword({
         currentPassword: pwdForm.currentPassword,
         newPassword: pwdForm.newPassword
       });
-
       toast.success('เปลี่ยนรหัสผ่านสำเร็จ');
       setShowPwdModal(false);
       setPwdForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -199,33 +170,28 @@ const Profile: React.FC = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[80vh] bg-[#F8FAFA]">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#148F96]"></div>
-      </div>
-    );
-  }
+  // ✅ ปรับเงื่อนไขสี: ไม่พิมพ์=เทา, พิมพ์แต่ผิด=แดง, ผ่าน=เขียว
+  const getRuleColor = (isValid: boolean) => {
+    if (pwdForm.newPassword.length === 0) return 'text-slate-400';
+    return isValid ? 'text-[#5aa8ad]' : 'text-red-500';
+  };
+  const getRuleIcon = (isValid: boolean) => {
+    if (pwdForm.newPassword.length === 0) return <div className="w-1.5 h-1.5 rounded-full bg-slate-300 mx-1"/>;
+    return isValid ? <Check size={14} className="stroke-[3]"/> : <X size={14} className="stroke-[3]"/>;
+  };
 
-  if (!profile) {
-    return (
-      <div className="flex justify-center items-center min-h-[80vh] text-slate-500 text-lg bg-[#F8FAFA]">
-        ไม่พบข้อมูลผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่อีกครั้ง
-      </div>
-    );
-  }
+  if (isLoading) return <div className="flex justify-center items-center min-h-[80vh] bg-[#F8FAFA]"><div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#148F96]"></div></div>;
+  if (!profile) return <div className="flex justify-center items-center min-h-[80vh] text-slate-500 text-lg bg-[#F8FAFA]">ไม่พบข้อมูลผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่อีกครั้ง</div>;
 
   return (
     <div className="bg-[#F8FAFA] min-h-screen pb-20 relative overflow-hidden font-sans pt-10">
       
-      {/* --- 🎬 CINEMATIC BACKGROUND --- */}
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-[#0a4d52]/60 z-10 mix-blend-multiply" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#F8FAFA] via-[#F8FAFA]/90 to-transparent z-10" />
         <img src={heroBackground} alt="Background" className="absolute inset-0 w-full h-full object-cover scale-105" />
       </div>
 
-      {/* Floating Background Orbs for extra effect */}
       <div className="absolute top-[-20%] left-1/4 w-[600px] h-[600px] bg-[#5aa8ad]/30 blur-[150px] rounded-full pointer-events-none z-0" />
       <div className="absolute bottom-10 right-10 w-[500px] h-[500px] bg-[#148F96]/20 blur-[150px] rounded-full pointer-events-none z-0" />
 
@@ -233,17 +199,14 @@ const Profile: React.FC = () => {
         
         <div className="bg-white/90 backdrop-blur-2xl rounded-[3rem] shadow-2xl shadow-[#5aa8ad]/20 border border-white/80 overflow-hidden relative">
           
-          {/* Header Gradient Cover */}
           <div className="h-48 bg-gradient-to-r from-[#5aa8ad] via-[#148F96] to-[#0a4d52] relative overflow-hidden">
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20 mix-blend-overlay"></div>
           </div>
           
           <div className="px-8 md:px-12 pb-12">
-            {/* Profile Avatar & Actions */}
             <div className="relative flex flex-col md:flex-row md:justify-between items-center md:items-end -mt-20 mb-10 gap-6">
               
               <div className="flex flex-col items-center md:items-start text-center md:text-left z-10">
-                {/* 📸 Avatar Image Container */}
                 <div className="relative group w-40 h-40 bg-white rounded-[2rem] p-2 shadow-xl shadow-[#5aa8ad]/30 border border-white/50 mb-4 md:mb-0 transform rotate-3 hover:rotate-0 transition-all duration-500">
                   {previewImage || profile.userImage ? (
                     <img 
@@ -257,7 +220,6 @@ const Profile: React.FC = () => {
                     </div>
                   )}
 
-                  {/* ปุ่มเปลี่ยนรูปภาพซ้อนทับ (จะโผล่มาตอน isEditing) */}
                   {isEditing && (
                     <label className="absolute inset-2 bg-black/50 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-[1.5rem] z-20 backdrop-blur-sm border-2 border-dashed border-white/50 hover:border-white">
                       <Camera size={28} className="mb-2" />
@@ -311,10 +273,8 @@ const Profile: React.FC = () => {
 
             <div className="h-px w-full bg-gradient-to-r from-transparent via-cyan-100 to-transparent mb-10"></div>
 
-            {/* Details Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               
-              {/* Username (Readonly) */}
               <div className="bg-slate-50/50 p-5 rounded-3xl border border-slate-100">
                 <div className="flex items-center gap-2 mb-2 text-slate-400">
                   <User size={16} /> <span className="text-sm font-bold uppercase tracking-wider text-[#5aa8ad]">ชื่อผู้ใช้</span>
@@ -324,7 +284,6 @@ const Profile: React.FC = () => {
                 </div>
               </div>
 
-              {/* Email (With Edit Action) */}
               <div className="bg-slate-50/50 p-5 rounded-3xl border border-slate-100 flex justify-between items-center">
                 <div>
                   <div className="flex items-center gap-2 mb-2 text-slate-400">
@@ -343,7 +302,6 @@ const Profile: React.FC = () => {
                 </button>
               </div>
 
-              {/* Phone */}
               <div className={`p-5 rounded-3xl border transition-colors ${isEditing ? 'bg-white border-[#5aa8ad]/40 shadow-sm' : 'bg-slate-50/50 border-slate-100'}`}>
                 <div className="flex items-center gap-2 mb-2 text-slate-400">
                   <Phone size={16} className={isEditing ? "text-[#5aa8ad]" : ""} /> 
@@ -365,7 +323,6 @@ const Profile: React.FC = () => {
                 )}
               </div>
 
-              {/* Role */}
               <div className="bg-slate-50/50 p-5 rounded-3xl border border-slate-100">
                 <div className="flex items-center gap-2 mb-2 text-slate-400">
                   <Star size={16} /> <span className="text-sm font-bold uppercase tracking-wider text-[#5aa8ad]">สถานะบัญชี</span>
@@ -375,7 +332,6 @@ const Profile: React.FC = () => {
                 </div>
               </div>
 
-              {/* Address */}
               <div className={`md:col-span-2 p-5 rounded-3xl border transition-colors ${isEditing ? 'bg-white border-[#5aa8ad]/40 shadow-sm' : 'bg-slate-50/50 border-slate-100'}`}>
                 <div className="flex items-center gap-2 mb-3 text-slate-400">
                   <MapPin size={16} className={isEditing ? "text-[#5aa8ad]" : ""} /> 
@@ -398,7 +354,6 @@ const Profile: React.FC = () => {
               </div>
             </div>
 
-            {/* ความปลอดภัย (Security Section) */}
             <div className="mt-10 border-t border-cyan-100/50 pt-8">
                <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
                  <Lock size={20} className="text-[#5aa8ad]" /> ความปลอดภัยและรหัสผ่าน
@@ -542,21 +497,11 @@ const Profile: React.FC = () => {
                   <div className="bg-slate-50 p-4 rounded-xl mt-2 border border-slate-100">
                     <p className="text-xs font-bold text-[#5aa8ad] mb-2">รหัสผ่านต้องประกอบด้วย:</p>
                     <ul className="text-xs space-y-1.5">
-                      <li className={`flex items-center gap-2 ${pwdReq.length ? 'text-[#5aa8ad]' : 'text-slate-400'}`}>
-                        {pwdReq.length ? <Check size={14}/> : <div className="w-1 h-1 rounded-full bg-slate-300 ml-1.5 mr-1"/>} อย่างน้อย 12 ตัวอักษร
-                      </li>
-                      <li className={`flex items-center gap-2 ${pwdReq.uppercase ? 'text-[#5aa8ad]' : 'text-slate-400'}`}>
-                         {pwdReq.uppercase ? <Check size={14}/> : <div className="w-1 h-1 rounded-full bg-slate-300 ml-1.5 mr-1"/>} ตัวพิมพ์ใหญ่ (A-Z) อย่างน้อย 1 ตัว
-                      </li>
-                      <li className={`flex items-center gap-2 ${pwdReq.lowercase ? 'text-[#5aa8ad]' : 'text-slate-400'}`}>
-                         {pwdReq.lowercase ? <Check size={14}/> : <div className="w-1 h-1 rounded-full bg-slate-300 ml-1.5 mr-1"/>} ตัวพิมพ์เล็ก (a-z) อย่างน้อย 1 ตัว
-                      </li>
-                      <li className={`flex items-center gap-2 ${pwdReq.number ? 'text-[#5aa8ad]' : 'text-slate-400'}`}>
-                         {pwdReq.number ? <Check size={14}/> : <div className="w-1 h-1 rounded-full bg-slate-300 ml-1.5 mr-1"/>} ตัวเลข (0-9) อย่างน้อย 1 ตัว
-                      </li>
-                      <li className={`flex items-center gap-2 ${pwdReq.specialChar ? 'text-[#5aa8ad]' : 'text-slate-400'}`}>
-                         {pwdReq.specialChar ? <Check size={14}/> : <div className="w-1 h-1 rounded-full bg-slate-300 ml-1.5 mr-1"/>} อักขระพิเศษ (!@#$%^&*-_) 1 ตัว
-                      </li>
+                      <li className={`flex items-center gap-2 ${getRuleColor(pwdReq.length)}`}>{getRuleIcon(pwdReq.length)} อย่างน้อย 12 ตัวอักษร</li>
+                      <li className={`flex items-center gap-2 ${getRuleColor(pwdReq.uppercase)}`}>{getRuleIcon(pwdReq.uppercase)} ตัวพิมพ์ใหญ่ (A-Z) อย่างน้อย 1 ตัว</li>
+                      <li className={`flex items-center gap-2 ${getRuleColor(pwdReq.lowercase)}`}>{getRuleIcon(pwdReq.lowercase)} ตัวพิมพ์เล็ก (a-z) อย่างน้อย 1 ตัว</li>
+                      <li className={`flex items-center gap-2 ${getRuleColor(pwdReq.number)}`}>{getRuleIcon(pwdReq.number)} ตัวเลข (0-9) อย่างน้อย 1 ตัว</li>
+                      <li className={`flex items-center gap-2 ${getRuleColor(pwdReq.specialChar)}`}>{getRuleIcon(pwdReq.specialChar)} อักขระพิเศษ (!@#$%^&*-_) 1 ตัว</li>
                     </ul>
                   </div>
                 </div>
@@ -576,10 +521,10 @@ const Profile: React.FC = () => {
                     </button>
                   </div>
                   {pwdForm.confirmPassword && !isPwdMatch && (
-                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1"><AlertCircle size={12}/> รหัสผ่านไม่ตรงกัน</p>
+                    <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={12}/> รหัสผ่านไม่ตรงกัน</p>
                   )}
                   {pwdForm.confirmPassword && isPwdMatch && (
-                    <p className="text-[#5aa8ad] text-xs mt-1 flex items-center gap-1"><Check size={12}/> รหัสผ่านตรงกัน</p>
+                    <p className="text-[#5aa8ad] text-xs mt-1.5 flex items-center gap-1"><Check size={12}/> รหัสผ่านตรงกัน</p>
                   )}
                 </div>
 
