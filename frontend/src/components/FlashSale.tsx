@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Star } from 'lucide-react';
+import { ShoppingCart, Star, Zap, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCart } from '../contexts/CartContext';
 import * as api from '../services/api';
@@ -26,9 +26,7 @@ const getImageUrl = (product: Product) => {
           if (img.startsWith('http')) return img;
           return `${API_BASE_URL}/uploads/${img}`;
       }
-  } catch (e) {
-      console.error("Error parsing image:", e);
-  }
+  } catch (e) {}
   return "https://placehold.co/400x300?text=No+Image";
 };
 
@@ -36,24 +34,18 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
   const [flashSales, setFlashSales] = useState<Promotion[]>([]);
   const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number }>({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0
+    days: 0, hours: 0, minutes: 0, seconds: 0
   });
 
   const { addToCart } = useCart();
   const navigate = useNavigate();
 
-  // ดึงข้อมูล Flash Sale และ Bookmark
   useEffect(() => {
     const fetchFlashSales = async () => {
       try {
         const sales = await getActiveFlashSales();
         setFlashSales(sales);
-      } catch (error) {
-        console.error('Failed to fetch flash sales:', error);
-      }
+      } catch (error) {}
     };
 
     const fetchBookmarks = async () => {
@@ -63,40 +55,25 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
                 const data = await api.getBookmarks();
                 const bookmarkIds = Array.isArray(data) ? data.map((b: any) => b.productId || b.product?.id || b.id) : (data && Array.isArray(data.data) ? data.data.map((b: any) => b.productId || b.product?.id || b.id) : []);
                 setBookmarks(bookmarkIds);
-            } catch (error) {
-                console.error('Failed to load bookmarks', error);
-            }
+            } catch (error) {}
         }
     };
 
-    fetchFlashSales();
-    fetchBookmarks();
-
-    const interval = setInterval(fetchFlashSales, 30000); // รีเฟรชทุก 30 วินาที
-
-    // ฟัง Event กรณีมีการกด Bookmark จากหน้าอื่น
+    fetchFlashSales(); fetchBookmarks();
+    const interval = setInterval(fetchFlashSales, 30000); 
     const handleBookmarkUpdate = () => fetchBookmarks();
     window.addEventListener('bookmarksUpdated', handleBookmarkUpdate);
-
-    return () => {
-        clearInterval(interval);
-        window.removeEventListener('bookmarksUpdated', handleBookmarkUpdate);
-    };
+    return () => { clearInterval(interval); window.removeEventListener('bookmarksUpdated', handleBookmarkUpdate); };
   }, []);
 
-  // นับเวลาถอยหลัง
   useEffect(() => {
     const calculateTimeLeft = () => {
       if (flashSales.length === 0) return;
-
       const now = new Date();
       let minEndTime = new Date(flashSales[0].endDate);
-
       flashSales.forEach(sale => {
         const endTime = new Date(sale.endDate);
-        if (endTime < minEndTime) {
-          minEndTime = endTime;
-        }
+        if (endTime < minEndTime) minEndTime = endTime;
       });
 
       const difference = minEndTime.getTime() - now.getTime();
@@ -106,7 +83,6 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
         const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((difference % (1000 * 60)) / 1000);
-
         setTimeLeft({ days, hours, minutes, seconds });
       } else {
         setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -115,34 +91,24 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
 
     calculateTimeLeft();
     const interval = setInterval(calculateTimeLeft, 1000);
-
     return () => clearInterval(interval);
   }, [flashSales]);
 
-  // จัดการการเพิ่มตะกร้า
   const handleAddToCart = async (e: React.MouseEvent, product: Product) => {
     e.preventDefault();
-    const token = localStorage.getItem('token');
-    if (!token) {
+    if (!localStorage.getItem('token')) {
       toast.error('กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้าลงตะกร้า');
-      navigate('/login');
-      return;
+      navigate('/login'); return;
     }
     await addToCart(product.id, 1); 
   };
 
-  // จัดการปุ่มถูกใจ (Bookmark)
   const toggleBookmark = async (e: React.MouseEvent, productId: string) => {
-    e.preventDefault(); 
-    e.stopPropagation();
-    
-    const token = localStorage.getItem('token');
-    if (!token) {
+    e.preventDefault(); e.stopPropagation();
+    if (!localStorage.getItem('token')) {
         toast.error('กรุณาเข้าสู่ระบบเพื่อบันทึกสินค้าที่สนใจ');
-        navigate('/login');
-        return;
+        navigate('/login'); return;
     }
-
     try {
         if (bookmarks.includes(productId)) {
             await api.removeBookmark(productId);
@@ -154,14 +120,11 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
             toast.success('เพิ่มลงในสินค้าที่สนใจแล้ว');
         }
         window.dispatchEvent(new Event('bookmarksUpdated'));
-    } catch (error) {
-        toast.error('เกิดข้อผิดพลาดในการจัดการสินค้าที่สนใจ');
-    }
+    } catch (error) {}
   };
 
   const calculateDiscountedPrice = (product: Product, promotion: Promotion) => {
     const price = typeof product.price === 'string' ? Number(product.price) : product.price;
-    
     if (promotion.discountType === 'PERCENTAGE') {
       return price * (1 - promotion.discountValue / 100);
     } else {
@@ -171,75 +134,64 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
 
   const getFlashSaleProducts = () => {
     const flashSaleProductIds = new Set<string>();
-    
-    flashSales.forEach(sale => {
-      sale.products?.forEach(product => {
-        flashSaleProductIds.add(product.id);
-      });
-    });
-
+    flashSales.forEach(sale => { sale.products?.forEach(product => { flashSaleProductIds.add(product.id); }); });
     return allProducts.filter(product => flashSaleProductIds.has(product.id));
   };
 
   const flashSaleProducts = getFlashSaleProducts();
-
-  if (flashSales.length === 0 || flashSaleProducts.length === 0) {
-    return null;
-  }
+  if (flashSales.length === 0 || flashSaleProducts.length === 0) return null;
 
   return (
-    <div style={{
-      background: 'linear-gradient(135deg, #ff8e53 0%, #148f96 100%)',
-      borderRadius: '16px',
-      padding: '24px',
-      margin: '20px 0 40px 0',
-      boxShadow: '0 8px 32px rgba(255, 107, 107, 0.2)',
-      color: 'white'
-    }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: '28px', fontWeight: '700', display: 'flex', alignItems: 'center' }}>
-            ⚡ FLASH SALE
-          </h2>
-          <p style={{ margin: '4px 0 0 0', fontSize: '14px', opacity: 0.9 }}>
-            ลดแรงแซงทุกโปร ด่วน! เวลาจำกัด
-          </p>
+    <div className="relative overflow-hidden rounded-[3rem] shadow-[0_20px_50px_rgba(20,143,150,0.15)] border border-white/50 p-8 md:p-12 mb-16 mt-8 font-sans isolate">
+      
+      <div className="absolute inset-0 bg-gradient-to-br from-[#148F96]/10 via-white to-[#ff8e53]/10 -z-10 pointer-events-none"></div>
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#ff8e53]/20 blur-[150px] rounded-full pointer-events-none animate-pulse -z-10" style={{ animationDuration: '6s' }} />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-[#148F96]/20 blur-[150px] rounded-full pointer-events-none animate-pulse -z-10" style={{ animationDuration: '8s' }} />
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03] mix-blend-overlay pointer-events-none -z-10"></div>
+
+      <div className="relative z-10 flex flex-col lg:flex-row justify-between items-center mb-10 gap-8 border-b border-[#148F96]/10 pb-8">
+        <div className="flex items-center gap-4 text-center lg:text-left">
+          <div className="p-3 bg-gradient-to-br from-[#ff8e53] to-[#D65A31] rounded-2xl shadow-lg shadow-orange-500/30">
+            <Zap size={36} className="text-white" />
+          </div>
+          <div>
+            <h2 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#148F96] to-[#0d6065] tracking-tight mb-1">
+              FLASH SALE
+            </h2>
+            <p className="text-slate-600 font-medium text-lg">ลดแรงแซงทุกโปร ด่วน! เวลาจำกัด</p>
+          </div>
         </div>
         
-        {/* Countdown Timer */}
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '12px', opacity: 0.9, marginBottom: '4px' }}>เหลือเวลาอีก</div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+        <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-4 shadow-lg shadow-slate-200/50 border border-white flex items-center gap-4">
+          <div className="flex items-center gap-2 text-[#D65A31] text-sm font-bold uppercase tracking-widest">
+            <Clock size={18} /> หมดเวลาใน
+          </div>
+          <div className="flex gap-2">
             {timeLeft.days > 0 && (
-              <div style={{ background: 'rgba(255,255,255,0.2)', padding: '8px 12px', borderRadius: '8px', minWidth: '40px', textAlign: 'center' }}>
-                <div style={{ fontSize: '18px', fontWeight: '700' }}>{timeLeft.days}</div>
-                <div style={{ fontSize: '10px', opacity: 0.8 }}>วัน</div>
+              <div className="bg-gradient-to-br from-[#148F96] to-[#107378] px-3 py-2 rounded-xl min-w-[50px] text-center shadow-md">
+                <div className="text-xl font-black text-white">{timeLeft.days}</div>
+                <div className="text-[10px] text-teal-100 font-bold uppercase">Days</div>
               </div>
             )}
-            <div style={{ background: 'rgba(255,255,255,0.2)', padding: '8px 12px', borderRadius: '8px', minWidth: '40px', textAlign: 'center' }}>
-              <div style={{ fontSize: '18px', fontWeight: '700' }}>{String(timeLeft.hours).padStart(2, '0')}</div>
-              <div style={{ fontSize: '10px', opacity: 0.8 }}>ชม</div>
+            <div className="bg-gradient-to-br from-[#148F96] to-[#107378] px-3 py-2 rounded-xl min-w-[50px] text-center shadow-md">
+              <div className="text-xl font-black text-white">{String(timeLeft.hours).padStart(2, '0')}</div>
+              <div className="text-[10px] text-teal-100 font-bold uppercase">Hrs</div>
             </div>
-            <div style={{ background: 'rgba(255,255,255,0.2)', padding: '8px 12px', borderRadius: '8px', minWidth: '40px', textAlign: 'center' }}>
-              <div style={{ fontSize: '18px', fontWeight: '700' }}>{String(timeLeft.minutes).padStart(2, '0')}</div>
-              <div style={{ fontSize: '10px', opacity: 0.8 }}>นาที</div>
+            <div className="bg-gradient-to-br from-[#148F96] to-[#107378] px-3 py-2 rounded-xl min-w-[50px] text-center shadow-md">
+              <div className="text-xl font-black text-white">{String(timeLeft.minutes).padStart(2, '0')}</div>
+              <div className="text-[10px] text-teal-100 font-bold uppercase">Mins</div>
             </div>
-            <div style={{ background: 'rgba(255,255,255,0.2)', padding: '8px 12px', borderRadius: '8px', minWidth: '40px', textAlign: 'center' }}>
-              <div style={{ fontSize: '18px', fontWeight: '700' }}>{String(timeLeft.seconds).padStart(2, '0')}</div>
-              <div style={{ fontSize: '10px', opacity: 0.8 }}>วินาที</div>
+            <div className="bg-gradient-to-br from-[#ff8e53] to-[#D65A31] px-3 py-2 rounded-xl min-w-[50px] text-center shadow-md animate-pulse">
+              <div className="text-xl font-black text-white">{String(timeLeft.seconds).padStart(2, '0')}</div>
+              <div className="text-[10px] text-orange-100 font-bold uppercase">Secs</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Flash Sale Products Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10">
         {flashSaleProducts.map((product) => {
-          const promotion = flashSales.find(sale => 
-            sale.products?.some(p => p.id === product.id)
-          );
-          
+          const promotion = flashSales.find(sale => sale.products?.some(p => p.id === product.id));
           if (!promotion) return null;
 
           const originalPrice = typeof product.price === 'string' ? Number(product.price) : product.price;
@@ -247,50 +199,45 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
 
           return (
             <Link to={`/product/${product.id}`} key={product.id} className="group relative block text-left">
-                {/* เปลี่ยนเป็น bg-white/20 และเพิ่ม backdrop-blur-md */}
-                <div className="bg-white/20 backdrop-blur-md rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-white/30 h-full flex flex-col relative">
+                {/* ✅ เพิ่ม isolate สำหรับ Card เพื่อล็อกขอบไม่ให้กระพริบ */}
+                <div className="bg-white/90 backdrop-blur-xl border border-white rounded-[2rem] shadow-xl hover:shadow-2xl hover:shadow-[#ff8e53]/20 transition-all duration-500 overflow-hidden h-full flex flex-col relative transform hover:-translate-y-2 isolate">
                 
-                {/* Promo Badge */}
-                <div className="absolute top-3 left-3 bg-red-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full z-20 shadow-md tracking-wider">
-                    {promotion.title.toUpperCase()}
+                <div className="absolute top-4 left-4 bg-gradient-to-r from-[#ff8e53] to-[#D65A31] text-white text-[11px] font-black px-3.5 py-1.5 rounded-full z-20 shadow-md tracking-widest flex items-center gap-1 border border-white/50">
+                    <Zap size={14}/> {promotion.title.toUpperCase()}
                 </div>
 
-                {/* Bookmark Button */}
                 <button 
                     onClick={(e) => toggleBookmark(e, product.id)}
-                    className="absolute top-3 right-3 p-2 bg-white/30 hover:bg-white/80 backdrop-blur-sm rounded-full z-20 shadow-sm text-white hover:text-yellow-400 transition-all hover:scale-110"
-                    title="เพิ่มในสินค้าที่สนใจ"
+                    className="absolute top-4 right-4 p-2.5 bg-white/80 backdrop-blur-md rounded-full z-20 shadow-sm text-slate-300 hover:text-yellow-400 hover:bg-white transition-all hover:scale-110 border border-slate-100"
                 >
-                    <Star size={18} fill={bookmarks.includes(product.id) ? "#FACC15" : "none"} className={bookmarks.includes(product.id) ? "text-yellow-400" : ""} />
+                    <Star size={18} fill={bookmarks.includes(product.id) ? "currentColor" : "none"} className={bookmarks.includes(product.id) ? "text-yellow-400" : ""} />
                 </button>
 
-                {/* Product Image */}
-                <div className="h-48 overflow-hidden bg-white/10">
-                    <img src={getImageUrl(product)} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                {/* ✅ เพิ่ม translateZ(0) และ rounded เข้าไปในกรอบรูป */}
+                <div className="h-60 overflow-hidden bg-slate-50 relative rounded-t-[2rem]" style={{ transform: 'translateZ(0)' }}>
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/5 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
+                    <img src={getImageUrl(product)} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out mix-blend-multiply" />
                 </div>
 
-                {/* Product Details - ปรับสีตัวอักษรให้อ่านง่ายบนพื้นหลัง Glassmorphism */}
-                <div className="p-4 flex flex-col flex-1">
-                    <div className="text-xs text-teal-100 font-bold mb-1">{product.category || 'ไม่มีหมวดหมู่'}</div>
-                    <h3 className="font-bold text-white text-lg mb-1 truncate group-hover:text-teal-200 transition-colors">{product.name}</h3>
-                    <p className="text-white/70 text-xs mb-3 line-clamp-1">{product.description || "ไม่มีรายละเอียด"}</p>
+                <div className="p-6 flex flex-col flex-1 bg-white/90 relative z-10">
+                    <div className="text-[10px] text-[#148F96] font-black tracking-widest uppercase mb-2">{product.category || 'LIMITED'}</div>
+                    <h3 className="font-bold text-slate-800 text-lg mb-2 line-clamp-2 group-hover:text-[#D65A31] transition-colors">{product.name}</h3>
                     
-                    <div className="mt-auto flex items-end justify-between">
+                    <div className="mt-auto flex items-end justify-between pt-4 border-t border-slate-100">
                         <div>
-                            <div className="flex items-center gap-2 mb-0.5">
-                                <span className="text-white/60 line-through text-xs">฿{originalPrice.toLocaleString()}</span>
-                                <span className="text-[10px] text-red-600 bg-white/90 px-1.5 py-0.5 rounded font-bold shadow-sm">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-slate-400 line-through text-xs font-medium">฿{originalPrice.toLocaleString()}</span>
+                                <span className="text-[10px] text-[#D65A31] bg-orange-50 px-2 py-0.5 rounded-md font-bold border border-orange-100">
                                     ลด {promotion.discountType === 'PERCENTAGE' ? `${promotion.discountValue}%` : `฿${promotion.discountValue}`}
                                 </span>
                             </div>
-                            <div className="text-xl font-bold text-red-600">
+                            <div className="text-2xl font-black text-[#148F96]">
                                 ฿{discountedPrice.toLocaleString()}
                             </div>
                         </div>
 
-                        {/* Add to Cart Button */}
-                        <button onClick={(e) => handleAddToCart(e, product)} className="bg-white/20 hover:bg-white text-white hover:text-[#148F96] p-2.5 rounded-full transition-colors backdrop-blur-sm" title="เพิ่มลงตะกร้า">
-                            <ShoppingCart size={18} />
+                        <button onClick={(e) => handleAddToCart(e, product)} className="bg-slate-50 hover:bg-[#ff8e53] text-slate-600 hover:text-white p-3.5 rounded-2xl transition-all shadow-sm hover:shadow-lg hover:shadow-orange-500/30 transform hover:scale-105 border border-slate-100 hover:border-transparent">
+                            <ShoppingCart size={20} />
                         </button>
                     </div>
                 </div>

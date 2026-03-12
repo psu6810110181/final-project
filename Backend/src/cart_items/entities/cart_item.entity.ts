@@ -28,5 +28,3 @@ export class CartItem {
   @JoinColumn({ name: 'variant_id' }) // ระบุชื่อคอลัมน์ใน DB ให้ชัดเจน
   variant: ProductVariant;
 }
-  variant: ProductVariant;
-}

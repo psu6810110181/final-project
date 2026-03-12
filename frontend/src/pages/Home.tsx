@@ -7,9 +7,9 @@ import type { Product, Category, Room, Feature, Color, Material, Size, Promotion
 import toast from 'react-hot-toast';
 import { useCart } from '../contexts/CartContext';
 import FlashSale from '../components/FlashSale';
-// import SeasonalPromotion from '../components/SeasonalPromotion';
+import SeasonalPromotion from '../components/SeasonalPromotion';
 import TabBar from '../components/TabBar';
-// import { getSeasonFromPromoTitle } from '../constants/seasonalThemes';
+import { getSeasonFromPromoTitle } from '../constants/seasonalThemes';
 
 import heroBackground from '../assets/background.jpg';
 
@@ -547,7 +547,7 @@ const Home = () => {
              <ProductGrid title="ผลการค้นหา" items={filteredProducts} />
           ) : (
              <>
-                {/* <SeasonalPromotion products={seasonalProducts} title={seasonalProducts[0]?.promo?.title} season={seasonalProducts[0]?.promo?.title ? getSeasonFromPromoTitle(seasonalProducts[0].promo.title) : undefined} /> */}
+                <SeasonalPromotion products={seasonalProducts} title={seasonalProducts[0]?.promo?.title} season={seasonalProducts[0]?.promo?.title ? getSeasonFromPromoTitle(seasonalProducts[0].promo.title) : undefined} />
                 <FlashSale products={products} />
                 <ProductGrid title="✨ แนะนำสำหรับคุณ" items={recommendedProducts} />
                 <ProductGrid title="🔥 โปรโมชันพิเศษ" items={promoProducts} />
