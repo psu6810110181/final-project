@@ -18,7 +18,7 @@ import ResetPassword from './pages/ResetPassword';
 import ProtectedRoute from './components/ProtectedRoute';
 import HomepagePromotion from './pages/HomepagePromotion'; // นำเข้าหน้าใหม่
 import BookmarkPage from './pages/Bookmark';
-import AuthCallback from './pages/AuthCallback';
+import VerifyEmail from './pages/VerifyEmail';
 
 
 function App() {
@@ -57,7 +57,7 @@ function App() {
               <Route path="/reset-password/:token" element={<ResetPassword />} />
               {/* ✅ เปลี่ยนมาใช้ ReviewPage ตามฝั่ง UX/UI */}
               <Route path="/review" element={<ProtectedRoute><ReviewPage /></ProtectedRoute>} />
-              <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/verify-email" element={<VerifyEmail />} />
             </Routes>
           </div>
         </CartProvider>
