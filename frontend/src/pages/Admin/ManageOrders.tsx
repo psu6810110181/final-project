@@ -161,9 +161,9 @@ const ManageOrders: React.FC = () => {
   };
 
   const statusOptions = [
-    { value: "WAITING_FOR_VERIFICATION", label: "PENDING (รอตรวจสอบ)" },
-    { value: "COMPLETED", label: "COMPLETED (สำเร็จ)" },
-    { value: "CANCELLED", label: "CANCELLED (ยกเลิก)" }
+    { value: "WAITING_FOR_VERIFICATION", label: "PENDING" },
+    { value: "COMPLETED", label: "COMPLETED" },
+    { value: "CANCELLED", label: "CANCELLED" }
   ];
 
   return (
