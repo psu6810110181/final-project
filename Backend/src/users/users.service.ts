@@ -222,4 +222,15 @@ export class UsersService {
 
     await this.usersRepository.save(user);
   }
+ 
+  async createGoogleUser(data: { email: string; username: string; userImage: string }) {
+    const user = this.usersRepository.create({
+      email: data.email,
+      username: data.username,
+      userImage: data.userImage,
+      password: '',
+      role: 'user',
+    });
+    return await this.usersRepository.save(user);
+  }
 }

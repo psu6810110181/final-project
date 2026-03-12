@@ -80,4 +80,28 @@ export class AuthService {
 
     return { message: 'เปลี่ยนรหัสผ่านสำเร็จ สามารถเข้าสู่ระบบได้เลย' };
   }
+
+  async googleLogin(googleUser: any) {
+    let user = await this.usersService.findOneByEmail(googleUser.email);
+
+    if (!user) {
+      user = await this.usersService.createGoogleUser({
+        email: googleUser.email,
+        username: googleUser.username,
+        userImage: googleUser.userImage,
+      });
+    }
+
+    const payload = { username: user.username, sub: user.id, role: user.role };
+    return {
+      access_token: this.jwtService.sign(payload),
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        email: user.email,
+        userImage: user.userImage,
+      },
+    };
+  }
 }
