@@ -1,4 +1,6 @@
+// frontend/src/components/Admin/OrderTable.tsx
 import React, { useEffect, useRef } from "react";
+import OrderStatusSelector from "./OrderStatusSelector";
 
 interface OrderTableProps {
   orders: any[];
@@ -18,6 +20,7 @@ const OrderTable: React.FC<OrderTableProps> = ({
 }) => {
   const dropdownRef = useRef<HTMLTableSectionElement>(null);
 
+  // คลิกพื้นที่อื่นเพื่อปิด Dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -33,14 +36,6 @@ const OrderTable: React.FC<OrderTableProps> = ({
     { value: "COMPLETED", label: "COMPLETED" },
     { value: "CANCELLED", label: "CANCELLED" }
   ];
-
-  const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '8px 12px', borderRadius: '8px',
-    border: `1px solid ${colors.border}`, fontSize: '13px', color: colors.textMain,
-    backgroundColor: colors.bgLight, outline: 'none', cursor: 'pointer',
-    fontWeight: '500', display: 'flex', justifyContent: 'space-between',
-    alignItems: 'center', userSelect: 'none'
-  };
 
   return (
     <div style={{ overflowX: 'auto', padding: '1px', paddingBottom: '120px' }}>
@@ -96,22 +91,18 @@ const OrderTable: React.FC<OrderTableProps> = ({
                       {statusOptions.find(opt => opt.value === order.status)?.label || order.status}
                     </span>
                   </td>
-                  <td style={{ padding: '16px 20px', display: 'flex', justifyItems: 'flex-end', gap: '8px', alignItems: 'center' }}>
-                    <div style={{ position: 'relative', width: '180px' }}>
-                      <div onClick={() => setOpenDropdownId(openDropdownId === order.id ? null : order.id)} style={inputStyle}>
-                        <span>{statusOptions.find(opt => opt.value === order.status)?.label || order.status}</span>
-                        <span>▼</span>
-                      </div>
-                      {openDropdownId === order.id && (
-                        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: colors.bgWhite, border: `1px solid ${colors.border}`, borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 50, padding: '6px 0', marginTop: '4px' }}>
-                          {statusOptions.map(opt => (
-                            <div key={opt.value} onClick={() => { onUpdateStatus(order.id, opt.value); setOpenDropdownId(null); }} style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', fontSize: '14px', color: colors.textMain }}>
-                              {opt.label}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                  <td style={{ padding: '16px 20px', display: 'flex', justifyContent: 'flex-end', gap: '8px', alignItems: 'center' }}>
+                    
+                    {/* ✅ เรียกใช้ OrderStatusSelector ที่สร้างแยกไว้ */}
+                    <OrderStatusSelector 
+                      orderId={order.id}
+                      currentStatus={order.status}
+                      isOpen={openDropdownId === order.id}
+                      onToggle={() => setOpenDropdownId(openDropdownId === order.id ? null : order.id)}
+                      onUpdateStatus={onUpdateStatus}
+                      colors={colors}
+                    />
+
                     <button onClick={() => onDeleteOrder(order.id)} style={{ background: colors.bgWhite, color: colors.danger, border: `1px solid ${colors.border}`, borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                       ❌
                     </button>
