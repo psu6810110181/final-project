@@ -4,7 +4,7 @@ import { ShoppingCart, Star, Sun, Waves, Sparkles, Leaf, Wind, Snowflake, Flower
 import toast from 'react-hot-toast';
 import { useCart } from '../contexts/CartContext';
 import * as api from '../services/api';
-import type { ProductWithPromo } from '../pages/Home';
+import type { ProductWithPromo } from '../components/ProductGrid';
 import { seasonalThemes, getSeasonFromPromoTitle } from '../constants/seasonalThemes';
 
 interface SeasonalPromotionProps {
