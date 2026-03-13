@@ -7,7 +7,7 @@ import type { Promotion } from '../services/api';
 import toast from 'react-hot-toast';
 import { useCart } from '../contexts/CartContext';
 import TabBar from '../components/TabBar'; // ✅ เพิ่ม TabBar
-import { type ProductWithPromo } from './Home';
+import {type ProductWithPromo } from '../components/ProductGrid';
 
 const BookmarkPage = () => {
   const [bookmarkedProducts, setBookmarkedProducts] = useState<ProductWithPromo[]>([]);
