@@ -27,12 +27,19 @@ const ManageProductsList: React.FC<ManageProductsListProps> = ({ onEditProduct }
   const fetchProducts = async () => {
     try {
       const products = await getAllProducts();
-      setProductsList(products);
-    } catch (error) { console.error(error); }
+      // ✅ แก้ไข: ดักจับข้อมูลเผื่อ API ส่งกลับมาเป็น Object { data: [...] }
+      setProductsList(Array.isArray(products) ? products : (products as any)?.data || []);
+    } catch (error) { 
+      console.error(error); 
+    }
   };
 
   const getLowStockProducts = () => {
     const lowStockItems: Array<{ product: Product; lowStockType: 'main' | 'variant'; stockLevel: number; variantInfo?: Variant; }> = [];
+    
+    // ✅ เพิ่มการเช็คให้แน่ใจว่า productsList เป็น Array ก่อนเรียกใช้ .forEach() เพื่อป้องกันหน้าจอขาว/ค้าง
+    if (!Array.isArray(productsList)) return lowStockItems;
+
     productsList.forEach(product => {
       if (product.variants && product.variants.length > 0) {
         product.variants.forEach(variant => {
@@ -102,7 +109,7 @@ const ManageProductsList: React.FC<ManageProductsListProps> = ({ onEditProduct }
       )}
       
       <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '20px' }}>
-        {productsList.length === 0 ? (
+        {(!Array.isArray(productsList) || productsList.length === 0) ? (
           <li style={{ color: colors.textMuted, gridColumn: '1/-1', textAlign: 'center', padding: '50px', background: colors.bgWhite, borderRadius: '16px', border: `1px dashed ${colors.border}` }}>
             ยังไม่มีสินค้าในระบบ
           </li>

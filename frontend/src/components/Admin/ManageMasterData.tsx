@@ -32,14 +32,20 @@ const ManageMasterData: React.FC = () => {
   const fetchMasterData = async () => {
     try {
       const [cats, rms, fts] = await Promise.all([getAllCategories(), getAllRooms(), getAllFeatures()]);
-      setCategoriesList(cats || []); setRoomsList(rms || []); setFeaturesList(fts || []);
+      // ✅ แก้ไข: ดักจับเผื่อข้อมูลเป็น { data: [...] } เพื่อป้องกันการใช้ .map() กับ Object
+      setCategoriesList(Array.isArray(cats) ? cats : (cats as any)?.data || []); 
+      setRoomsList(Array.isArray(rms) ? rms : (rms as any)?.data || []); 
+      setFeaturesList(Array.isArray(fts) ? fts : (fts as any)?.data || []);
     } catch (error) { console.error(error); }
 
     try {
       const cols = await getAllColors().catch(() => []);
       const mats = await getAllMaterials().catch(() => []);
       const szs = await getAllSizes().catch(() => []);
-      setColorsList(cols || []); setMaterialsList(mats || []); setSizesList(szs || []);
+      // ✅ แก้ไข: ดักจับเผื่อข้อมูลเป็น { data: [...] } 
+      setColorsList(Array.isArray(cols) ? cols : (cols as any)?.data || []); 
+      setMaterialsList(Array.isArray(mats) ? mats : (mats as any)?.data || []); 
+      setSizesList(Array.isArray(szs) ? szs : (szs as any)?.data || []);
     } catch (error) { console.error(error); }
   };
 
@@ -75,12 +81,16 @@ const ManageMasterData: React.FC = () => {
   };
 
   const getActiveList = () => {
-    if (activeTab === 'category') return categoriesList;
-    if (activeTab === 'room') return roomsList;
-    if (activeTab === 'feature') return featuresList;
-    if (activeTab === 'color') return colorsList;
-    if (activeTab === 'material') return materialsList;
-    return sizesList;
+    let list: any[] = [];
+    if (activeTab === 'category') list = categoriesList;
+    else if (activeTab === 'room') list = roomsList;
+    else if (activeTab === 'feature') list = featuresList;
+    else if (activeTab === 'color') list = colorsList;
+    else if (activeTab === 'material') list = materialsList;
+    else list = sizesList;
+
+    // ✅ แก้ไข: คืนค่าเป็น Array เสมอ ป้องกันหน้าจอขาวจากคำสั่ง .map() ด้านล่าง
+    return Array.isArray(list) ? list : [];
   };
 
   const getActiveIcon = () => ({ category: '📂', room: '🏠', feature: '✨', color: '🎨', material: '🪵', size: '📏' }[activeTab]);

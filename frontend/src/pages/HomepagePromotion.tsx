@@ -65,20 +65,21 @@ const HomepagePromotion = () => {
         const now = new Date();
         const activePromos: Promotion[] = []; 
 
-        if (Array.isArray(promoData)) {
-            promoData.forEach((promo: Promotion) => {
-                const isCurrentlyActive = promo.isActive && now >= new Date(promo.startDate) && now <= new Date(promo.endDate);
-                if (isCurrentlyActive) {
-                    activePromos.push(promo);
-                    promo.products?.forEach((prod: Product) => { if (!promoMap.has(prod.id)) promoMap.set(prod.id, promo); });
-                }
-            });
-        }
+        const validPromos = Array.isArray(promoData) ? promoData : ((promoData as any)?.data || []);
+        
+        validPromos.forEach((promo: Promotion) => {
+            const isCurrentlyActive = promo.isActive && now >= new Date(promo.startDate) && now <= new Date(promo.endDate);
+            if (isCurrentlyActive) {
+                activePromos.push(promo);
+                promo.products?.forEach((prod: Product) => { if (!promoMap.has(prod.id)) promoMap.set(prod.id, promo); });
+            }
+        });
 
-        const validProducts = Array.isArray(productsData) ? productsData : [];
+        // แก้ไขบรรทัดนี้ เพื่อให้ดึงสินค้าออกมาได้ถูกต้อง
+        const validProducts = Array.isArray(productsData) ? productsData : ((productsData as any)?.data || []);
         const productsWithPromo: ProductWithPromo[] = validProducts
-            .filter(p => promoMap.has(p.id))
-            .map(p => ({ ...p, promo: promoMap.get(p.id) }));
+            .filter((p: any) => promoMap.has(p.id))
+            .map((p: any) => ({ ...p, promo: promoMap.get(p.id) }));
 
         setProducts(productsWithPromo);
         setPromotions(activePromos);

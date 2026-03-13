@@ -57,22 +57,23 @@ const BookmarkPage = () => {
         let promoMap = new Map<string, Promotion>();
         const now = new Date();
         
-        if (Array.isArray(promoData)) {
-            promoData.forEach((promo: Promotion) => {
-                const startDate = new Date(promo.startDate);
-                const endDate = new Date(promo.endDate);
-                if (promo.isActive && now >= startDate && now <= endDate) {
-                    promo.products?.forEach((prod: any) => {
-                        if (!promoMap.has(prod.id)) promoMap.set(prod.id, promo);
-                    });
-                }
-            });
-        }
+        const validPromos = Array.isArray(promoData) ? promoData : ((promoData as any)?.data || []);
+        
+        validPromos.forEach((promo: Promotion) => {
+            const startDate = new Date(promo.startDate);
+            const endDate = new Date(promo.endDate);
+            if (promo.isActive && now >= startDate && now <= endDate) {
+                promo.products?.forEach((prod: any) => {
+                    if (!promoMap.has(prod.id)) promoMap.set(prod.id, promo);
+                });
+            }
+        });
 
-        const validProducts = Array.isArray(productsData) ? productsData : [];
+        // แก้ไขบรรทัดนี้
+        const validProducts = Array.isArray(productsData) ? productsData : ((productsData as any)?.data || []);
         const productsWithPromo = validProducts
-            .filter(p => bookmarkIds.includes(p.id))
-            .map(p => ({ ...p, promo: promoMap.get(p.id) }));
+            .filter((p: any) => bookmarkIds.includes(p.id))
+            .map((p: any) => ({ ...p, promo: promoMap.get(p.id) }));
 
         setBookmarkedProducts(productsWithPromo);
       } catch (error) {
