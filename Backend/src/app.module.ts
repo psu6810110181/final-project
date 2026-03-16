@@ -69,7 +69,7 @@ import { BookmarksModule } from './bookmarks/bookmarks.module';
             type: 'postgres',
             url: databaseUrl, // ใช้ Connection String จาก Neon
             autoLoadEntities: true,
-            synchronize: true, // ⚠️ เปลี่ยนเป็น false หากขึ้น Production จริงและใช้ Migration
+            synchronize: false, // ⚠️ เปลี่ยนเป็น false หากขึ้น Production จริงและใช้ Migration
             ssl: true,         // ✅ บังคับเปิด SSL สำหรับ Neon
             extra: {
               ssl: {
