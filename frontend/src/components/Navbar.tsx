@@ -51,11 +51,12 @@ const Navbar = () => {
   };
 
   // --- Function เช็คสถานะ Active สำหรับไอคอน Navbar ---
+  // ✅ ปรับ p-1.5 เป็น p-1 ในจอมือถือเพื่อประหยัดพื้นที่
   const getNavStyle = (path: string) => {
     const isActive = location.pathname === path;
     return isActive
-      ? "text-white border-2 border-white rounded-lg p-1.5 transition-all duration-300 relative" 
-      : "text-white hover:text-gray-200 border-2 border-transparent hover:border-white/50 rounded-lg p-1.5 transition-all duration-300 relative"; 
+      ? "text-white border-2 border-white rounded-lg p-1 sm:p-1.5 transition-all duration-300 relative flex items-center justify-center" 
+      : "text-white hover:text-gray-200 border-2 border-transparent hover:border-white/50 rounded-lg p-1 sm:p-1.5 transition-all duration-300 relative flex items-center justify-center"; 
   };
 
   // ตรวจสอบว่าอยู่หน้าหมวดหมู่ที่เกี่ยวข้องกับโปรไฟล์หรือไม่
@@ -63,38 +64,41 @@ const Navbar = () => {
 
   return (
     <nav className="bg-[#148F96] shadow-md sticky top-0 z-50">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      {/* ✅ ลด padding ด้านข้างในจอมือถือ (px-2 sm:px-4) */}
+      <div className="container mx-auto px-3 sm:px-4 h-16 flex items-center justify-between">
         
         {/* โลโก้แบบใหม่ */}
-        <Link to="/" className="flex items-center gap-3 text-2xl font-bold text-white hover:text-gray-200 transition-colors">
+        {/* ✅ ปรับขนาดโลโก้และฟอนต์ให้เล็กลงนิดนึงในจอมือถือ */}
+        <Link to="/" className="flex items-center gap-2 sm:gap-3 text-xl sm:text-2xl font-bold text-white hover:text-gray-200 transition-colors flex-shrink-0">
           <img 
             src={logoImg} 
             alt="HomeAlright Logo" 
-            className="w-10 h-10 rounded-full border-2 border-[#04A5E3] bg-white object-contain p-1"
+            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-[#04A5E3] bg-white object-contain p-0.5 sm:p-1"
           />
-          HomeAlright
+          <span className="truncate max-w-[140px] sm:max-w-none">HomeAlright</span>
         </Link>
 
         {/* เมนูฝั่งขวา */}
-        <div className="flex items-center gap-6">
+        {/* ✅ ปรับระยะห่างระหว่างไอคอน gap-6 -> gap-1.5 บนมือถือ และกว้างขึ้นในจอใหญ่ */}
+        <div className="flex items-center gap-1.5 sm:gap-4 md:gap-6">
           {user ? (
             <>
               {/* 1. ไอคอนเฟอร์นิเจอร์ (ไปหน้า Home) + เพิ่มข้อความ */}
               <Link 
                 to="/" 
-                className={`${getNavStyle('/')} flex items-center gap-2 sm:px-3`} 
+                className={`${getNavStyle('/')} gap-1.5 sm:gap-2 sm:px-3`} 
                 title="หน้าแรก"
               >
-                <Armchair size={24} />
+                <Armchair size={22} className="sm:w-6 sm:h-6" />
                 <span className="font-medium text-sm hidden sm:block">เฟอร์นิเจอร์</span>
               </Link>
 
               {/* 2. ไอคอนตะกร้า + Badge แสดงจำนวนสินค้า */}
               <Link to="/cart" className={getNavStyle('/cart')} title="ตะกร้าสินค้า">
-                <ShoppingCart size={24} />
+                <ShoppingCart size={22} className="sm:w-6 sm:h-6" />
                 {/* แสดง Badge สีแดงเมื่อมีสินค้าในตะกร้า */}
                 {cartItemCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold min-w-[20px] h-[20px] flex items-center justify-center rounded-full px-1 border-2 border-[#148F96] shadow-sm">
+                  <span className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 bg-red-500 text-white text-[9px] sm:text-[10px] font-bold min-w-[18px] h-[18px] sm:min-w-[20px] sm:h-[20px] flex items-center justify-center rounded-full px-1 border border-[#148F96] sm:border-2 shadow-sm">
                     {cartItemCount > 99 ? '99+' : cartItemCount}
                   </span>
                 )}
@@ -104,14 +108,14 @@ const Navbar = () => {
               <div className="relative" ref={dropdownRef}>
                 <button 
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className={`flex items-center gap-2 text-white hover:text-gray-200 transition-colors focus:outline-none p-1.5 rounded-lg border-2 ${
+                  className={`flex items-center gap-1.5 sm:gap-2 text-white hover:text-gray-200 transition-colors focus:outline-none p-1 sm:p-1.5 rounded-lg border-2 ${
                     isProfileActive || isDropdownOpen 
                       ? 'border-white bg-white/10' 
                       : 'border-transparent hover:border-white/50'
                   }`}
                 >
-                  <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center overflow-hidden border border-white/30">
-                    {/* ✅ แก้ไข: แสดงรูปโปรไฟล์ถ้ามี ถ้าไม่มีให้ใช้ไอคอน User */}
+                  {/* ✅ ปรับขนาดรูปโปรไฟล์ในจอมือถือให้พอดี */}
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 bg-white/20 rounded-full flex items-center justify-center overflow-hidden border border-white/30">
                     {user.userImage || (user as any).image ? (
                       <img 
                         src={getAvatarUrl(user.userImage || (user as any).image) as string} 
@@ -119,10 +123,10 @@ const Navbar = () => {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <User size={20} className="text-white" />
+                      <User size={18} className="text-white sm:w-5 sm:h-5" />
                     )}
                   </div>
-                  <span className="font-medium hidden sm:block">{user.username}</span>
+                  <span className="font-medium hidden sm:block max-w-[100px] truncate">{user.username}</span>
                 </button>
 
                 {/* รายการเมนูใน Dropdown */}
@@ -195,10 +199,10 @@ const Navbar = () => {
             </>
           ) : (
             /* กรณีที่ยังไม่ได้ Login */
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <Link 
                 to="/login" 
-                className={`font-medium text-sm transition-all duration-300 px-4 py-2 rounded-lg border-2 ${
+                className={`font-medium text-xs sm:text-sm transition-all duration-300 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg border-2 whitespace-nowrap ${
                   location.pathname === '/login' 
                     ? 'text-white border-white' 
                     : 'text-white border-transparent hover:border-white/50'
@@ -208,7 +212,7 @@ const Navbar = () => {
               </Link>
               <Link 
                 to="/register" 
-                className={`font-medium text-sm transition-all duration-300 px-4 py-2 rounded-lg border-2 ${
+                className={`font-medium text-xs sm:text-sm transition-all duration-300 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg border-2 whitespace-nowrap ${
                   location.pathname === '/register'
                     ? 'text-white border-white' 
                     : 'text-white border-transparent hover:border-white/50'

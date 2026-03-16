@@ -1,6 +1,6 @@
 // frontend/src/components/HomeFilterBar.tsx
-import React from 'react';
-import { Search, ChevronDown, FilterX } from 'lucide-react'; 
+import React, { useState } from 'react';
+import { Search, ChevronDown, FilterX, Menu, X } from 'lucide-react'; 
 import toast from 'react-hot-toast';
 
 interface HomeFilterBarProps {
@@ -32,6 +32,8 @@ const getColorHex = (colorName: string) => {
 };
 
 const HomeFilterBar: React.FC<HomeFilterBarProps> = (props) => {
+  // ✅ State สำหรับควบคุมการเปิด/ปิดเมนูตัวกรองในหน้าจอมือถือ
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // ✅ นับรวมการเลือก Promotion ไว้ในเงื่อนไขการกรอง
   const isAdvancedFilterAllowed = props.selectedCategories.length > 0 || props.selectedRooms.length > 0 || props.selectedFeatures.length > 0 || (props.selectedPromotions && props.selectedPromotions.length > 0);
@@ -102,8 +104,32 @@ const HomeFilterBar: React.FC<HomeFilterBarProps> = (props) => {
 
   return (
     <div className="sticky top-20 z-40 container mx-auto px-4 -mt-10 mb-16 transition-all duration-300">
-      <div className="bg-white/95 backdrop-blur-xl border border-gray-200 shadow-xl shadow-slate-200/50 rounded-[2rem] p-4 flex flex-col lg:flex-row gap-4 justify-between items-center">
-        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+      <div className="bg-white/95 backdrop-blur-xl border border-gray-200 shadow-xl shadow-slate-200/50 rounded-[2rem] p-4 flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
+        
+        {/* 🔍 ช่องค้นหา & ปุ่มเมนูมือถือ (แสดงแถวบนสุดเมื่ออยู่ในโหมดมือถือ) */}
+        <div className="flex flex-col items-end w-full lg:w-80 flex-shrink-0 order-1 lg:order-2">
+          <div className="flex items-center gap-2 w-full">
+            <div className={`relative w-full group ${ringHighlightColor}`}>
+              <input type="text" placeholder="ค้นหาชื่อ รายละเอียด..." value={props.searchTerm} onChange={(e) => props.setSearchTerm(e.target.value)} className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 shadow-sm rounded-full focus:outline-none focus:ring-2 transition-all text-sm font-medium" />
+              <Search className="absolute left-4 top-3.5 text-slate-400 transition-colors" size={18} />
+            </div>
+            {/* ☰ ปุ่ม Hamburger ซ่อนในหน้าจอขนาดใหญ่ (lg) */}
+            <button 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
+              className="lg:hidden p-3 bg-white border border-gray-200 rounded-full text-gray-700 shadow-sm flex-shrink-0 hover:bg-gray-50 transition-colors"
+            >
+              {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
+          {hasAnyFilter && (
+            <div className={`text-xs text-slate-500 mt-2 pr-2 font-medium ${isMobileMenuOpen ? 'block' : 'hidden lg:block'}`}>
+              ค้นพบ <span className={`font-bold text-sm ${textHighlightColor}`}>{props.filteredCount}</span> รายการ
+            </div>
+          )}
+        </div>
+
+        {/* 🎛️ ตัวกรองทั้งหมด (ซ่อนในโหมดมือถือ หากไม่ได้กดเปิดเมนู) */}
+        <div className={`${isMobileMenuOpen ? 'flex' : 'hidden'} lg:flex flex-wrap items-center gap-3 w-full lg:w-auto order-2 lg:order-1`}>
           
           {/* ✅ แคมเปญ (เฉพาะหน้า Promotion) */}
           {props.promotions && props.selectedPromotions && props.setSelectedPromotions && (
@@ -131,12 +157,12 @@ const HomeFilterBar: React.FC<HomeFilterBarProps> = (props) => {
             <DropdownContent type="feature" options={props.features} selected={props.selectedFeatures} setSelected={props.setSelectedFeatures} />
           </div>
 
-          {/* ราคา */}
-          <div className={`flex items-center gap-2 bg-white rounded-full px-5 py-2 focus-within:ring-2 transition-all border border-gray-200 shadow-sm ${ringHighlightColor.split(' ')[0]}`}>
+          {/* ราคา (ปรับ px และ w ให้น้อยลงในมือถือเพื่อไม่ให้ล้นจอ) */}
+          <div className={`flex items-center gap-2 bg-white rounded-full px-4 sm:px-5 py-2 focus-within:ring-2 transition-all border border-gray-200 shadow-sm ${ringHighlightColor.split(' ')[0]}`}>
             <span className="text-sm font-bold text-slate-500">ราคา:</span>
-            <input type="number" placeholder="ต่ำสุด" value={props.minPrice} onChange={(e) => props.setMinPrice(e.target.value)} className="w-20 text-sm outline-none bg-transparent text-center font-medium" min="0" />
+            <input type="number" placeholder="ต่ำสุด" value={props.minPrice} onChange={(e) => props.setMinPrice(e.target.value)} className="w-16 sm:w-20 text-sm outline-none bg-transparent text-center font-medium" min="0" />
             <span className="text-slate-300">-</span>
-            <input type="number" placeholder="สูงสุด" value={props.maxPrice} onChange={(e) => props.setMaxPrice(e.target.value)} className="w-20 text-sm outline-none bg-transparent text-center font-medium" min="0" />
+            <input type="number" placeholder="สูงสุด" value={props.maxPrice} onChange={(e) => props.setMaxPrice(e.target.value)} className="w-16 sm:w-20 text-sm outline-none bg-transparent text-center font-medium" min="0" />
           </div>
 
           {/* สี, วัสดุ, ขนาด */}
@@ -156,22 +182,9 @@ const HomeFilterBar: React.FC<HomeFilterBarProps> = (props) => {
           </div>
 
           {hasAnyFilter && (
-            <button onClick={clearAllFilters} className="px-4 py-2 text-red-500 text-sm font-bold flex items-center gap-2 hover:bg-red-50 rounded-full transition-colors ml-auto lg:ml-0">
-              <FilterX size={16} /> ล้าง
+            <button onClick={clearAllFilters} className="px-4 py-2 text-red-500 text-sm font-bold flex items-center justify-center lg:justify-start gap-2 hover:bg-red-50 rounded-full transition-colors w-full lg:w-auto mt-2 lg:mt-0">
+              <FilterX size={16} /> ล้างตัวกรองทั้งหมด
             </button>
-          )}
-        </div>
-        
-        {/* ค้นหา */}
-        <div className="flex flex-col items-end w-full lg:w-80 flex-shrink-0 mt-2 lg:mt-0">
-          <div className={`relative w-full group ${ringHighlightColor}`}>
-            <input type="text" placeholder="ค้นหาชื่อ รายละเอียด..." value={props.searchTerm} onChange={(e) => props.setSearchTerm(e.target.value)} className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 shadow-sm rounded-full focus:outline-none focus:ring-2 transition-all text-sm font-medium" />
-            <Search className="absolute left-4 top-3.5 text-slate-400 transition-colors" size={18} />
-          </div>
-          {hasAnyFilter && (
-            <div className="text-xs text-slate-500 mt-2 pr-2 font-medium">
-              ค้นพบ <span className={`font-bold text-sm ${textHighlightColor}`}>{props.filteredCount}</span> รายการ
-            </div>
           )}
         </div>
       </div>
