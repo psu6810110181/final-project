@@ -57,20 +57,20 @@ import { BookmarksModule } from './bookmarks/bookmarks.module';
       serveRoot: '/uploads',
     }),
 
-    // 4. เชื่อมต่อ Database (รองรับ Neon Database)
+    // 4. เชื่อมต่อ Database
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
-        // ✅ 4.1 ตรวจสอบว่ามีการใส่ DATABASE_URL (ของ Neon) มาหรือไม่
+        // ✅ 4.1 ตรวจสอบว่ามีการใส่ DATABASE_URL มาหรือไม่
         const databaseUrl = configService.get<string>('DATABASE_URL');
         
         if (databaseUrl) {
           return {
             type: 'postgres',
-            url: databaseUrl, // ใช้ Connection String จาก Neon
+            url: databaseUrl, // ใช้ Connection String
             autoLoadEntities: true,
             synchronize: false, // ⚠️ เปลี่ยนเป็น false หากขึ้น Production จริงและใช้ Migration
-            ssl: true,         // ✅ บังคับเปิด SSL สำหรับ Neon
+            ssl: true,         // ✅ บังคับเปิด SSL
             extra: {
               ssl: {
                 rejectUnauthorized: false, // ป้องกันปัญหาสายหลุดจาก Certificate
@@ -79,7 +79,7 @@ import { BookmarksModule } from './bookmarks/bookmarks.module';
           };
         }
 
-        // ✅ 4.2 ถ้าไม่มี DATABASE_URL ให้กลับไปใช้ Config เดิมเผื่อไว้ (เช่นรัน Local)
+        // ✅ 4.2 ถ้าไม่มี DATABASE_URL ให้กลับไปใช้ Config เดิมเผื่อไว้ (เช่นรัน Local หรือ AWS RDS)
         const dbType = configService.get<string>('DB_TYPE', 'postgres');
         
         if (dbType === 'postgres') {
@@ -90,6 +90,12 @@ import { BookmarksModule } from './bookmarks/bookmarks.module';
             username: configService.get<string>('DB_USERNAME'),
             password: configService.get<string>('DB_PASSWORD'),
             database: configService.get<string>('DB_DATABASE'),
+            
+            // 👇 เติมโค้ด 3 บรรทัดนี้ลงไป เพื่อบังคับเปิด SSL ให้ AWS RDS
+            ssl: {
+              rejectUnauthorized: false,
+            },
+
             autoLoadEntities: true,
             synchronize: true,
           };
