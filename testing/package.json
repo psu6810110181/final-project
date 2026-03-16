@@ -18,6 +18,6 @@
   "homepage": "https://github.com/psu6810110181/final-project#readme",
   "devDependencies": {
     "@playwright/test": "^1.58.2",
-    "@types/node": "^25.3.3"
+    "@types/node": "^25.5.0"
   }
 }
