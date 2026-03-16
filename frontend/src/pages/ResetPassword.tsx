@@ -13,6 +13,7 @@ const ResetPassword = () => {
   const [isVisible, setIsVisible] = useState(false);
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   useEffect(() => {
     setIsVisible(true);
@@ -29,7 +30,7 @@ const ResetPassword = () => {
 
     setLoading(true);
     try {
-      await axios.post(`http://localhost:3000/auth/reset-password/${token}`, { password });
+      await axios.post(`${API_URL}/auth/reset-password/${token}`, { password });
       toast.success('เปลี่ยนรหัสผ่านสำเร็จ!');
       navigate('/login');
     } catch (err: any) {

@@ -24,6 +24,7 @@ const ReviewPage = () => {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   const fetchHistory = async () => {
     try {
@@ -91,7 +92,7 @@ const ReviewPage = () => {
   const getImageUrl = (img: string) => {
     if (!img) return "https://via.placeholder.com/150";
     if (img.startsWith('http')) return img;
-    return `http://localhost:3000/uploads/${img}`;
+    return `${API_URL}/uploads/${img}`;
   };
 
   if (loading) return (
