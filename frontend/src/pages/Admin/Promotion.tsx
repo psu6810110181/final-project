@@ -88,17 +88,14 @@ const PromotionManager: React.FC = () => {
   const fetchPromotions = async () => {
     setLoading(true);
     try {
-      console.log("Fetching promotions...");
       const response = await api.get('/promotions', getAuthHeader());
-      console.log("Promotions response:", response);
-      setPromotions(response.data);
+      // ✅ แก้ไข: ป้องกัน Error ถ้า Backend ส่งข้อมูลแบบมี Pagination
+      const promoData = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+      setPromotions(promoData);
       setError(null);
     } catch (error: any) {
       console.error("Failed to fetch promotions", error);
-      
       if (error.response) {
-        console.error("Fetch error response:", error.response);
-        console.error("Fetch error status:", error.response.status);
         if (error.response.status === 401) {
           setError("ไม่ได้รับสิทธิ์เข้าถึง (401 Unauthorized) - กรุณาตรวจสอบการ Login ของคุณ");
         } else if (error.response.status === 404) {
@@ -107,10 +104,8 @@ const PromotionManager: React.FC = () => {
           setError(`ไม่สามารถโหลดข้อมูลโปรโมชั่นได้: ${error.response.statusText}`);
         }
       } else if (error.request) {
-        console.error("Fetch error request:", error.request);
         setError("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ - กรุณาตรวจสอบว่า Backend กำลังทำงานอยู่");
       } else {
-        console.error("Fetch error message:", error.message);
         setError(`เกิดข้อผิดพลาด: ${error.message}`);
       }
     } finally {
@@ -120,8 +115,10 @@ const PromotionManager: React.FC = () => {
 
   const fetchProducts = async () => {
     try {
-      const response = await api.get('/products');
-      setProducts(response.data);
+      // ✅ แก้ไข: เพิ่ม limit เพื่อให้ดึงสินค้ามาเลือกจัดโปรโมชั่นได้ครบ และรองรับ Pagination Format
+      const response = await api.get('/products?limit=1000');
+      const productsData = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+      setProducts(productsData);
     } catch (error) {
       console.error("Failed to fetch products:", error);
     }
@@ -231,17 +228,11 @@ const PromotionManager: React.FC = () => {
         endDate: new Date(formData.endDate).toISOString()
       };
 
-      console.log("Submitting promotion data:", promotionData);
-      console.log("Auth header:", getAuthHeader());
-
       if (editingPromotion) {
-        console.log("Updating promotion ID:", editingPromotion.id);
         await api.patch(`/promotions/${editingPromotion.id}`, promotionData, getAuthHeader());
         toast.success("อัปเดตโปรโมชั่นสำเร็จ!");
       } else {
-        console.log("Creating new promotion...");
-        const response = await api.post('/promotions', promotionData, getAuthHeader());
-        console.log("Create promotion response:", response);
+        await api.post('/promotions', promotionData, getAuthHeader());
         toast.success("สร้างโปรโมชั่นสำเร็จ!");
       }
       
@@ -249,19 +240,7 @@ const PromotionManager: React.FC = () => {
       fetchPromotions();
     } catch (error: any) {
       console.error("Error saving promotion:", error);
-      
-      if (error.response) {
-        console.error("Error response:", error.response);
-        console.error("Error status:", error.response.status);
-        console.error("Error data:", error.response.data);
-        toast.error(`เกิดข้อผิดพลาดในการบันทึกโปรโมชั่น: ${error.response.data?.message || error.response.statusText || 'Unknown error'}`);
-      } else if (error.request) {
-        console.error("Error request:", error.request);
-        toast.error("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ - กรุณาตรวจสอบว่า Backend กำลังทำงานอยู่");
-      } else {
-        console.error("Error message:", error.message);
-        toast.error(`เกิดข้อผิดพลาด: ${error.message}`);
-      }
+      toast.error("เกิดข้อผิดพลาดในการบันทึกโปรโมชั่น");
     }
   };
 
@@ -291,7 +270,6 @@ const PromotionManager: React.FC = () => {
           toast.success("ลบโปรโมชั่นสำเร็จ!");
           fetchPromotions();
         } catch (error) {
-          console.error("Error deleting promotion:", error);
           toast.error("เกิดข้อผิดพลาดในการลบโปรโมชั่น");
         }
       },
@@ -305,7 +283,6 @@ const PromotionManager: React.FC = () => {
       toast.success(`${!currentStatus ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}โปรโมชั่นสำเร็จ!`);
       fetchPromotions();
     } catch (error) {
-      console.error("Error toggling promotion status:", error);
       toast.error("เกิดข้อผิดพลาดในการเปลี่ยนสถานะโปรโมชั่น");
     }
   };
@@ -317,11 +294,16 @@ const PromotionManager: React.FC = () => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('th-TH', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
+    if (!dateString) return '-';
+    try {
+      return new Date(dateString).toLocaleDateString('th-TH', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    } catch {
+      return 'Invalid Date';
+    }
   };
 
   const discountOptions = [
@@ -371,7 +353,6 @@ const PromotionManager: React.FC = () => {
                     onChange={(e) => {
                       const selectedSeason = e.target.value;
                       const seasonOption = seasonOptions.find(opt => opt.value === selectedSeason);
-                      console.log('Selected season:', selectedSeason, 'Option:', seasonOption);
                       setFormData({
                         ...formData, 
                         season: selectedSeason,
@@ -446,9 +427,7 @@ const PromotionManager: React.FC = () => {
                       key={opt.value}
                       onClick={() => {
                         const newType = opt.value as 'PERCENTAGE' | 'FIXED_AMOUNT';
-                        if (!validateSelectedProducts(newType, formData.discountValue)) {
-                          return;
-                        }
+                        if (!validateSelectedProducts(newType, formData.discountValue)) return;
                         setFormData({...formData, discountType: newType});
                         setOpenDiscountDropdown(false);
                       }}
@@ -495,16 +474,11 @@ const PromotionManager: React.FC = () => {
                 value={formData.discountValue}
                 onChange={(e) => {
                   const value = e.target.value;
-                  if (formData.discountType === 'PERCENTAGE') {
-                    const numValue = Number(value);
-                    if (numValue > 90) {
-                      toast.error('ส่วนลดสูงสุดคือ 90%');
-                      return;
-                    }
-                  }
-                  if (!validateSelectedProducts(formData.discountType, value)) {
+                  if (formData.discountType === 'PERCENTAGE' && Number(value) > 90) {
+                    toast.error('ส่วนลดสูงสุดคือ 90%');
                     return;
                   }
+                  if (!validateSelectedProducts(formData.discountType, value)) return;
                   setFormData({...formData, discountValue: value});
                 }}
                 style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px', outline: 'none' }}
@@ -524,20 +498,10 @@ const PromotionManager: React.FC = () => {
                   type="button"
                   onClick={() => setFormData({...formData, isFlashSale: true})}
                   style={{
-                    flex: 1,
-                    padding: '12px 16px',
-                    border: `2px solid ${formData.isFlashSale ? colors.secondary : colors.border}`,
-                    borderRadius: '8px',
-                    background: formData.isFlashSale ? colors.secondaryLight : colors.bgWhite,
-                    color: formData.isFlashSale ? colors.secondary : colors.textMuted,
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    transition: 'all 0.2s'
+                    flex: 1, padding: '12px 16px', border: `2px solid ${formData.isFlashSale ? colors.secondary : colors.border}`,
+                    borderRadius: '8px', background: formData.isFlashSale ? colors.secondaryLight : colors.bgWhite,
+                    color: formData.isFlashSale ? colors.secondary : colors.textMuted, cursor: 'pointer', fontSize: '14px',
+                    fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s'
                   }}
                 >
                   🔥 Flash Sale
@@ -546,27 +510,14 @@ const PromotionManager: React.FC = () => {
                   type="button"
                   onClick={() => setFormData({...formData, isFlashSale: false})}
                   style={{
-                    flex: 1,
-                    padding: '12px 16px',
-                    border: `2px solid ${!formData.isFlashSale ? colors.primary : colors.border}`,
-                    borderRadius: '8px',
-                    background: !formData.isFlashSale ? colors.primaryLight : colors.bgWhite,
-                    color: !formData.isFlashSale ? colors.primary : colors.textMuted,
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    transition: 'all 0.2s'
+                    flex: 1, padding: '12px 16px', border: `2px solid ${!formData.isFlashSale ? colors.primary : colors.border}`,
+                    borderRadius: '8px', background: !formData.isFlashSale ? colors.primaryLight : colors.bgWhite,
+                    color: !formData.isFlashSale ? colors.primary : colors.textMuted, cursor: 'pointer', fontSize: '14px',
+                    fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s'
                   }}
                 >
                   📅 Seasonal Promotion
                 </button>
-              </div>
-              <div style={{ fontSize: '12px', color: colors.textMuted, marginTop: '6px' }}>
-                {formData.isFlashSale ? '🔥 Flash Sale (แสดงหน้าแรก)' : '📅 Seasonal Promotion (โปรโมชั่นปกติ)'}
               </div>
             </div>
 
@@ -574,34 +525,20 @@ const PromotionManager: React.FC = () => {
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: colors.textMain }}>
                 🛍️ เลือกสินค้าที่เข้าร่วมโปรโมชั่น
               </label>
-              <div style={{ 
-                border: `1px solid ${colors.border}`, 
-                borderRadius: '8px', 
-                padding: '12px',
-                maxHeight: '200px',
-                overflowY: 'auto',
-                backgroundColor: colors.bgWhite
-              }}>
+              <div style={{ border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '12px', maxHeight: '200px', overflowY: 'auto', backgroundColor: colors.bgWhite }}>
                 <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '8px' }}>
-                  เลือกสินค้าที่ต้องการลดราคา (เลือก {formData.productIds.length} สินค้า)
+                  เลือกสินค้า (เลือกแล้ว {formData.productIds.length} ชิ้น)
                 </div>
                 {products.length === 0 ? (
-                  <div style={{ color: colors.textMuted, fontStyle: 'italic' }}>
-                    กำลังโหลดรายการสินค้า...
+                  <div style={{ color: colors.textMuted, fontStyle: 'italic', fontSize: '14px' }}>
+                    กำลังโหลด หรือไม่มีสินค้าในระบบ...
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {products.map((product) => (
                       <label 
                         key={product.id} 
-                        style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          cursor: 'pointer',
-                          padding: '4px',
-                          borderRadius: '4px',
-                          backgroundColor: formData.productIds.includes(product.id) ? colors.primaryLight : 'transparent'
-                        }}
+                        style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '4px', borderRadius: '4px', backgroundColor: formData.productIds.includes(product.id) ? colors.primaryLight : 'transparent' }}
                       >
                         <input
                           type="checkbox"
@@ -610,9 +547,7 @@ const PromotionManager: React.FC = () => {
                           style={{ marginRight: '8px', width: '14px', height: '14px' }}
                         />
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '13px', fontWeight: '500' }}>
-                            {product.name}
-                          </div>
+                          <div style={{ fontSize: '13px', fontWeight: '500' }}>{product.name}</div>
                           <div style={{ fontSize: '11px', color: colors.textMuted }}>
                             ฿{typeof product.price === 'string' ? Number(product.price).toLocaleString() : product.price.toLocaleString()}
                             {product.category && ` • ${product.category}`}
@@ -632,10 +567,7 @@ const PromotionManager: React.FC = () => {
               <input
                 type="datetime-local"
                 value={formatDateTimeLocal(formData.startDate)}
-                onChange={(e) => {
-                  console.log('Start date changed:', e.target.value);
-                  setFormData({...formData, startDate: e.target.value});
-                }}
+                onChange={(e) => setFormData({...formData, startDate: e.target.value})}
                 style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px', outline: 'none' }}
                 min={formData.startDate ? getMinDateTimeLocal(formData.startDate) : formatDateTimeLocal(new Date().toISOString())}
               />
@@ -648,10 +580,7 @@ const PromotionManager: React.FC = () => {
               <input
                 type="datetime-local"
                 value={formatDateTimeLocal(formData.endDate)}
-                onChange={(e) => {
-                  console.log('End date changed:', e.target.value);
-                  setFormData({...formData, endDate: e.target.value});
-                }}
+                onChange={(e) => setFormData({...formData, endDate: e.target.value})}
                 style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px', outline: 'none' }}
                 min={formatDateTimeLocal(formData.startDate)}
               />
@@ -666,22 +595,15 @@ const PromotionManager: React.FC = () => {
               value={formData.description}
               onChange={(e) => setFormData({...formData, description: e.target.value})}
               style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '8px', fontSize: '14px', minHeight: '100px', resize: 'vertical', outline: 'none' }}
-              placeholder="รายละเอียดเพิ่มเติมเกี่ยวกับโปรโมชั่น..."
+              placeholder="รายละเอียดเพิ่มเติม..."
             />
           </div>
 
           <div style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-            <button
-              type="button"
-              onClick={resetForm}
-              style={{ padding: '12px 24px', border: `1px solid ${colors.border}`, borderRadius: '8px', background: colors.bgWhite, color: colors.textMuted, cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}
-            >
+            <button type="button" onClick={resetForm} style={{ padding: '12px 24px', border: `1px solid ${colors.border}`, borderRadius: '8px', background: colors.bgWhite, color: colors.textMuted, cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
               ยกเลิก
             </button>
-            <button
-              type="submit"
-              style={{ padding: '12px 24px', border: 'none', borderRadius: '8px', background: colors.primary, color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}
-            >
+            <button type="submit" style={{ padding: '12px 24px', border: 'none', borderRadius: '8px', background: colors.primary, color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
               {editingPromotion ? 'อัปเดตโปรโมชั่น' : 'สร้างโปรโมชั่น'}
             </button>
           </div>
@@ -692,7 +614,6 @@ const PromotionManager: React.FC = () => {
 
   return (
     <article style={{ maxWidth: '1200px', margin: '0 auto', padding: '10px 0', fontFamily: "'Prompt', sans-serif" }}>
-      
       <header style={{ 
         background: 'linear-gradient(to right, #ffffff, #f8fafc)',
         padding: '24px 32px', borderRadius: '16px', boxShadow: '0 4px 20px -2px rgba(0, 0, 0, 0.04)',
@@ -700,32 +621,15 @@ const PromotionManager: React.FC = () => {
         marginBottom: '28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-          <div style={{
-            width: '64px', height: '64px', background: colors.primaryLight, borderRadius: '16px', 
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', 
-            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.04)', flexShrink: 0
-          }} aria-hidden="true">
+          <div style={{ width: '64px', height: '64px', background: colors.primaryLight, borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }} aria-hidden="true">
             🎯
           </div>
           <div>
-            <h2 id="manage-promotions-heading" style={{ margin: 0, color: '#1E293B', fontSize: '24px', fontWeight: '700', letterSpacing: '-0.5px' }}>
-              จัดการโปรโมชั่นสินค้า
-            </h2>
-            <p style={{ margin: '6px 0 0 0', color: '#64748B', fontSize: '15px' }}>
-              สร้าง แก้ไข และจัดการโปรโมชั่นสำหรับสินค้าเฟอร์นิเจอร์
-            </p>
+            <h2 id="manage-promotions-heading" style={{ margin: 0, color: '#1E293B', fontSize: '24px', fontWeight: '700' }}>จัดการโปรโมชั่นสินค้า</h2>
+            <p style={{ margin: '6px 0 0 0', color: '#64748B', fontSize: '15px' }}>สร้าง แก้ไข และจัดการโปรโมชั่นสำหรับสินค้า</p>
           </div>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          style={{ 
-            padding: '12px 20px', background: colors.primary, color: 'white', border: 'none', 
-            borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600', 
-            display: 'flex', alignItems: 'center', gap: '8px', transition: 'background 0.2s'
-          }}
-          onMouseOver={(e) => e.currentTarget.style.background = '#0E7C82'}
-          onMouseOut={(e) => e.currentTarget.style.background = colors.primary}
-        >
+        <button onClick={() => setShowForm(true)} style={{ padding: '12px 20px', background: colors.primary, color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span>➕</span> สร้างโปรโมชั่นใหม่
         </button>
       </header>
@@ -738,103 +642,58 @@ const PromotionManager: React.FC = () => {
 
       <section aria-labelledby="manage-promotions-heading" style={{ background: colors.bgWhite, borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', border: `1px solid ${colors.border}`, overflow: 'hidden' }}>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: colors.textMuted }}>
-            กำลังโหลดข้อมูลโปรโมชั่น...
-          </div>
+          <div style={{ textAlign: 'center', padding: '40px', color: colors.textMuted }}>กำลังโหลดข้อมูล...</div>
         ) : (
           <div style={{ overflowX: 'auto', padding: '1px' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '1000px' }}>
-              
               <thead style={{ background: colors.bgLight, borderBottom: `2px solid ${colors.border}` }}>
                 <tr>
-                  <th scope="col" style={{ padding: '16px 20px', color: colors.textMuted, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ชื่อโปรโมชั่น</th>
-                  <th scope="col" style={{ padding: '16px 20px', color: colors.textMuted, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ประเภทส่วนลด</th>
-                  <th scope="col" style={{ padding: '16px 20px', color: colors.textMuted, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>มูลค่า</th>
-                  <th scope="col" style={{ padding: '16px 20px', color: colors.textMuted, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ระยะเวลา</th>
-                  <th scope="col" style={{ padding: '16px 20px', color: colors.textMuted, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>สถานะ</th>
-                  <th scope="col" style={{ padding: '16px 20px', color: colors.textMuted, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'right' }}>จัดการ</th>
+                  <th scope="col" style={{ padding: '16px 20px', color: colors.textMuted, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase' }}>ชื่อโปรโมชั่น</th>
+                  <th scope="col" style={{ padding: '16px 20px', color: colors.textMuted, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase' }}>ประเภท</th>
+                  <th scope="col" style={{ padding: '16px 20px', color: colors.textMuted, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase' }}>มูลค่า</th>
+                  <th scope="col" style={{ padding: '16px 20px', color: colors.textMuted, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase' }}>ระยะเวลา</th>
+                  <th scope="col" style={{ padding: '16px 20px', color: colors.textMuted, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase' }}>สถานะ</th>
+                  <th scope="col" style={{ padding: '16px 20px', color: colors.textMuted, fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', textAlign: 'right' }}>จัดการ</th>
                 </tr>
               </thead>
-              
               <tbody>
                 {promotions.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: colors.textMuted, fontStyle: 'italic' }}>
-                      ยังไม่มีโปรโมชั่นในระบบ
-                    </td>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: colors.textMuted, fontStyle: 'italic' }}>ยังไม่มีโปรโมชั่นในระบบ</td>
                   </tr>
                 ) : (
                   promotions.map((promotion) => {
                     const statusStyle = getStatusStyle(promotion.isActive);
-                    
                     return (
-                      <tr key={promotion.id} className="promotion-row" style={{ borderBottom: `1px solid ${colors.border}`, transition: 'background 0.2s' }}>
+                      <tr key={promotion.id} style={{ borderBottom: `1px solid ${colors.border}` }}>
                         <td style={{ padding: '16px 20px' }}>
-                          <div>
-                            <div style={{ fontSize: '15px', color: colors.textMain, fontWeight: '600', marginBottom: '4px' }}>
-                              {promotion.title}
-                            </div>
-                            {promotion.description && (
-                              <div style={{ fontSize: '13px', color: colors.textMuted }}>
-                                {promotion.description.length > 50 ? `${promotion.description.substring(0, 50)}...` : promotion.description}
-                              </div>
-                            )}
-                          </div>
+                          <div style={{ fontSize: '15px', color: colors.textMain, fontWeight: '600' }}>{promotion.title}</div>
+                          {promotion.description && <div style={{ fontSize: '13px', color: colors.textMuted }}>{promotion.description.length > 50 ? `${promotion.description.substring(0, 50)}...` : promotion.description}</div>}
                         </td>
                         <td style={{ padding: '16px 20px', fontSize: '14px', color: colors.textMain }}>
-                          {promotion.discountType === 'PERCENTAGE' ? 'เปอร์เซ็นต์' : 'จำนวนเงินคงที่'}
+                          {promotion.discountType === 'PERCENTAGE' ? 'เปอร์เซ็นต์' : 'จำนวนเงิน'}
                         </td>
                         <td style={{ padding: '16px 20px', fontSize: '15px', color: colors.secondary, fontWeight: '700' }}>
-                          {promotion.discountType === 'PERCENTAGE' 
-                            ? `${promotion.discountValue}%`
-                            : `฿${Number(promotion.discountValue).toLocaleString()}`
-                          }
-                          <div style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '400', marginTop: '2px' }}>
-                            {promotion.isFlashSale ? '🔥 Flash Sale' : '📅 Seasonal'} 
-                            {promotion.products && promotion.products.length > 0 && ` • ${promotion.products.length} สินค้า`}
-                          </div>
+                          {promotion.discountType === 'PERCENTAGE' ? `${promotion.discountValue}%` : `฿${Number(promotion.discountValue).toLocaleString()}`}
+                          <div style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '400' }}>{promotion.isFlashSale ? '🔥 Flash Sale' : '📅 Seasonal'}</div>
                         </td>
                         <td style={{ padding: '16px 20px', fontSize: '14px', color: colors.textMain }}>
                           <div>{formatDate(promotion.startDate)}</div>
-                          <div style={{ fontSize: '12px', color: colors.textMuted }}>
-                            ถึง {formatDate(promotion.endDate)}
-                          </div>
+                          <div style={{ fontSize: '12px', color: colors.textMuted }}>ถึง {formatDate(promotion.endDate)}</div>
                         </td>
                         <td style={{ padding: '16px 20px' }}>
-                          <span style={{ 
-                            display: 'inline-block', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600',
-                            background: statusStyle.bg, color: statusStyle.color, border: `1px solid ${statusStyle.color}40`
-                          }}>
+                          <span style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', background: statusStyle.bg, color: statusStyle.color }}>
                             {promotion.isActive ? 'ใช้งาน' : 'ปิดใช้งาน'}
                           </span>
                         </td>
-                        <td style={{ padding: '16px 20px', display: 'flex', justifyContent: 'flex-end', gap: '8px', alignItems: 'center' }}>
-                          <button
-                            onClick={() => handleToggleStatus(promotion.id, promotion.isActive)}
-                            style={{ 
-                              padding: '8px 12px', borderRadius: '8px', border: `1px solid ${colors.border}`, fontSize: '12px', cursor: 'pointer', 
-                              background: promotion.isActive ? colors.warningLight : colors.successLight, 
-                              color: promotion.isActive ? colors.warning : colors.success, fontWeight: '500'
-                            }}
-                            title={promotion.isActive ? 'ปิดใช้งานโปรโมชั่น' : 'เปิดใช้งานโปรโมชั่น'}
-                          >
+                        <td style={{ padding: '16px 20px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                          <button onClick={() => handleToggleStatus(promotion.id, promotion.isActive)} style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${colors.border}`, fontSize: '12px', cursor: 'pointer', background: promotion.isActive ? colors.warningLight : colors.successLight, color: promotion.isActive ? colors.warning : colors.success, fontWeight: '500' }}>
                             {promotion.isActive ? 'ปิด' : 'เปิด'}
                           </button>
-                          <button
-                            onClick={() => handleEdit(promotion)}
-                            style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${colors.border}`, fontSize: '12px', cursor: 'pointer', background: colors.infoLight, color: colors.info, fontWeight: '500' }}
-                            title="แก้ไขโปรโมชั่น"
-                          >
+                          <button onClick={() => handleEdit(promotion)} style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${colors.border}`, fontSize: '12px', cursor: 'pointer', background: colors.infoLight, color: colors.info, fontWeight: '500' }}>
                             แก้ไข
                           </button>
-                          <button
-                            onClick={() => handleDelete(promotion.id)}
-                            style={{ 
-                              padding: '8px 12px', borderRadius: '8px', border: `1px solid ${colors.border}`, fontSize: '12px', cursor: 'pointer', 
-                              background: colors.dangerLight, color: colors.danger, fontWeight: '500'
-                            }}
-                            title="ลบโปรโมชั่น"
-                          >
+                          <button onClick={() => handleDelete(promotion.id)} style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${colors.border}`, fontSize: '12px', cursor: 'pointer', background: colors.dangerLight, color: colors.danger, fontWeight: '500' }}>
                             ลบ
                           </button>
                         </td>
@@ -847,21 +706,7 @@ const PromotionManager: React.FC = () => {
           </div>
         )}
       </section>
-
-      <style>{`
-        .promotion-row:hover {
-          background-color: #F8FAFC !important;
-        }
-      `}</style>
-      
-      {confirm && (
-        <Confirm
-          message={confirm.message}
-          onConfirm={confirm.onConfirm}
-          onCancel={() => setConfirm(null)}
-          type={confirm.type}
-        />
-      )}
+      {confirm && <Confirm message={confirm.message} onConfirm={confirm.onConfirm} onCancel={() => setConfirm(null)} type={confirm.type} />}
     </article>
   );
 };

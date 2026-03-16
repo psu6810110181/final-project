@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import logoImg from '../assets/HomeAlright_logo.webp';
-import { Check, X, Mail, User, Lock, ArrowRight, AlertCircle } from 'lucide-react';
+import { Check, X, Mail, User, Lock, ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react'; // ✅ เพิ่ม Eye, EyeOff
 import toast from 'react-hot-toast';
 
 import loginbackground from '../assets/login.jpeg'; 
@@ -11,6 +11,8 @@ const Register = () => {
   const [formData, setFormData] = useState({ email: '', username: '', password: '', confirmPassword: '' });
   const [isPolicyAccepted, setIsPolicyAccepted] = useState(false); 
   const [isVisible, setIsVisible] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // ✅ สำหรับช่องรหัสผ่าน
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false); // ✅ สำหรับช่องยืนยันรหัสผ่าน
   
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -24,7 +26,6 @@ const Register = () => {
     uppercase: /[A-Z]/.test(formData.password),
     lowercase: /[a-z]/.test(formData.password),
     number: /[0-9]/.test(formData.password),
-    // ✅ แก้ไข Regex: ใส่ \- เพื่อไม่ให้ระบบมองเป็น Range
     specialChar: /[!@#$%^&*_\-]/.test(formData.password),
   };
 
@@ -56,7 +57,6 @@ const Register = () => {
     }
   };
 
-  // ✅ ปรับ UI เงื่อนไข: ถ้าเริ่มพิมพ์แล้วยังไม่ผ่านให้เป็นสีแดง ถ้าผ่านแล้วเป็นสีเขียว
   const RuleItem = ({ isValid, text }: { isValid: boolean, text: string }) => {
     const hasInput = formData.password.length > 0;
     const textColor = !hasInput ? 'text-slate-400' : (isValid ? 'text-emerald-500' : 'text-red-500');
@@ -101,7 +101,7 @@ const Register = () => {
         </div>
       </div>
 
-      {/* --- ฝั่งขวา: Light Cinematic Form Panel --- */}
+      {/* --- ฝั่งขวา: Form Panel --- */}
       <div className="w-full lg:w-1/3 relative flex items-center justify-center p-6 md:p-8 bg-white z-20 shadow-[-20px_0_50px_rgba(0,0,0,0.05)] overflow-y-auto custom-scrollbar">
         
         <div className="absolute top-1/4 right-0 w-96 h-96 bg-[#D65A31]/10 blur-[100px] rounded-full pointer-events-none" />
@@ -141,23 +141,32 @@ const Register = () => {
               />
             </div>
 
+            {/* ✅ Password Input with Eye Toggle */}
             <div>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
                   <Lock size={18} className="text-slate-400 group-focus-within:text-[#D65A31] transition-colors" />
                 </div>
                 <input 
-                  type="password" placeholder="รหัสผ่าน" required
-                  className={`w-full pl-12 pr-4 py-3.5 bg-slate-50 border rounded-xl outline-none focus:bg-white focus:ring-4 transition-all font-medium shadow-sm text-slate-800 placeholder:text-slate-400
+                  type={showPassword ? "text" : "password"}
+                  placeholder="รหัสผ่าน" required
+                  className={`w-full pl-12 pr-12 py-3.5 bg-slate-50 border rounded-xl outline-none focus:bg-white focus:ring-4 transition-all font-medium shadow-sm text-slate-800 placeholder:text-slate-400
                     ${formData.password && !isPasswordValid ? 'border-red-300 focus:ring-red-200 focus:border-red-400' : 'border-slate-200 focus:ring-[#D65A31]/20 focus:border-[#D65A31]'}
                   `} 
                   onChange={(e) => setFormData({...formData, password: e.target.value})} 
                 />
+                <button 
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-[#D65A31] transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
 
               {/* Password Rules Box */}
               <div className="w-full bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col gap-1.5 shadow-inner mt-2">
-                <p className="text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">ความปลอดภัยของรหัสผ่าน:</p>
+                <p className="text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">ความปลอดภัยของหรัสผ่าน:</p>
                 <div className="grid grid-cols-2 gap-y-2 gap-x-1">
                   <RuleItem isValid={passwordRules.length} text="ยาว 12 ตัวอักษรขึ้นไป" />
                   <RuleItem isValid={passwordRules.uppercase} text="พิมพ์ใหญ่ (A-Z)" />
@@ -170,21 +179,29 @@ const Register = () => {
               </div>
             </div>
 
+            {/* ✅ Confirm Password Input with Eye Toggle */}
             <div>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
                   <Lock size={18} className="text-slate-400 group-focus-within:text-[#D65A31] transition-colors" />
                 </div>
                 <input 
-                  type="password" placeholder="ยืนยันรหัสผ่าน" required
-                  className={`w-full pl-12 pr-4 py-3.5 bg-slate-50 border rounded-xl outline-none focus:bg-white focus:ring-4 transition-all font-medium shadow-sm text-slate-800 placeholder:text-slate-400
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="ยืนยันรหัสผ่าน" required
+                  className={`w-full pl-12 pr-12 py-3.5 bg-slate-50 border rounded-xl outline-none focus:bg-white focus:ring-4 transition-all font-medium shadow-sm text-slate-800 placeholder:text-slate-400
                     ${formData.confirmPassword && !isPasswordMatch ? 'border-red-300 focus:ring-red-200 focus:border-red-400' : 'border-slate-200 focus:ring-[#D65A31]/20 focus:border-[#D65A31]'}
                   `} 
                   onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} 
                 />
+                <button 
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-[#D65A31] transition-colors"
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
               
-              {/* ✅ เพิ่มข้อความแจ้งเตือนรหัสผ่านตรงกัน (เหมือนหน้า Profile) */}
               {formData.confirmPassword && !isPasswordMatch && (
                 <p className="text-red-500 text-xs mt-1.5 px-1 flex items-center gap-1"><AlertCircle size={12}/> รหัสผ่านไม่ตรงกัน</p>
               )}

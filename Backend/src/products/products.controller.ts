@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFiles, Query } from '@nestjs/common';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
@@ -87,7 +87,15 @@ export class ProductsController {
     return this.productsService.update(id, body);
   }
 
-  @Get() findAll() { return this.productsService.findAll(); }
+  @Get()
+  findAll(
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '12',
+  ) {
+    // แปลง string จาก url ให้เป็น number ก่อนส่งให้ service
+    return this.productsService.findAll(+page, +limit); 
+  }
+  
   @Get(':id') findOne(@Param('id') id: string) { return this.productsService.findOne(id); }
   @Delete(':id') remove(@Param('id') id: string) { return this.productsService.remove(id); }
 }

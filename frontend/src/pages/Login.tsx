@@ -4,13 +4,15 @@ import { useCart } from '../contexts/CartContext';
 import { useNavigate, Link } from 'react-router-dom';
 import logoImg from '../assets/HomeAlright_logo.webp';
 import toast from 'react-hot-toast';
-import { Mail, Lock, ArrowRight } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react'; // ✅ เพิ่ม Eye, EyeOff
 
 import loginbackground from '../assets/login.jpeg'; 
 
 const Login = () => {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [isVisible, setIsVisible] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // ✅ เพิ่ม State สำหรับซ่อน/โชว์
+  
   const { login } = useAuth();
   const { fetchCart } = useCart();
   const navigate = useNavigate();
@@ -65,7 +67,6 @@ const Login = () => {
       {/* --- ฝั่งขวา: Light Cinematic Form Panel --- */}
       <div className="w-full lg:w-1/3 relative flex items-center justify-center p-8 bg-white z-20 shadow-[-20px_0_50px_rgba(0,0,0,0.05)]">
         
-        {/* Decorative Light Glow */}
         <div className="absolute top-1/4 right-0 w-96 h-96 bg-[#148F96]/10 blur-[100px] rounded-full pointer-events-none" />
         
         <div className={`w-full max-w-sm transition-all duration-1000 delay-300 transform ${isVisible ? 'translate-x-0 opacity-100' : 'translate-x-12 opacity-0'}`}>
@@ -94,16 +95,24 @@ const Login = () => {
               />
             </div>
 
+            {/* ✅ Password Input with Eye Toggle */}
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
                 <Lock size={20} className="text-slate-400 group-focus-within:text-[#148F96] transition-colors" />
               </div>
               <input 
-                type="password" 
+                type={showPassword ? "text" : "password"} // ✅ เปลี่ยน type ตาม state
                 placeholder="รหัสผ่าน" 
-                className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:bg-white focus:ring-4 focus:ring-[#148F96]/20 focus:border-[#148F96] text-slate-800 placeholder:text-slate-400 transition-all font-medium shadow-sm"
+                className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:bg-white focus:ring-4 focus:ring-[#148F96]/20 focus:border-[#148F96] text-slate-800 placeholder:text-slate-400 transition-all font-medium shadow-sm"
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
               />
+              <button 
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-[#148F96] transition-colors"
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
             
             <div className="flex items-center justify-between px-2 pt-2">
