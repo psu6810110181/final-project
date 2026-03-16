@@ -41,12 +41,19 @@ export class AuthController {
   async googleAuthCallback(@Req() req, @Res() res) {
     try {
       const result = await this.authService.googleLogin(req.user);
+      
+      // ✅ ดึง URL ของ Frontend จาก .env (ถ้าไม่มีจะตกหล่นไปใช้ localhost)
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      
       res.redirect(
-        `http://localhost:5173/auth/callback?token=${result.access_token}&user=${encodeURIComponent(JSON.stringify(result.user))}`
+        `${frontendUrl}/auth/callback?token=${result.access_token}&user=${encodeURIComponent(JSON.stringify(result.user))}`
       );
     } catch (error) {
       console.error('Google callback error:', error);
-      res.redirect('http://localhost:5173/login');
+      
+      // ✅ แก้ให้ตอน Error ก็เด้งกลับไปที่โดเมนจริงด้วย
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      res.redirect(`${frontendUrl}/login`);
     }
   }
 }
