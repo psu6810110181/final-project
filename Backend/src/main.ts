@@ -9,8 +9,9 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
   
   // 2. เปิดให้ Frontend ยิง API เข้ามาได้ (CORS)
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
   app.enableCors({
-    origin: '*', 
+    origin: [frontendUrl, 'http://localhost:5173'], 
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });

@@ -12,6 +12,7 @@ const Login = () => {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [isVisible, setIsVisible] = useState(false);
   const [showPassword, setShowPassword] = useState(false); // ✅ เพิ่ม State สำหรับซ่อน/โชว์
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
   
   const { login } = useAuth();
   const { fetchCart } = useCart();
@@ -138,7 +139,7 @@ const Login = () => {
 
             <button
               type="button"
-              onClick={() => window.location.href = 'http://localhost:3000/auth/google'}
+              onClick={() => window.location.href = `${API_URL}/auth/google`}
               className="w-full flex items-center justify-center gap-2 border border-gray-300 py-3 rounded-full font-bold hover:bg-gray-50 transition text-sm"
             >
               <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" />
