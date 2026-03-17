@@ -1,7 +1,7 @@
 // frontend/src/components/Admin/OrderTable.tsx
 import React, { useEffect, useRef } from "react";
 import OrderStatusSelector from "./OrderStatusSelector";
-
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 interface OrderTableProps {
   orders: any[];
   colors: any;
@@ -16,7 +16,7 @@ interface OrderTableProps {
 
 const OrderTable: React.FC<OrderTableProps> = ({
   orders, colors, openDropdownId, setOpenDropdownId,
-  onUpdateStatus, onViewReceipt, onDeleteOrder, getStatusStyle, calculateDeliveryDate
+  onUpdateStatus, onDeleteOrder, getStatusStyle, calculateDeliveryDate
 }) => {
   const dropdownRef = useRef<HTMLTableSectionElement>(null);
 
@@ -77,13 +77,13 @@ const OrderTable: React.FC<OrderTableProps> = ({
                   <td style={{ padding: '16px 20px', fontSize: '15px', color: colors.secondary, fontWeight: '700' }}>฿{Number(order.totalAmount).toLocaleString()}</td>
                   <td style={{ padding: '16px 20px', fontSize: '14px' }}>
                     {order.paymentSlipImage ? (
-                      <a href={`http://localhost:3000/uploads/slips/${order.paymentSlipImage}`} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: colors.primary, textDecoration: 'none', fontWeight: '600', background: colors.primaryLight, padding: '6px 12px', borderRadius: '20px' }}>
+                      <a href={`${API_URL}/uploads/slips/${order.paymentSlipImage}`} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: colors.primary, textDecoration: 'none', fontWeight: '600', background: colors.primaryLight, padding: '6px 12px', borderRadius: '20px' }}>
                         🧾 ดูสลิป
                       </a>
                     ) : order.stripeReceiptUrl ? (
-                      <button onClick={() => onViewReceipt(order.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: colors.info, fontWeight: '600', background: colors.infoLight, padding: '6px 12px', borderRadius: '20px', border: 'none', cursor: 'pointer' }}>
+                      <a href={order.stripeReceiptUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: colors.info, fontWeight: '600', background: colors.infoLight, padding: '6px 12px', borderRadius: '20px', textDecoration: 'none' }}>
                         💳 ดูใบเสร็จ Stripe
-                      </button>
+                      </a>
                     ) : <span style={{ color: colors.textMuted, fontStyle: 'italic' }}>ไม่มีสลิป</span>}
                   </td>
                   <td style={{ padding: '16px 20px' }}>
