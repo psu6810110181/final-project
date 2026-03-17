@@ -11,6 +11,7 @@ const ForgotPassword = () => {
   const [loading, setLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const navigate = useNavigate();
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   useEffect(() => {
     setIsVisible(true);
@@ -20,7 +21,7 @@ const ForgotPassword = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await axios.post('http://localhost:3000/auth/forgot-password', { email });
+      await axios.post(`${API_URL}/auth/forgot-password`, { email });
       toast.success('ส่งลิงก์สำหรับรีเซ็ตรหัสผ่านไปที่อีเมลของคุณแล้ว');
       navigate('/login');
     } catch (err: any) {
