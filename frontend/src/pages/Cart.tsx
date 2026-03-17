@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Trash2, Minus, Plus, MapPin, X } from 'lucide-react'; 
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom'; // ✅ นำเข้า useLocation เพิ่ม
 import { useCart, calculateDiscountPrice } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import * as api from '../services/api';
@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 
 const Cart = () => {
   const navigate = useNavigate();
+  const location = useLocation(); // ✅ ใช้ตรวจจับการเปลี่ยนหน้า
   const [isProcessing, setIsProcessing] = useState(false);
   const [address, setAddress] = useState("");
   const [showAddressModal, setShowAddressModal] = useState(false);
@@ -28,44 +29,43 @@ const Cart = () => {
   const shippingFee = cartItems.length > 0 ? 150 : 0; 
   const total = cartTotal + installationFee + shippingFee;
 
-  // ✅ แก้ไข: ดึงข้อมูล Profile ล่าสุดจาก Backend เสมอ เพื่อให้อัปเดตตรงกับหน้า Profile
+  // ✅ แก้ไข: บังคับให้ดึงข้อมูลจาก Profile (Backend) เป็นอันดับแรกเสมอ
   useEffect(() => {
     const fetchAddress = async () => {
-      // 1. ตรวจสอบใน localStorage ก่อน
-      const savedAddress = localStorage.getItem('delivery_address');
-      if (savedAddress) {
-          setAddress(savedAddress);
-          return;
-      }
+      let latestDbAddress = "";
 
-      // 2. ถ้าไม่มีใน localStorage ให้ไปดึง Profile ล่าสุดจาก Backend
+      // 1. ดึงที่อยู่ล่าสุดจาก Backend ก่อน (มั่นใจที่สุดว่าตรงกับหน้า Profile)
       if (user) {
           try {
               const profileData = await api.getProfile();
               if (profileData && profileData.address && profileData.address.trim() !== "") {
-                  setAddress(profileData.address);
+                  latestDbAddress = profileData.address;
               } else if ((user as any).address && (user as any).address.trim() !== "") {
-                  // Fallback 
-                  setAddress((user as any).address);
-              } else {
-                  setAddress("");
+                  latestDbAddress = (user as any).address;
               }
           } catch (error) {
               console.error("Error fetching profile address:", error);
-              // Fallback กรณี API มีปัญหา
-              if ((user as any).address) {
-                  setAddress((user as any).address);
-              } else {
-                  setAddress("");
-              }
           }
+      }
+
+      const savedLocalAddress = localStorage.getItem('delivery_address');
+
+      // 2. ตัดสินใจเลือกที่อยู่
+      if (latestDbAddress) {
+          // ถ้า Profile มีที่อยู่ ให้ใช้ของ Profile เสมอ
+          setAddress(latestDbAddress);
+          // ลบของเก่าในเครื่องทิ้งไปเลย เพื่อไม่ให้กวนกันในอนาคต
+          localStorage.removeItem('delivery_address'); 
+      } else if (savedLocalAddress) {
+          // ถ้า Profile ไม่มีที่อยู่ แต่ผู้ใช้เคยพิมพ์ค้างไว้ในตะกร้า ให้ใช้อันนั้น
+          setAddress(savedLocalAddress);
       } else {
           setAddress("");
       }
     };
 
     fetchAddress();
-  }, [user]);
+  }, [user, location.pathname]); // ✅ เพิ่ม location.pathname ดึงข้อมูลใหม่ทุกครั้งที่กดเข้ามาหน้านี้
 
   const handleSaveAddress = () => {
     setAddress(tempAddress);
@@ -73,7 +73,6 @@ const Cart = () => {
     setShowAddressModal(false);
   };
 
-  // ✅ ดึงรูปภาพโดยตรวจสอบทั้งจาก Variant และ Product หลัก
   const getImageUrl = (source: any) => {
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
     if (!source) return "https://via.placeholder.com/150";
@@ -145,11 +144,8 @@ const Cart = () => {
               cartItems.map((item: any) => {
                 if (!item?.product) return null;
 
-                // ✅ ดึงราคาจาก Variant (ถ้ามี) หรือ Product หลัก
                 const basePrice = item.variant ? Number(item.variant.price) : Number(item.product.price || 0);
                 const discountedPrice = calculateDiscountPrice(basePrice, item.product.promo);
-                
-                // ✅ เลือกว่าจะโชว์รูปของ Variant หรือรูปของ Product หลัก
                 const imageSource = (item.variant && item.variant.image) ? item.variant : item.product;
 
                 return (
@@ -165,7 +161,6 @@ const Cart = () => {
                       <h3 className="font-bold text-gray-800 text-lg truncate">{item.product.name}</h3>
                       <p className="text-gray-400 text-sm mb-1">{(item.product as any).category || "ทั่วไป"}</p>
                       
-                      {/* ✅ แสดงคุณสมบัติของสินค้า */}
                       {(() => {
                         const displayColor = item.variant?.color || item.product?.color || item.product?.mainColor;
                         const displayMaterial = item.variant?.material || item.product?.material || item.product?.mainMaterial;
@@ -184,7 +179,6 @@ const Cart = () => {
                         );
                       })()}
 
-                      {/* ✅ แสดงราคาลดและป้ายโปรโมชัน */}
                       {item.product.promo ? (
                         <div className="mb-2 flex items-center flex-wrap gap-2">
                            <span className="text-gray-400 line-through text-sm">฿{basePrice.toLocaleString()}</span>
@@ -199,7 +193,6 @@ const Cart = () => {
                         <div className="font-bold text-[#D65A31] text-lg mb-2">฿{basePrice.toLocaleString()}</div>
                       )}
                       
-                      {/* ✅ ปุ่มบริการติดตั้ง */}
                       <div className="flex items-center gap-2 mt-2">
                           <span className="text-xs text-[#148F96] font-bold">🔧 บริการติดตั้ง:</span>
                           <div className="flex items-center bg-white border border-gray-200 rounded-md">
@@ -211,7 +204,6 @@ const Cart = () => {
 
                     </div>
                     
-                    {/* ✅ ส่วนจัดการจำนวนสินค้าและปุ่มลบ (Responsive) */}
                     <div className="flex sm:flex-col items-center justify-between sm:justify-center w-full sm:w-auto gap-4 sm:gap-0 mt-4 sm:mt-0">
                       <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl p-1 shadow-inner">
                         <button onClick={() => updateCartItem(item.id, item.quantity - 1, Math.min(item.quantity - 1, item.installationQty || 0))} className="p-2 text-gray-400 hover:text-black transition-colors disabled:opacity-30" disabled={item.quantity <= 1}><Minus size={16}/></button>
