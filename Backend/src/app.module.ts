@@ -104,7 +104,7 @@ import { BookmarksModule } from './bookmarks/bookmarks.module';
             type: 'sqlite',
             database: configService.get<string>('DB_DATABASE', './data/finalproject.db'),
             autoLoadEntities: true,
-            synchronize: true,
+            synchronize: false,
           };
         }
       },
