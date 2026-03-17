@@ -66,7 +66,8 @@ export class UsersService {
     const token = jwt.sign({ id: user.id, newEmail }, process.env.JWT_SECRET || 'homealright-secret', { expiresIn: '15m' });
     
     // สร้างลิงก์ยืนยัน (ชี้ไปที่ Frontend)
-    const confirmUrl = `http://localhost:5173/verify-email?token=${token}`;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const confirmUrl = `${frontendUrl}/verify-email?token=${token}`;
 
     try {
       // ส่งอีเมล
