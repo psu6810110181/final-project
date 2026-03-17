@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trash2, Minus, Plus, MapPin, X } from 'lucide-react'; 
+import { Trash2, Minus, Plus, MapPin, X, User } from 'lucide-react'; 
 import { useNavigate } from 'react-router-dom';
 import { useCart, calculateDiscountPrice } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -28,12 +28,15 @@ const Cart = () => {
   const shippingFee = cartItems.length > 0 ? 150 : 0; 
   const total = cartTotal + installationFee + shippingFee;
 
+  // ✅ ปรับปรุง Logic การดึงที่อยู่: ถ้า LocalStorage ว่าง ให้ใช้ Profile เสมอ
   useEffect(() => {
     const savedAddress = localStorage.getItem('delivery_address');
-    if (savedAddress) {
+    const userProfileAddress = user && (user as any).address ? (user as any).address.trim() : "";
+
+    if (savedAddress && savedAddress.trim() !== "") {
         setAddress(savedAddress);
-    } else if (user && (user as any).address && (user as any).address.trim() !== "") {
-        setAddress((user as any).address);
+    } else if (userProfileAddress !== "") {
+        setAddress(userProfileAddress);
     } else {
         setAddress("");
     }
@@ -45,7 +48,16 @@ const Cart = () => {
     setShowAddressModal(false);
   };
 
-  // ✅ ดึงรูปภาพโดยตรวจสอบทั้งจาก Variant และ Product หลัก
+  // ✅ ฟังก์ชันเสริม: กดปุ่มเดียวเพื่อดึงที่อยู่จาก Profile มาใส่ช่อง Textarea
+  const handleUseProfileAddress = () => {
+    if (user && (user as any).address) {
+      setTempAddress((user as any).address);
+      toast.success("ดึงที่อยู่จากโปรไฟล์เรียบร้อย");
+    } else {
+      toast.error("ไม่พบที่อยู่ในโปรไฟล์ของคุณ");
+    }
+  };
+
   const getImageUrl = (source: any) => {
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
     if (!source) return "https://via.placeholder.com/150";
@@ -117,11 +129,8 @@ const Cart = () => {
               cartItems.map((item: any) => {
                 if (!item?.product) return null;
 
-                // ✅ ดึงราคาจาก Variant (ถ้ามี) หรือ Product หลัก
                 const basePrice = item.variant ? Number(item.variant.price) : Number(item.product.price || 0);
                 const discountedPrice = calculateDiscountPrice(basePrice, item.product.promo);
-                
-                // ✅ เลือกว่าจะโชว์รูปของ Variant หรือรูปของ Product หลัก
                 const imageSource = (item.variant && item.variant.image) ? item.variant : item.product;
 
                 return (
@@ -137,7 +146,6 @@ const Cart = () => {
                       <h3 className="font-bold text-gray-800 text-lg truncate">{item.product.name}</h3>
                       <p className="text-gray-400 text-sm mb-1">{(item.product as any).category || "ทั่วไป"}</p>
                       
-                      {/* ✅ แสดงคุณสมบัติของสินค้า (รองรับทั้งแบบมี Variant และสินค้าหลัก) */}
                       {(() => {
                         const displayColor = item.variant?.color || item.product?.color || item.product?.mainColor;
                         const displayMaterial = item.variant?.material || item.product?.material || item.product?.mainMaterial;
@@ -156,7 +164,6 @@ const Cart = () => {
                         );
                       })()}
 
-                      {/* ✅ แสดงราคาลดและป้ายโปรโมชัน */}
                       {item.product.promo ? (
                         <div className="mb-2 flex items-center flex-wrap gap-2">
                            <span className="text-gray-400 line-through text-sm">฿{basePrice.toLocaleString()}</span>
@@ -171,7 +178,6 @@ const Cart = () => {
                         <div className="font-bold text-[#D65A31] text-lg mb-2">฿{basePrice.toLocaleString()}</div>
                       )}
                       
-                      {/* ✅ ปุ่มบริการติดตั้ง */}
                       <div className="flex items-center gap-2 mt-2">
                           <span className="text-xs text-[#148F96] font-bold">🔧 บริการติดตั้ง:</span>
                           <div className="flex items-center bg-white border border-gray-200 rounded-md">
@@ -183,7 +189,6 @@ const Cart = () => {
 
                     </div>
                     
-                    {/* ✅ ส่วนจัดการจำนวนสินค้าและปุ่มลบ (Responsive) */}
                     <div className="flex sm:flex-col items-center justify-between sm:justify-center w-full sm:w-auto gap-4 sm:gap-0 mt-4 sm:mt-0">
                       <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl p-1 shadow-inner">
                         <button onClick={() => updateCartItem(item.id, item.quantity - 1, Math.min(item.quantity - 1, item.installationQty || 0))} className="p-2 text-gray-400 hover:text-black transition-colors disabled:opacity-30" disabled={item.quantity <= 1}><Minus size={16}/></button>
@@ -286,7 +291,20 @@ const Cart = () => {
             >
               <X size={24}/>
             </button>
-            <h3 className="text-xl font-bold text-gray-800 mb-6">ที่อยู่จัดส่ง</h3>
+            
+            {/* ✅ เพิ่มปุ่มดึงข้อมูลจาก Profile ไว้ตรงหัวมุมขวาของ Modal */}
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-800">ที่อยู่จัดส่ง</h3>
+              {user && (user as any).address && (
+                <button 
+                  onClick={handleUseProfileAddress}
+                  className="flex items-center gap-1.5 text-xs font-bold text-[#148F96] bg-[#148F96]/10 px-3 py-1.5 rounded-full hover:bg-[#148F96]/20 transition-colors"
+                >
+                  <User size={14} /> ดึงจากโปรไฟล์
+                </button>
+              )}
+            </div>
+
             <textarea 
               className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-gray-800 outline-none focus:border-[#148F96] focus:ring-2 focus:ring-[#148F96]/20 transition-all resize-none"
               rows={4}
@@ -294,6 +312,7 @@ const Cart = () => {
               onChange={(e) => setTempAddress(e.target.value)}
               placeholder="บ้านเลขที่, ถนน, ตำบล, อำเภอ, จังหวัด, รหัสไปรษณีย์..."
             ></textarea>
+            
             <div className="flex gap-4 mt-6">
               <button 
                 onClick={() => setShowAddressModal(false)}
