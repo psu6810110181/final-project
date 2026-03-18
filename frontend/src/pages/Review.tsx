@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Star, Send, Loader, Package, ChevronLeft, MessageSquare } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import * as api from '../services/api';
 import toast from 'react-hot-toast'; 
 
@@ -24,9 +25,20 @@ const ReviewPage = () => {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  
+  const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+  // ✅ สร้างฟังก์ชันช่วยดึง Token
+  const getToken = () => localStorage.getItem('token') || sessionStorage.getItem('token');
+  const isLoggedIn = !!getToken();
+
   const fetchHistory = async () => {
+    if (!isLoggedIn) {
+      navigate('/login');
+      return;
+    }
+
     try {
       setLoading(true);
       const data = await (api as any).getMyOrders();
@@ -60,7 +72,7 @@ const ReviewPage = () => {
 
   useEffect(() => {
     fetchHistory();
-  }, []);
+  }, [isLoggedIn]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,6 +107,8 @@ const ReviewPage = () => {
     return `${API_URL}/uploads/${img}`;
   };
 
+  if (!isLoggedIn) return null;
+
   if (loading) return (
     <div className="min-h-screen flex flex-col items-center justify-center text-[#148F96] gap-4 bg-[#F8FAFA]">
       <Loader className="animate-spin" size={48} />
@@ -104,7 +118,6 @@ const ReviewPage = () => {
 
   return (
     <div className="bg-[#F8FAFA] min-h-screen pb-20 relative overflow-hidden font-sans">
-      {/* Background Orbs */}
       <div className="fixed top-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#148F96]/10 blur-[150px] rounded-full pointer-events-none z-0" />
       <div className="fixed bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-orange-500/10 blur-[150px] rounded-full pointer-events-none z-0" />
 
@@ -147,7 +160,6 @@ const ReviewPage = () => {
                   </div>
                   <button 
                     onClick={() => setSelectedProduct(item)}
-                    // ✅ ปรับสีปุ่มเริ่มต้นเป็น #1fd4de ตามที่ร้องขอ
                     className="w-full sm:w-auto bg-[#0caab3] text-white px-8 py-3 rounded-xl font-bold hover:bg-[#148F96] hover:shadow-lg hover:shadow-[#148F96]/30 transition-all active:scale-95 whitespace-nowrap"
                   >
                     เขียนรีวิว
@@ -172,7 +184,6 @@ const ReviewPage = () => {
             </button>
 
             <div className="bg-white/90 backdrop-blur-2xl rounded-[3rem] shadow-2xl shadow-slate-200/50 p-8 md:p-12 border border-white relative overflow-hidden">
-              {/* Decorative Blur Inside Card */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-orange-400/10 blur-[50px] rounded-full pointer-events-none" />
 
               <div className="text-center mb-10 relative z-10">
