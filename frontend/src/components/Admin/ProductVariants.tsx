@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import toast from 'react-hot-toast'; // ✅ นำเข้า toast สำหรับแจ้งเตือน
 
 export interface Variant {
   color: string; material: string; size: string;
@@ -17,9 +18,38 @@ const ProductVariants: React.FC<ProductVariantsProps> = ({ variants, setVariants
   const [materialDropdowns, setMaterialDropdowns] = useState<boolean[]>([]);
   const [sizeDropdowns, setSizeDropdowns] = useState<boolean[]>([]);
 
+  // ✅ ปรับปรุง handleVariantChange เพื่อดักจับสต็อกติดลบ
   const handleVariantChange = (index: number, field: keyof Omit<Variant, 'imageFile'>, value: string) => {
     const newVariants = [...variants];
-    newVariants[index][field] = value;
+    
+    if (field === 'stock') {
+        if (value === '') {
+            newVariants[index][field] = '';
+        } else {
+            const num = parseInt(value, 10);
+            if (num < 0) {
+                toast.error('จำนวนสินค้าต่ำสุดคือ 0 ชิ้น');
+                newVariants[index][field] = '0';
+            } else {
+                newVariants[index][field] = num.toString();
+            }
+        }
+    } else if (field === 'price') {
+         if (value === '') {
+            newVariants[index][field] = '';
+        } else {
+            const num = parseFloat(value);
+            if (num < 0) {
+                toast.error('ราคาต้องไม่ติดลบ');
+                newVariants[index][field] = '0';
+            } else {
+                newVariants[index][field] = value; // ให้พิมพ์ทศนิยมได้
+            }
+        }
+    } else {
+        newVariants[index][field] = value;
+    }
+    
     setVariants(newVariants);
   };
 
@@ -101,11 +131,13 @@ const ProductVariants: React.FC<ProductVariantsProps> = ({ variants, setVariants
             <div style={{ display: 'flex', gap: '12px', width: '220px' }}>
               <div style={{ flex: 1 }}>
                 <label style={{ fontSize: '12px' }}>ราคา</label>
-                <input type="number" value={variant.price} onChange={e => handleVariantChange(index, 'price', e.target.value)} style={{...inputStyle, padding: '10px'}} />
+                {/* ✅ เพิ่ม min="0" สำหรับราคา */}
+                <input type="number" min="0" step="0.01" value={variant.price} onChange={e => handleVariantChange(index, 'price', e.target.value)} style={{...inputStyle, padding: '10px'}} />
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ fontSize: '12px' }}>คลัง</label>
-                <input type="number" value={variant.stock} onChange={e => handleVariantChange(index, 'stock', e.target.value)} style={{...inputStyle, padding: '10px'}} />
+                {/* ✅ เพิ่ม min="0" สำหรับคลังสต็อก */}
+                <input type="number" min="0" value={variant.stock} onChange={e => handleVariantChange(index, 'stock', e.target.value)} style={{...inputStyle, padding: '10px'}} />
               </div>
             </div>
 

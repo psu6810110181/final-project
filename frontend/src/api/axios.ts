@@ -10,7 +10,10 @@ const api = axios.create({
 // เพิ่ม Interceptor เพื่อแนบ Token ไปกับทุก Request ถ้ามี
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    // ✅ ดึง Token จาก sessionStorage ก่อน (สำหรับกรณีไม่ได้กดจำฉัน) 
+    // ถ้าไม่มี ค่อยไปหาใน localStorage (สำหรับกรณีกดจำฉัน)
+    const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

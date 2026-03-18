@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import toast from 'react-hot-toast'; // ✅ นำเข้า toast สำหรับแจ้งเตือน
 
 interface ProductGeneralInfoProps {
   name: string; setName: (v: string) => void;
@@ -25,6 +26,22 @@ const ProductGeneralInfo: React.FC<ProductGeneralInfoProps> = (props) => {
 
   const toggleFeature = (featureName: string) => {
     props.setSelectedFeatures(prev => prev.includes(featureName) ? prev.filter(f => f !== featureName) : [...prev, featureName]);
+  };
+
+  // ✅ ฟังก์ชันจัดการการเปลี่ยนแปลงคลังหลัก (ป้องกันติดลบ)
+  const handleMainStockChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val === '') {
+      props.setMainStock('');
+      return;
+    }
+    const num = parseInt(val, 10);
+    if (num < 0) {
+      toast.error('จำนวนสินค้าต่ำสุดคือ 0 ชิ้น');
+      props.setMainStock('0');
+    } else {
+      props.setMainStock(num.toString());
+    }
   };
 
   const colors = { textMain: '#1F2937', textMuted: '#6B7280', border: '#E5E7EB', bgLight: '#F9FAFB', bgWhite: '#FFFFFF', danger: '#EF4444', primary: '#148F96', primaryLight: '#E6F7F8' };
@@ -64,7 +81,7 @@ const ProductGeneralInfo: React.FC<ProductGeneralInfoProps> = (props) => {
               </div>
               <div style={{ flex: 1 }}>
                 <label style={labelStyle}>ราคาเริ่มต้น (฿) <span style={{color: colors.danger}}>*</span></label>
-                <input type="number" value={props.price} onChange={e => props.setPrice(e.target.value)} required style={inputStyle} />
+                <input type="number" min="0" value={props.price} onChange={e => props.setPrice(e.target.value)} required style={inputStyle} />
               </div>
             </div>
 
@@ -108,7 +125,6 @@ const ProductGeneralInfo: React.FC<ProductGeneralInfoProps> = (props) => {
 
             {/* คุณสมบัติหลัก 4 ช่อง */}
             <div style={{ display: 'flex', gap: '16px' }}>
-              {/* ทำแบบย่อเพื่อให้ดูง่ายขึ้น สี/วัสดุ/ขนาด/สต็อก */}
               {[ 
                 { label: 'สีหลัก', val: props.selectedMainColor, set: props.setSelectedMainColor, list: props.colorsList, show: showMainColorDropdown, setShow: setShowMainColorDropdown },
                 { label: 'วัสดุหลัก', val: props.selectedMainMaterial, set: props.setSelectedMainMaterial, list: props.materialsList, show: showMainMaterialDropdown, setShow: setShowMainMaterialDropdown },
@@ -134,7 +150,8 @@ const ProductGeneralInfo: React.FC<ProductGeneralInfoProps> = (props) => {
               ))}
               <div style={{ flex: 1 }}>
                 <label style={labelStyle}>คลังหลัก</label>
-                <input type="number" value={props.mainStock} onChange={e => props.setMainStock(e.target.value)} style={inputStyle} />
+                {/* ✅ ผูก Event onChange และใส่ min="0" ป้องกันการติดลบ */}
+                <input type="number" min="0" value={props.mainStock} onChange={handleMainStockChange} style={inputStyle} />
               </div>
             </div>
 

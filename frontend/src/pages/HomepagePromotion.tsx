@@ -1,4 +1,3 @@
-// frontend/src/pages/HomepagePromotion.tsx
 import { useState, useEffect } from 'react';
 import { Loader } from 'lucide-react'; 
 import * as api from '../services/api'; 
@@ -10,7 +9,7 @@ import ProductGrid, { type ProductWithPromo } from '../components/ProductGrid';
 import HomeFilterBar from '../components/HomeFilterBar';
 import heroBackground from '../assets/background.jpg';
 
-const ITEMS_PER_PAGE = 12;
+const ITEMS_PER_PAGE_GRID = 20; // โหมด Filter โชว์หน้าละ 20
 
 function calculateDiscountPrice(price: string | number, promo: Promotion) {
   const p = Number(price);
@@ -46,9 +45,17 @@ const HomepagePromotion = () => {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   const [currentPage, setCurrentPage] = useState<number>(1);
+  
+  // ✅ แยก State สำหรับจัดการ Limit และ Page ของ "แต่ละโปรโมชัน"
+  const [promoLimits, setPromoLimits] = useState<Record<string, number>>({});
+  const [promoPages, setPromoPages] = useState<Record<string, number>>({});
 
-  // รีเซ็ตหน้ากลับไป 1 เมื่อเปลี่ยน Filter
-  useEffect(() => { setCurrentPage(1); }, [selectedPromotions, selectedCategories, selectedRooms, selectedFeatures, selectedColors, selectedMaterials, selectedSizes, minPrice, maxPrice, searchTerm]);
+  // รีเซ็ตหน้าและลิมิตกลับไปค่าเริ่มต้นเมื่อเปลี่ยน Filter หรือคำค้นหา
+  useEffect(() => { 
+    setCurrentPage(1); 
+    setPromoLimits({});
+    setPromoPages({});
+  }, [selectedPromotions, selectedCategories, selectedRooms, selectedFeatures, selectedColors, selectedMaterials, selectedSizes, minPrice, maxPrice, searchTerm]);
 
   useEffect(() => {
     setIsVisible(true);
@@ -75,7 +82,6 @@ const HomepagePromotion = () => {
             }
         });
 
-        // แก้ไขบรรทัดนี้ เพื่อให้ดึงสินค้าออกมาได้ถูกต้อง
         const validProducts = Array.isArray(productsData) ? productsData : ((productsData as any)?.data || []);
         const productsWithPromo: ProductWithPromo[] = validProducts
             .filter((p: any) => promoMap.has(p.id))
@@ -134,10 +140,11 @@ const HomepagePromotion = () => {
     return matchPromotion && matchCategory && matchRoom && matchFeature && matchColor && matchMaterial && matchSize && matchSearch && matchMinPrice && matchMaxPrice; 
   });
 
-  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
-  const paginatedProducts = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-  
   const hasAnyFilter = selectedPromotions.length > 0 || selectedCategories.length > 0 || selectedRooms.length > 0 || selectedFeatures.length > 0 || minPrice !== '' || maxPrice !== '' || searchTerm !== '' || selectedColors.length > 0 || selectedMaterials.length > 0 || selectedSizes.length > 0;
+
+  // สำหรับโหมดค้นหา (มี Filter)
+  const totalPagesFiltered = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE_GRID);
+  const paginatedFiltered = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE_GRID, currentPage * ITEMS_PER_PAGE_GRID);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#F8FAFA]"><Loader size={48} className="animate-spin text-red-500" /></div>;
 
@@ -171,7 +178,7 @@ const HomepagePromotion = () => {
 
       {/* --- 🎬 FILTER BAR --- */}
       <HomeFilterBar 
-        promotions={promotions} // ✅ ส่ง promotions เข้าไปเพื่อให้แสดงปุ่ม "แคมเปญ"
+        promotions={promotions}
         selectedPromotions={selectedPromotions}
         setSelectedPromotions={setSelectedPromotions}
         categories={categories} rooms={rooms} features={features} colors={colors} materials={materials} sizes={sizes}
@@ -192,25 +199,65 @@ const HomepagePromotion = () => {
         <main className="flex flex-col gap-4">
           {hasAnyFilter ? (
              <ProductGrid 
-                title="ผลการค้นหาและตัวกรอง" items={paginatedProducts} 
-                showPagination={true} currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage}
+                title="ผลการค้นหาและตัวกรอง" 
+                items={paginatedFiltered} 
+                gridCols={5} // โหมด Filter โชว์ 5 แถว
+                showPagination={true} currentPage={currentPage} totalPages={totalPagesFiltered} onPageChange={setCurrentPage}
                 bookmarks={bookmarks} setBookmarks={setBookmarks}
-                theme="promo" // ✅ เพิ่ม theme="promo" ตรงนี้
+                theme="promo" 
              />
           ) : (
              <>
                {promotions.map((promo) => {
-                 const promoItems = products.filter(p => p.promo?.id === promo.id);
-                 if (promoItems.length === 0) return null;
+                 const allPromoItems = products.filter(p => p.promo?.id === promo.id);
+                 if (allPromoItems.length === 0) return null;
+
+                 // ✅ ดึงลิมิตและหน้าที่กำลังดูอยู่ของ "โปรโมชันนี้" (ค่าเริ่มต้นคือ ลิมิต 10, หน้า 1)
+                 const currentLimit = promoLimits[promo.id] || 10;
+                 const currentPromoPage = promoPages[promo.id] || 1;
+
+                 // ✅ โลจิกตัดแบ่งสินค้า
+                 let displayItems: ProductWithPromo[] = [];
+                 if (currentLimit < 20) {
+                     // ถ้ายังไม่ถูกกด "แสดงสินค้าเพิ่มเติม" ให้โชว์แค่ 10 ชิ้น
+                     displayItems = allPromoItems.slice(0, currentLimit);
+                 } else {
+                     // ถ้ากด "แสดงสินค้าเพิ่มเติม" แล้ว (ลิมิตเป็น 20) จะใช้ Pagination มาช่วย
+                     const startIndex = (currentPromoPage - 1) * 20;
+                     displayItems = allPromoItems.slice(startIndex, startIndex + 20);
+                 }
+
+                 const totalPagesForThisPromo = Math.ceil(allPromoItems.length / 20);
+
                  return (
-                   <ProductGrid 
-                      key={promo.id} 
-                      title={`🔥 ${promo.title}`} 
-                      items={promoItems} 
-                      bookmarks={bookmarks} 
-                      setBookmarks={setBookmarks} 
-                      theme="promo" // ✅ เพิ่ม theme="promo" ตรงนี้
-                   />
+                   <div key={promo.id} className="relative mb-6 flex flex-col">
+                     <ProductGrid 
+                        title={`🔥 ${promo.title}`} 
+                        items={displayItems} 
+                        gridCols={5} // แถวละ 5
+                        horizontal={false} // ห้ามเลื่อนซ้ายขวา
+                        bookmarks={bookmarks} 
+                        setBookmarks={setBookmarks} 
+                        theme="promo" 
+                        // 💡 โชว์ Pagination เฉพาะตอนที่ลิมิตเป็น 20 และหน้าทั้งหมด > 1
+                        showPagination={currentLimit >= 20 && totalPagesForThisPromo > 1}
+                        currentPage={currentPromoPage}
+                        totalPages={totalPagesForThisPromo}
+                        onPageChange={(page) => setPromoPages(prev => ({ ...prev, [promo.id]: page }))}
+                     />
+
+                     {/* ✅ ปุ่ม "แสดงสินค้าเพิ่มเติม" แสดงใต้เฉพาะโปรที่สินค้า > 10 ชิ้น */}
+                     {currentLimit < 20 && allPromoItems.length > 10 && (
+                       <div className="flex justify-center -mt-8 mb-12 relative z-20">
+                          <button 
+                            onClick={() => setPromoLimits(prev => ({ ...prev, [promo.id]: 20 }))}
+                            className="bg-white hover:bg-red-50 text-red-500 font-bold border border-red-200 px-10 py-3.5 rounded-full shadow-[0_8px_30px_rgb(239,68,68,0.15)] hover:shadow-[0_8px_30px_rgb(239,68,68,0.25)] hover:-translate-y-1 transition-all duration-300"
+                          >
+                            แสดงสินค้าเพิ่มเติม
+                          </button>
+                       </div>
+                     )}
+                   </div>
                  );
                })}
 

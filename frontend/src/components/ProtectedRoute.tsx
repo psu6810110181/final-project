@@ -10,8 +10,8 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
   const { user, isLoading } = useAuth();
   
-  // ✅ 1. ดึง Token มาเช็คเป็นด่านแรกสุด 
-  const token = localStorage.getItem('token'); 
+  // ✅ 1. ดึง Token มาเช็คเป็นด่านแรกสุด (ค้นหาจากทั้ง sessionStorage และ localStorage)
+  const token = sessionStorage.getItem('token') || localStorage.getItem('token'); 
 
   // 🚪 2. ถ้าไม่มี Token เลย (แปลว่าไม่ได้ล็อกอินแน่ๆ) ให้เตะไปหน้า Login
   if (!token) {

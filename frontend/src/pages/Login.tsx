@@ -4,14 +4,18 @@ import { useCart } from '../contexts/CartContext';
 import { useNavigate, Link } from 'react-router-dom';
 import logoImg from '../assets/HomeAlright_logo.webp';
 import toast from 'react-hot-toast';
-import { Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react'; // ✅ เพิ่ม Eye, EyeOff
+import { Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 import loginbackground from '../assets/login.jpeg'; 
 
 const Login = () => {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [isVisible, setIsVisible] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // ✅ เพิ่ม State สำหรับซ่อน/โชว์
+  const [showPassword, setShowPassword] = useState(false);
+  
+  // ✅ เพิ่ม State สำหรับ "จดจำฉัน"
+  const [rememberMe, setRememberMe] = useState(false); 
+
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
   
   const { login } = useAuth();
@@ -25,13 +29,20 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const userData = await login(formData);
-      await fetchCart();
+      // ✅ ส่งค่า rememberMe แนบไปพร้อมกับ formData ให้ AuthContext ไปจัดการ
+      const userData = await login({ ...formData, rememberMe });
       toast.success('เข้าสู่ระบบสำเร็จ!');
       
+      // ✅ ตรวจสอบ Role ก่อน ถ้าเป็น admin ข้าม fetchCart ไปเลย
       if (userData?.role === 'admin') {
         navigate('/admin');
       } else {
+        // ถ้าเป็น user ธรรมดา ค่อย fetchCart
+        try {
+          await fetchCart();
+        } catch (cartErr) {
+          console.warn("ไม่สามารถดึงข้อมูลตะกร้าได้", cartErr);
+        }
         navigate('/');
       }
     } catch (err) {
@@ -96,13 +107,13 @@ const Login = () => {
               />
             </div>
 
-            {/* ✅ Password Input with Eye Toggle */}
+            {/* Password Input with Eye Toggle */}
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
                 <Lock size={20} className="text-slate-400 group-focus-within:text-[#148F96] transition-colors" />
               </div>
               <input 
-                type={showPassword ? "text" : "password"} // ✅ เปลี่ยน type ตาม state
+                type={showPassword ? "text" : "password"} 
                 placeholder="รหัสผ่าน" 
                 className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:bg-white focus:ring-4 focus:ring-[#148F96]/20 focus:border-[#148F96] text-slate-800 placeholder:text-slate-400 transition-all font-medium shadow-sm"
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
@@ -118,7 +129,13 @@ const Login = () => {
             
             <div className="flex items-center justify-between px-2 pt-2">
               <div className="flex items-center gap-2">
-                <input type="checkbox" id="remember" className="w-4 h-4 rounded border-gray-300 text-[#148F96] focus:ring-[#148F96] cursor-pointer" />
+                <input 
+                  type="checkbox" 
+                  id="remember" 
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 text-[#148F96] focus:ring-[#148F96] cursor-pointer" 
+                />
                 <label htmlFor="remember" className="text-sm text-slate-600 cursor-pointer font-medium hover:text-slate-800">จดจำฉัน</label>
               </div>
               <Link to="/forgot-password" className="text-sm text-[#D65A31] hover:text-[#b54622] transition-colors font-bold">ลืมรหัสผ่าน?</Link>
@@ -142,7 +159,7 @@ const Login = () => {
               onClick={() => window.location.href = `${API_URL}/auth/google`}
               className="w-full flex items-center justify-center gap-2 border border-gray-300 py-3 rounded-full font-bold hover:bg-gray-50 transition text-sm"
             >
-              <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" />
+              <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google Logo" />
               เข้าสู่ระบบด้วย Google
             </button>
           </form>
