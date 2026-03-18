@@ -19,7 +19,7 @@ interface ProductGridProps {
   setBookmarks: React.Dispatch<React.SetStateAction<string[]>>;
   theme?: 'default' | 'promo'; 
   horizontal?: boolean; 
-  gridCols?: 4 | 5; // ✅ รองรับการแสดงแถวละ 5
+  gridCols?: 4 | 5; 
 }
 
 const calculateDiscountPrice = (price: string | number, promo: Promotion) => {
@@ -44,7 +44,7 @@ const getImageUrl = (product: Product) => {
 const ProductGrid: React.FC<ProductGridProps> = ({ 
   title, items, showPagination = false, 
   currentPage = 1, totalPages = 1, onPageChange,
-  bookmarks, setBookmarks, theme = 'default', horizontal = false, gridCols = 4 // ✅ รับค่าจำนวนคอลัมน์
+  bookmarks, setBookmarks, theme = 'default', horizontal = false, gridCols = 4 
 }) => {
   const { addToCart } = useCart();
   const navigate = useNavigate();
@@ -95,15 +95,15 @@ const ProductGrid: React.FC<ProductGridProps> = ({
     pageText: isPromo ? 'text-red-500 hover:bg-red-50' : 'text-[#148F96] hover:bg-[#148F96] hover:text-white'
   };
 
-  // ✅ ปรับ Layout ให้รองรับแบบ 5 คอลัมน์สำหรับหน้าจอใหญ่
+  // ✅ เพิ่ม py-6 เข้าไปใน Grid Classes สำหรับทั้ง 2 แบบ เพื่อให้มีพื้นที่เหลือสำหรับการ์ดเด้งขึ้นบนและแผ่เงา
   const gridClasses = horizontal 
-    ? "flex overflow-x-auto gap-6 pb-8 scrollbar-hide relative z-10 items-stretch" 
-    : `grid grid-cols-2 md:grid-cols-3 ${gridCols === 5 ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-6 relative z-10 items-stretch`;
+    ? "flex overflow-x-auto gap-6 py-6 px-2 scrollbar-hide relative z-10 items-stretch" 
+    : `grid grid-cols-2 md:grid-cols-3 ${gridCols === 5 ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-6 py-6 px-2 relative z-10 items-stretch`;
 
   return (
     <div className="mb-16">
       {title && (
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center gap-4 mb-4">
           {isPromo ? <Zap className="text-orange-500 drop-shadow-md" size={32} /> : <div className={`h-[2px] w-8 ${cTheme.titleBar}`}></div>}
           <h2 className="text-3xl font-bold text-slate-800 tracking-tight">{title}</h2>
         </div>
@@ -125,7 +125,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
 
           <div 
             ref={horizontal ? scrollRef : null}
-            className={gridClasses} // ✅ ใช้ Class Grid ที่คำนวณมาใหม่
+            className={gridClasses} 
             style={horizontal ? { scrollbarWidth: 'none', msOverflowStyle: 'none' } : {}}
           >
             {items.map((product) => (
@@ -197,9 +197,8 @@ const ProductGrid: React.FC<ProductGridProps> = ({
         </div>
       )}
 
-      {/* ✅ Pagination ทำงานในทุกมุมมอง ไม่ว่าจะแนวนอนหรือแนวตั้ง */}
       {showPagination && totalPages > 1 && onPageChange && (
-        <div className="flex justify-center items-center gap-4 mt-12">
+        <div className="flex justify-center items-center gap-4 mt-8">
           <button 
             onClick={() => { onPageChange(currentPage - 1); window.scrollTo({ top: 500, behavior: 'smooth' }); }}
             disabled={currentPage === 1}

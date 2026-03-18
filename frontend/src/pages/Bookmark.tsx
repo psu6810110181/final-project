@@ -7,9 +7,9 @@ import toast from 'react-hot-toast';
 import { useCart } from '../contexts/CartContext';
 import TabBar from '../components/TabBar'; 
 import ProductGrid, { type ProductWithPromo } from '../components/ProductGrid';
-import HomeFilterBar from '../components/HomeFilterBar'; // ✅ นำเข้า HomeFilterBar
+import HomeFilterBar from '../components/HomeFilterBar'; 
 
-const ITEMS_PER_PAGE = 40; // ✅ ตั้งค่าลิมิตหน้าที่ 40 ชิ้น
+const ITEMS_PER_PAGE = 40; 
 
 const BookmarkPage = () => {
   const [bookmarkedProducts, setBookmarkedProducts] = useState<ProductWithPromo[]>([]);
@@ -18,7 +18,6 @@ const BookmarkPage = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
-  // ✅ State สำหรับตัวกรอง (Filters) แบบเดียวกับหน้า HomepagePromotion
   const [promotions, setPromotions] = useState<Promotion[]>([]); 
   const [categories, setCategories] = useState<Category[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -44,7 +43,6 @@ const BookmarkPage = () => {
   const { addToCart } = useCart();
   const navigate = useNavigate();
 
-  // รีเซ็ตกลับไปหน้า 1 เสมอเมื่อเปลี่ยน Filter
   useEffect(() => { setCurrentPage(1); }, [selectedPromotions, selectedCategories, selectedRooms, selectedFeatures, selectedColors, selectedMaterials, selectedSizes, minPrice, maxPrice, searchTerm]);
 
   useEffect(() => {
@@ -61,7 +59,6 @@ const BookmarkPage = () => {
       try {
         setLoading(true);
         
-        // 1. ดึงข้อมูล Bookmark
         const bookmarkData = await api.getBookmarks().catch(() => []);
         let bookmarkIds: string[] = [];
 
@@ -73,7 +70,6 @@ const BookmarkPage = () => {
         
         setBookmarks(bookmarkIds);
 
-        // 2. ดึงข้อมูล Master Data ทั้งหมดสำหรับ Filter และ Product
         const [
             productsData, promoData, categoriesData, roomsData, 
             featuresData, colorsData, materialsData, sizesData 
@@ -107,15 +103,13 @@ const BookmarkPage = () => {
 
         const validProducts = Array.isArray(productsData) ? productsData : ((productsData as any)?.data || []);
         
-        // 3. แมปสินค้าโปรด + จัดเรียงลำดับ (Flash Sale -> Season Sale -> General)
         const productsWithPromo = validProducts
             .filter((p: any) => bookmarkIds.includes(p.id))
             .map((p: any) => ({ ...p, promo: promoMap.get(p.id) }))
             .sort((a: ProductWithPromo, b: ProductWithPromo) => {
-                // ให้คะแนนความสำคัญ: Flash Sale = 1, Season Sale = 2, ทั่วไป = 3
                 const rankA = a.promo ? (a.promo.isFlashSale ? 1 : 2) : 3;
                 const rankB = b.promo ? (b.promo.isFlashSale ? 1 : 2) : 3;
-                return rankA - rankB; // เรียงจาก 1 ไป 3
+                return rankA - rankB; 
             });
 
         setBookmarkedProducts(productsWithPromo);
@@ -142,7 +136,6 @@ const BookmarkPage = () => {
     return Math.max(0, p - promo.discountValue);
   };
 
-  // ✅ ระบบกรองข้อมูลเหมือนหน้า HomepagePromotion
   const filteredProducts = bookmarkedProducts.filter((product) => {
     const matchPromotion = selectedPromotions.length === 0 || (product.promo && selectedPromotions.includes(product.promo.title));
     const matchCategory = selectedCategories.length === 0 || (product.category && selectedCategories.includes(product.category));
@@ -164,11 +157,9 @@ const BookmarkPage = () => {
     return matchPromotion && matchCategory && matchRoom && matchFeature && matchColor && matchMaterial && matchSize && matchSearch && matchMinPrice && matchMaxPrice; 
   });
 
-  // ✅ Pagination (40 ชิ้นต่อหน้า)
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
   const paginatedProducts = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  // --- กรณีไม่ได้ล็อคอิน ---
   if (!isLoggedIn && !loading) {
     return (
       <div className="bg-slate-900 min-h-screen flex flex-col items-center justify-center pb-10 text-center relative overflow-hidden">
@@ -192,16 +183,13 @@ const BookmarkPage = () => {
   return (
     <div className="bg-[#F8FAFA] min-h-screen pb-20 relative overflow-hidden font-sans">
       
-      {/* Background Orbs */}
       <div className="absolute top-0 right-1/4 w-[400px] h-[400px] bg-yellow-400/10 blur-[120px] rounded-full pointer-events-none z-0" />
       <div className="absolute bottom-1/4 left-10 w-[500px] h-[500px] bg-[#148F96]/10 blur-[150px] rounded-full pointer-events-none z-0" />
 
-      {/* TabBar */}
       <div className="relative z-20">
         <TabBar />
       </div>
 
-      {/* Hero Header */}
       <div className="bg-slate-900 py-16 mb-8 relative overflow-hidden z-10">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 mix-blend-overlay"></div>
         <div className="container mx-auto px-4 text-center relative z-10">
@@ -210,7 +198,6 @@ const BookmarkPage = () => {
         </div>
       </div>
 
-      {/* ✅ แถบตัวกรอง (HomeFilterBar) จะแสดงเมื่อมีสินค้าที่ถูก Bookmark อย่างน้อย 1 ชิ้น */}
       {bookmarkedProducts.length > 0 && (
         <HomeFilterBar 
           promotions={promotions}
@@ -249,11 +236,10 @@ const BookmarkPage = () => {
                 <p className="text-slate-500 mt-2">ลองล้างตัวกรองเพื่อดูสินค้าทั้งหมดของคุณ</p>
             </div>
         ) : (
-            // ✅ ใช้ ProductGrid แทนการเขียน .map เพื่อให้ Card รูปแบบเหมือนกันเป๊ะ และรองรับ Pagination
             <div className="mt-8">
                <ProductGrid 
                   items={paginatedProducts} 
-                  gridCols={4} 
+                  gridCols={5} // ✅ เปลี่ยนให้โชว์เป็นแถวละ 5 การ์ด
                   showPagination={true} 
                   currentPage={currentPage} 
                   totalPages={totalPages} 

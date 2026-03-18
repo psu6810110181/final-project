@@ -48,7 +48,7 @@ const SeasonalPromotion: React.FC<SeasonalPromotionProps> = ({ products, title, 
 
   const { addToCart } = useCart();
   const navigate = useNavigate();
-  const scrollRef = useRef<HTMLDivElement>(null); // ✅ เพิ่ม Ref สำหรับจับการเลื่อน
+  const scrollRef = useRef<HTMLDivElement>(null); 
 
   useEffect(() => {
     const fetchBookmarks = async () => {
@@ -127,7 +127,6 @@ const SeasonalPromotion: React.FC<SeasonalPromotionProps> = ({ products, title, 
     return Math.max(0, p - promo.discountValue);
   };
 
-  // ✅ ฟังก์ชันสำหรับกดเลื่อนซ้าย-ขวา
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
       const scrollAmount = scrollRef.current.clientWidth * 0.75;
@@ -246,10 +245,8 @@ const SeasonalPromotion: React.FC<SeasonalPromotionProps> = ({ products, title, 
         </div>
       </div>
 
-      {/* ✅ ปรับ Container เป็นแบบเลื่อนได้ */}
       <div className="relative group/slider mt-4">
         
-        {/* ✅ แสดงปุ่มซ้ายเมื่อมีสินค้ามากกว่า 4 ชิ้น */}
         {products.length > 4 && (
           <button 
             onClick={() => scroll('left')} 
@@ -259,9 +256,10 @@ const SeasonalPromotion: React.FC<SeasonalPromotionProps> = ({ products, title, 
           </button>
         )}
 
+        {/* ✅ แก้ไข: เพิ่ม py-6 เข้าไปใน Container ที่ครอบ Grid แนวนอน เผื่อพื้นที่ให้การ์ดลอยขึ้นไปได้โดยไม่โดนตัด */}
         <div 
           ref={scrollRef}
-          className="flex overflow-x-auto gap-8 pb-8 scrollbar-hide relative z-10 items-stretch"
+          className="flex overflow-x-auto gap-8 py-6 px-1 scrollbar-hide relative z-10 items-stretch"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {products.map((product) => {
@@ -270,7 +268,6 @@ const SeasonalPromotion: React.FC<SeasonalPromotionProps> = ({ products, title, 
             const discountedPrice = calculateDiscountPrice(product.price, product.promo);
 
             return (
-              /* ✅ เปลี่ยน Link ให้ยืดความสูงเต็ม และมีขนาดกว้าง 280px */
               <Link to={`/product/${product.id}`} key={product.id} className="group relative flex flex-col w-[280px] shrink-0 text-left">
                   
                   {/* 🛑 Card ของเดิม 100% ห้ามแก้ไขเด็ดขาด 🛑 */}
@@ -329,7 +326,6 @@ const SeasonalPromotion: React.FC<SeasonalPromotionProps> = ({ products, title, 
           })}
         </div>
 
-        {/* ✅ แสดงปุ่มขวาเมื่อมีสินค้ามากกว่า 4 ชิ้น */}
         {products.length > 4 && (
           <button 
             onClick={() => scroll('right')} 

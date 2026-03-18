@@ -39,7 +39,7 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
 
   const { addToCart } = useCart();
   const navigate = useNavigate();
-  const scrollRef = useRef<HTMLDivElement>(null); // ✅ เพิ่ม Ref สำหรับจับการเลื่อน
+  const scrollRef = useRef<HTMLDivElement>(null); 
 
   useEffect(() => {
     const fetchFlashSales = async () => {
@@ -133,7 +133,6 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
     }
   };
 
-  // ✅ ฟังก์ชันสำหรับกดเลื่อนซ้าย-ขวา
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
       const scrollAmount = scrollRef.current.clientWidth * 0.75;
@@ -202,10 +201,8 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
         </div>
       </div>
 
-      {/* ✅ ปรับ Container เป็นแบบเลื่อนได้ */}
       <div className="relative group/slider mt-4">
         
-        {/* ✅ แสดงปุ่มซ้ายเมื่อมีสินค้ามากกว่า 4 ชิ้น */}
         {flashSaleProducts.length > 4 && (
           <button 
             onClick={() => scroll('left')} 
@@ -215,9 +212,10 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
           </button>
         )}
 
+        {/* ✅ แก้ไข: เพิ่ม py-6 px-1 เผื่อพื้นที่ให้ตอนโฮเวอร์แล้ว Card ลอยขึ้นไม่โดนตัด */}
         <div 
           ref={scrollRef}
-          className="flex overflow-x-auto gap-8 pb-8 scrollbar-hide relative z-10 items-stretch"
+          className="flex overflow-x-auto gap-8 py-6 px-1 scrollbar-hide relative z-10 items-stretch"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {flashSaleProducts.map((product) => {
@@ -228,13 +226,12 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
             const discountedPrice = calculateDiscountedPrice(product, promotion);
 
             return (
-              /* ✅ เปลี่ยน Link ให้ยืดความสูงเต็ม และมีขนาดกว้าง 280px */
               <Link to={`/product/${product.id}`} key={product.id} className="group relative flex flex-col w-[280px] shrink-0 text-left">
                   
                   {/* 🛑 Card ของเดิม 100% ห้ามแก้ไขเด็ดขาด 🛑 */}
                   <div className="bg-white/90 backdrop-blur-xl border border-white rounded-[2rem] shadow-xl hover:shadow-2xl hover:shadow-[#ff8e53]/20 transition-all duration-500 overflow-hidden h-full flex flex-col relative transform hover:-translate-y-2 isolate">
                   
-                  <div className="absolute top-4 left-4 bg-gradient-to-r from-[#ff8e53] to-[#D65A31] text-white text-[11px] font-black px-3.5 py-1.5 rounded-full z-20 shadow-md tracking-widest flex items-center gap-1 border border-white/50">
+                  <div className="absolute top-4 left-4 bg-gradient-to-r from-[#ff8e53] to-[#D65A31] text-white text-[11px] font-black px-3.5 py-1.5 rounded-full z-20 shadow-lg tracking-widest flex items-center gap-1 border border-white/50">
                       <Zap size={14}/> {promotion.title.toUpperCase()}
                   </div>
 
@@ -280,7 +277,6 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
           })}
         </div>
 
-        {/* ✅ แสดงปุ่มขวาเมื่อมีสินค้ามากกว่า 4 ชิ้น */}
         {flashSaleProducts.length > 4 && (
           <button 
             onClick={() => scroll('right')} 
