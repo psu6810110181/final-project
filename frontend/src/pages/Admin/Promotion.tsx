@@ -535,26 +535,67 @@ const PromotionManager: React.FC = () => {
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {products.map((product) => (
-                      <label 
-                        key={product.id} 
-                        style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '4px', borderRadius: '4px', backgroundColor: formData.productIds.includes(product.id) ? colors.primaryLight : 'transparent' }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={formData.productIds.includes(product.id)}
-                          onChange={() => handleProductToggle(product.id)}
-                          style={{ marginRight: '8px', width: '14px', height: '14px' }}
-                        />
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '13px', fontWeight: '500' }}>{product.name}</div>
-                          <div style={{ fontSize: '11px', color: colors.textMuted }}>
-                            ฿{typeof product.price === 'string' ? Number(product.price).toLocaleString() : product.price.toLocaleString()}
-                            {product.category && ` • ${product.category}`}
+                    {products.map((product) => {
+                      // ✅ เช็คว่าสินค้าชิ้นนี้ไปโผล่อยู่ในโปรโมชั่นที่กำลัง Active อยู่หรือไม่ (และต้องไม่ใช่โปรโมชั่นนี้ที่กำลังแก้ไข)
+                      const activePromoForThisProduct = promotions.find(promo => 
+                        promo.isActive && 
+                        promo.id !== editingPromotion?.id && 
+                        promo.products?.some(p => p.id === product.id)
+                      );
+                      
+                      const isAlreadyInOtherPromo = !!activePromoForThisProduct;
+
+                      return (
+                        <label 
+                          key={product.id} 
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'flex-start', 
+                            cursor: isAlreadyInOtherPromo ? 'not-allowed' : 'pointer', 
+                            padding: '10px', 
+                            borderRadius: '6px', 
+                            backgroundColor: isAlreadyInOtherPromo 
+                                ? colors.dangerLight 
+                                : (formData.productIds.includes(product.id) ? colors.primaryLight : 'transparent'),
+                            border: `1px solid ${isAlreadyInOtherPromo ? '#FECACA' : 'transparent'}`,
+                            transition: 'background 0.2s',
+                            marginBottom: '4px'
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={formData.productIds.includes(product.id)}
+                            onChange={() => !isAlreadyInOtherPromo && handleProductToggle(product.id)}
+                            disabled={isAlreadyInOtherPromo}
+                            style={{ marginRight: '10px', marginTop: '3px', width: '16px', height: '16px', cursor: isAlreadyInOtherPromo ? 'not-allowed' : 'pointer' }}
+                          />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: '14px', fontWeight: '600', color: isAlreadyInOtherPromo ? colors.danger : colors.textMain }}>
+                                {product.name}
+                            </div>
+                            <div style={{ fontSize: '12px', color: colors.textMuted, marginTop: '2px' }}>
+                              ฿{typeof product.price === 'string' ? Number(product.price).toLocaleString() : product.price.toLocaleString()}
+                              {product.category && ` • ${product.category}`}
+                            </div>
+                            
+                            {isAlreadyInOtherPromo && (
+                              <div style={{ 
+                                marginTop: '6px', 
+                                display: 'inline-block', 
+                                backgroundColor: colors.danger, 
+                                color: 'white', 
+                                fontSize: '11px', 
+                                fontWeight: 'bold', 
+                                padding: '2px 8px', 
+                                borderRadius: '4px' 
+                              }}>
+                                ⚠️ ติดโปรโมชั่น: {activePromoForThisProduct.title}
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      </label>
-                    ))}
+                        </label>
+                      );
+                    })}
                   </div>
                 )}
               </div>
