@@ -1,13 +1,15 @@
-// frontend/src/pages/Bookmark.tsx
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Loader, Star, Heart } from 'lucide-react';
+import { Heart, Loader, Star } from 'lucide-react';
 import * as api from '../services/api'; 
-import type { Promotion } from '../services/api';
+import type { Promotion, Category, Room, Feature, Color, Material, Size } from '../services/api';
 import toast from 'react-hot-toast';
 import { useCart } from '../contexts/CartContext';
-import TabBar from '../components/TabBar'; // ✅ เพิ่ม TabBar
-import {type ProductWithPromo } from '../components/ProductGrid';
+import TabBar from '../components/TabBar'; 
+import ProductGrid, { type ProductWithPromo } from '../components/ProductGrid';
+import HomeFilterBar from '../components/HomeFilterBar'; // ✅ นำเข้า HomeFilterBar
+
+const ITEMS_PER_PAGE = 40; // ✅ ตั้งค่าลิมิตหน้าที่ 40 ชิ้น
 
 const BookmarkPage = () => {
   const [bookmarkedProducts, setBookmarkedProducts] = useState<ProductWithPromo[]>([]);
@@ -16,12 +18,38 @@ const BookmarkPage = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
+  // ✅ State สำหรับตัวกรอง (Filters) แบบเดียวกับหน้า HomepagePromotion
+  const [promotions, setPromotions] = useState<Promotion[]>([]); 
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [features, setFeatures] = useState<Feature[]>([]);
+  const [colors, setColors] = useState<Color[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [sizes, setSizes] = useState<Size[]>([]);
+
+  const [selectedPromotions, setSelectedPromotions] = useState<string[]>([]); 
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
+  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
   const { addToCart } = useCart();
   const navigate = useNavigate();
 
+  // รีเซ็ตกลับไปหน้า 1 เสมอเมื่อเปลี่ยน Filter
+  useEffect(() => { setCurrentPage(1); }, [selectedPromotions, selectedCategories, selectedRooms, selectedFeatures, selectedColors, selectedMaterials, selectedSizes, minPrice, maxPrice, searchTerm]);
+
   useEffect(() => {
     setIsVisible(true);
-    const fetchBookmarks = async () => {
+    const fetchBookmarksAndData = async () => {
       const token = localStorage.getItem('token');
       if (!token) {
           setIsLoggedIn(false);
@@ -33,6 +61,7 @@ const BookmarkPage = () => {
       try {
         setLoading(true);
         
+        // 1. ดึงข้อมูล Bookmark
         const bookmarkData = await api.getBookmarks().catch(() => []);
         let bookmarkIds: string[] = [];
 
@@ -44,18 +73,24 @@ const BookmarkPage = () => {
         
         setBookmarks(bookmarkIds);
 
-        if (bookmarkIds.length === 0) {
-            setBookmarkedProducts([]);
-            return;
-        }
-
-        const [productsData, promoData] = await Promise.all([
+        // 2. ดึงข้อมูล Master Data ทั้งหมดสำหรับ Filter และ Product
+        const [
+            productsData, promoData, categoriesData, roomsData, 
+            featuresData, colorsData, materialsData, sizesData 
+        ] = await Promise.all([
           api.getAllProducts().catch(() => []),
-          api.getAllPromotions().catch(() => [])
+          api.getAllPromotions().catch(() => []),
+          api.getAllCategories().catch(() => []),
+          api.getAllRooms().catch(() => []),
+          api.getAllFeatures().catch(() => []),
+          api.getAllColors().catch(() => []),
+          api.getAllMaterials().catch(() => []),
+          api.getAllSizes().catch(() => [])
         ]);
 
         let promoMap = new Map<string, Promotion>();
         const now = new Date();
+        const activePromos: Promotion[] = [];
         
         const validPromos = Array.isArray(promoData) ? promoData : ((promoData as any)?.data || []);
         
@@ -63,60 +98,43 @@ const BookmarkPage = () => {
             const startDate = new Date(promo.startDate);
             const endDate = new Date(promo.endDate);
             if (promo.isActive && now >= startDate && now <= endDate) {
+                activePromos.push(promo);
                 promo.products?.forEach((prod: any) => {
                     if (!promoMap.has(prod.id)) promoMap.set(prod.id, promo);
                 });
             }
         });
 
-        // แก้ไขบรรทัดนี้
         const validProducts = Array.isArray(productsData) ? productsData : ((productsData as any)?.data || []);
+        
+        // 3. แมปสินค้าโปรด + จัดเรียงลำดับ (Flash Sale -> Season Sale -> General)
         const productsWithPromo = validProducts
             .filter((p: any) => bookmarkIds.includes(p.id))
-            .map((p: any) => ({ ...p, promo: promoMap.get(p.id) }));
+            .map((p: any) => ({ ...p, promo: promoMap.get(p.id) }))
+            .sort((a: ProductWithPromo, b: ProductWithPromo) => {
+                // ให้คะแนนความสำคัญ: Flash Sale = 1, Season Sale = 2, ทั่วไป = 3
+                const rankA = a.promo ? (a.promo.isFlashSale ? 1 : 2) : 3;
+                const rankB = b.promo ? (b.promo.isFlashSale ? 1 : 2) : 3;
+                return rankA - rankB; // เรียงจาก 1 ไป 3
+            });
 
         setBookmarkedProducts(productsWithPromo);
+        setPromotions(activePromos);
+        setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+        setRooms(Array.isArray(roomsData) ? roomsData : []);
+        setFeatures(Array.isArray(featuresData) ? featuresData : []);
+        setColors(Array.isArray(colorsData) ? colorsData : []);
+        setMaterials(Array.isArray(materialsData) ? materialsData : []);
+        setSizes(Array.isArray(sizesData) ? sizesData : []);
+
       } catch (error) {
         toast.error('ไม่สามารถดึงข้อมูลสินค้าที่สนใจได้');
       } finally {
         setLoading(false);
       }
     };
-    fetchBookmarks();
+    fetchBookmarksAndData();
   }, []);
-
-  const toggleBookmark = async (e: React.MouseEvent, productId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    try {
-        await api.removeBookmark(productId);
-        
-        setBookmarks(prev => prev.filter(id => id !== productId));
-        setBookmarkedProducts(prev => prev.filter(p => p.id !== productId));
-        toast.success('ลบออกจากสินค้าที่สนใจแล้ว');
-        window.dispatchEvent(new Event('bookmarksUpdated'));
-    } catch (error) {
-        toast.error('เกิดข้อผิดพลาดในการลบสินค้าที่สนใจ');
-    }
-  };
-
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-
-  const getImageUrl = (product: any) => {
-    try {
-        const rawImages = product.image;
-        let images: string[] = [];
-        if (Array.isArray(rawImages)) images = rawImages;
-        else if (typeof rawImages === 'string') images = rawImages.startsWith('[') ? JSON.parse(rawImages) : [rawImages];
-        if (images.length > 0) {
-            const img = images[0];
-            if (img.startsWith('http')) return img;
-            return `${API_BASE_URL}/uploads/${img}`;
-        }
-    } catch (e) {}
-    return "https://placehold.co/400x300?text=No+Image";
-  };
 
   const calculateDiscountPrice = (price: string | number, promo: Promotion) => {
     const p = Number(price);
@@ -124,15 +142,31 @@ const BookmarkPage = () => {
     return Math.max(0, p - promo.discountValue);
   };
 
-  const handleAddToCart = async (e: React.MouseEvent, product: any) => {
-    e.preventDefault();
-    if (!isLoggedIn) {
-      toast.error('กรุณาเข้าสู่ระบบก่อน');
-      navigate('/login');
-      return;
-    }
-    await addToCart(product.id, 1);
-  };
+  // ✅ ระบบกรองข้อมูลเหมือนหน้า HomepagePromotion
+  const filteredProducts = bookmarkedProducts.filter((product) => {
+    const matchPromotion = selectedPromotions.length === 0 || (product.promo && selectedPromotions.includes(product.promo.title));
+    const matchCategory = selectedCategories.length === 0 || (product.category && selectedCategories.includes(product.category));
+    const matchRoom = selectedRooms.length === 0 || (product.room && selectedRooms.includes(product.room));
+    const matchFeature = selectedFeatures.length === 0 || (product.features && product.features.some((f) => selectedFeatures.includes(f)));
+    
+    const variants = (product as any).variants || [];
+    const matchColor = selectedColors.length === 0 || variants.some((v: any) => selectedColors.includes(v.color?.name || v.color)) || ((product as any).colors || []).some((c: any) => selectedColors.includes(c?.name || c)); 
+    const matchMaterial = selectedMaterials.length === 0 || variants.some((v: any) => selectedMaterials.includes(v.material?.name || v.material)) || ((product as any).materials || []).some((m: any) => selectedMaterials.includes(m?.name || m));
+    const matchSize = selectedSizes.length === 0 || variants.some((v: any) => selectedSizes.includes(v.size?.name || v.size)) || ((product as any).sizes || []).some((s: any) => selectedSizes.includes(s?.name || s));
+
+    const searchLower = searchTerm.toLowerCase();
+    const matchSearch = searchTerm === '' || product.name.toLowerCase().includes(searchLower) || (product.category && product.category.toLowerCase().includes(searchLower)) || (product.description && product.description.toLowerCase().includes(searchLower));
+    
+    const productPrice = product.promo ? calculateDiscountPrice(product.price, product.promo) : Number(product.price);
+    const matchMinPrice = minPrice === '' || productPrice >= Number(minPrice);
+    const matchMaxPrice = maxPrice === '' || productPrice <= Number(maxPrice);
+
+    return matchPromotion && matchCategory && matchRoom && matchFeature && matchColor && matchMaterial && matchSize && matchSearch && matchMinPrice && matchMaxPrice; 
+  });
+
+  // ✅ Pagination (40 ชิ้นต่อหน้า)
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  const paginatedProducts = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   // --- กรณีไม่ได้ล็อคอิน ---
   if (!isLoggedIn && !loading) {
@@ -162,13 +196,13 @@ const BookmarkPage = () => {
       <div className="absolute top-0 right-1/4 w-[400px] h-[400px] bg-yellow-400/10 blur-[120px] rounded-full pointer-events-none z-0" />
       <div className="absolute bottom-1/4 left-10 w-[500px] h-[500px] bg-[#148F96]/10 blur-[150px] rounded-full pointer-events-none z-0" />
 
-      {/* ✅ ใช้ TabBar คอมโพเนนต์แทนการสร้างเมนูซ้ำ */}
+      {/* TabBar */}
       <div className="relative z-20">
         <TabBar />
       </div>
 
       {/* Hero Header */}
-      <div className="bg-slate-900 py-16 mb-12 relative overflow-hidden z-10">
+      <div className="bg-slate-900 py-16 mb-8 relative overflow-hidden z-10">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 mix-blend-overlay"></div>
         <div className="container mx-auto px-4 text-center relative z-10">
             <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-3 drop-shadow-md">คอลเลกชันส่วนตัว</h1>
@@ -176,10 +210,30 @@ const BookmarkPage = () => {
         </div>
       </div>
 
+      {/* ✅ แถบตัวกรอง (HomeFilterBar) จะแสดงเมื่อมีสินค้าที่ถูก Bookmark อย่างน้อย 1 ชิ้น */}
+      {bookmarkedProducts.length > 0 && (
+        <HomeFilterBar 
+          promotions={promotions}
+          selectedPromotions={selectedPromotions}
+          setSelectedPromotions={setSelectedPromotions}
+          categories={categories} rooms={rooms} features={features} colors={colors} materials={materials} sizes={sizes}
+          selectedCategories={selectedCategories} setSelectedCategories={setSelectedCategories}
+          selectedRooms={selectedRooms} setSelectedRooms={setSelectedRooms}
+          selectedFeatures={selectedFeatures} setSelectedFeatures={setSelectedFeatures}
+          selectedColors={selectedColors} setSelectedColors={setSelectedColors}
+          selectedMaterials={selectedMaterials} setSelectedMaterials={setSelectedMaterials}
+          selectedSizes={selectedSizes} setSelectedSizes={setSelectedSizes}
+          minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice}
+          searchTerm={searchTerm} setSearchTerm={setSearchTerm}
+          activeDropdown={activeDropdown} setActiveDropdown={setActiveDropdown}
+          filteredCount={filteredProducts.length}
+        />
+      )}
+
       <div className={`container mx-auto px-4 relative z-20 transition-all duration-1000 transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
         
         {bookmarkedProducts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-24 bg-white/60 backdrop-blur-xl rounded-[3rem] border border-white shadow-xl">
+            <div className="flex flex-col items-center justify-center py-24 bg-white/60 backdrop-blur-xl rounded-[3rem] border border-white shadow-xl mt-8">
                 <div className="p-6 bg-slate-50 rounded-full mb-6">
                     <Star size={64} className="text-slate-300" />
                 </div>
@@ -189,61 +243,24 @@ const BookmarkPage = () => {
                     ไปช้อปกันเลย
                 </Link>
             </div>
+        ) : filteredProducts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 bg-white/60 backdrop-blur-xl rounded-[3rem] border border-white shadow-xl mt-8">
+                <h3 className="text-xl font-bold text-slate-700">ไม่พบสินค้าที่ตรงกับตัวกรอง</h3>
+                <p className="text-slate-500 mt-2">ลองล้างตัวกรองเพื่อดูสินค้าทั้งหมดของคุณ</p>
+            </div>
         ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                {bookmarkedProducts.map((product) => (
-                    <Link to={`/product/${product.id}`} key={product.id} className="group relative block">
-                        <div className="bg-white/80 backdrop-blur-xl rounded-[2rem] shadow-lg shadow-slate-200/50 hover:shadow-2xl hover:shadow-[#148F96]/20 transition-all duration-500 overflow-hidden border border-white h-full flex flex-col relative hover:-translate-y-2">
-                            
-                            {product.promo && (
-                                <div className="absolute top-4 left-4 bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-bold px-3 py-1.5 rounded-full z-20 shadow-lg tracking-wider">
-                                    {product.promo.title.toUpperCase()}
-                                </div>
-                            )}
-                            
-                            <button 
-                                onClick={(e) => toggleBookmark(e, product.id)}
-                                className="absolute top-4 right-4 p-2.5 bg-white/80 backdrop-blur-md hover:bg-white rounded-full z-20 shadow-md transition-transform hover:scale-110"
-                            >
-                                <Star size={20} fill="currentColor" className="text-yellow-400" />
-                            </button>
-
-                            <div className="h-60 overflow-hidden bg-slate-100 relative">
-                                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/20 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
-                                <img src={getImageUrl(product)} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out" />
-                            </div>
-
-                            <div className="p-6 flex flex-col flex-1">
-                                <div className="text-xs text-[#148F96] font-bold tracking-widest uppercase mb-2">{product.category || 'GENERAL'}</div>
-                                <h3 className="font-bold text-slate-800 text-xl mb-4 line-clamp-2 group-hover:text-[#148F96] transition-colors">{product.name}</h3>
-                                
-                                <div className="mt-auto flex items-end justify-between pt-4 border-t border-slate-100">
-                                    <div>
-                                        {product.promo ? (
-                                            <>
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-slate-400 line-through text-sm">฿{Number(product.price).toLocaleString()}</span>
-                                                    <span className="text-[10px] text-red-600 bg-red-50 px-2 py-0.5 rounded-md font-bold">
-                                                        ลด {product.promo.discountType === 'PERCENTAGE' ? `${product.promo.discountValue}%` : `฿${product.promo.discountValue}`}
-                                                    </span>
-                                                </div>
-                                                <div className="text-2xl font-black text-red-600 drop-shadow-sm">
-                                                    ฿{calculateDiscountPrice(product.price, product.promo).toLocaleString()}
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <div className="text-2xl font-black text-slate-800 drop-shadow-sm">฿{Number(product.price).toLocaleString()}</div>
-                                        )}
-                                    </div>
-
-                                    <button onClick={(e) => handleAddToCart(e, product)} className="bg-slate-100 hover:bg-[#148F96] hover:text-white text-slate-700 p-3 rounded-2xl transition-all hover:scale-105 hover:shadow-lg hover:shadow-[#148F96]/30">
-                                        <ShoppingCart size={20} />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </Link>
-                ))}
+            // ✅ ใช้ ProductGrid แทนการเขียน .map เพื่อให้ Card รูปแบบเหมือนกันเป๊ะ และรองรับ Pagination
+            <div className="mt-8">
+               <ProductGrid 
+                  items={paginatedProducts} 
+                  gridCols={4} 
+                  showPagination={true} 
+                  currentPage={currentPage} 
+                  totalPages={totalPages} 
+                  onPageChange={setCurrentPage}
+                  bookmarks={bookmarks} 
+                  setBookmarks={setBookmarks}
+               />
             </div>
         )}
       </div>
