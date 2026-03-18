@@ -50,19 +50,30 @@ const ProductGrid: React.FC<ProductGridProps> = ({
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null); 
 
+  // ✅ เช็ค Token จากทั้ง 2 ที่
+  const getToken = () => localStorage.getItem('token') || sessionStorage.getItem('token');
+
   const handleAddToCart = async (e: React.MouseEvent, product: Product) => {
     e.preventDefault();
     if (Number(product.stock) <= 0) {
       toast.error('ขออภัย สินค้านี้หมดชั่วคราว');
       return;
     }
-    if (!localStorage.getItem('token')) { toast.error('กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้า'); navigate('/login'); return; }
+    if (!getToken()) { 
+      toast.error('กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้า'); 
+      navigate('/login'); 
+      return; 
+    }
     await addToCart(product.id, 1); 
   };
 
   const toggleBookmark = async (e: React.MouseEvent, productId: string) => {
     e.preventDefault(); e.stopPropagation();
-    if (!localStorage.getItem('token')) { toast.error('กรุณาเข้าสู่ระบบเพื่อบันทึกสินค้าที่สนใจ'); navigate('/login'); return; }
+    if (!getToken()) { 
+      toast.error('กรุณาเข้าสู่ระบบเพื่อบันทึกสินค้าที่สนใจ'); 
+      navigate('/login'); 
+      return; 
+    }
     try {
         if (bookmarks.includes(productId)) {
             await api.removeBookmark(productId);
@@ -156,7 +167,6 @@ const ProductGrid: React.FC<ProductGridProps> = ({
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/10 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
                         <img src={getImageUrl(product)} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
                         
-                        {/* ✅ ป้ายสินค้าหมด (อยู่มุมซ้ายล่างของรูป) */}
                         {isOutOfStock && (
                           <div className="absolute bottom-4 left-4 bg-red-50 text-red-600 border border-red-200 text-xs font-extrabold px-3 py-1.5 rounded-xl shadow-sm z-20">
                             สินค้าหมด

@@ -1,4 +1,3 @@
-// frontend/src/pages/ProductDetail.tsx
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom'; 
 import { Star, Minus, Plus, ChevronRight, Loader, Check } from 'lucide-react'; 
@@ -39,6 +38,9 @@ const ProductDetail = () => {
   const [selectedSize, setSelectedSize] = useState<string>('');
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+  // ✅ เพิ่มฟังก์ชันเช็ค Token จากทั้งสองที่
+  const getToken = () => localStorage.getItem('token') || sessionStorage.getItem('token');
 
   useEffect(() => {
     const fetchProductAndReviews = async () => {
@@ -133,14 +135,27 @@ const ProductDetail = () => {
 
   const handleAddToCart = async () => {
     if (!product || !id) return;
-    if (!user) { toast.error("กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้า"); navigate('/login'); return; }
-    if (product.variants && product.variants.length > 0 && !currentVariant && !isMainProductSelected) {
-        toast.error("กรุณาเลือกรูปแบบสินค้าให้ครบถ้วน หรือ สินค้ารูปแบบนี้ไม่มีในระบบ"); return;
+    
+    // ✅ เช็ค Token จาก getToken() แทนการใช้เช็ค user หรือ localStorage ตรงๆ
+    if (!getToken()) { 
+      toast.error("กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้า"); 
+      navigate('/login'); 
+      return; 
     }
+    
+    if (product.variants && product.variants.length > 0 && !currentVariant && !isMainProductSelected) {
+        toast.error("กรุณาเลือกรูปแบบสินค้าให้ครบถ้วน หรือ สินค้ารูปแบบนี้ไม่มีในระบบ"); 
+        return;
+    }
+    
     try {
         setIsAdding(true);
         await addToCart(id, quantity, installationQty, currentVariant?.id); 
-    } catch (error) { console.error(error); } finally { setIsAdding(false); }
+    } catch (error) { 
+        console.error(error); 
+    } finally { 
+        setIsAdding(false); 
+    }
   }; 
 
   const availableColors = Array.from(new Set([mainColor, ...(product?.variants?.map(v => v.color) || [])])).filter(Boolean) as string[];

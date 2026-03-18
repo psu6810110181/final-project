@@ -41,6 +41,9 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null); 
 
+  // ✅ เช็ค Token จากทั้ง 2 ที่
+  const getToken = () => localStorage.getItem('token') || sessionStorage.getItem('token');
+
   useEffect(() => {
     const fetchFlashSales = async () => {
       try {
@@ -50,8 +53,7 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
     };
 
     const fetchBookmarks = async () => {
-        const token = localStorage.getItem('token');
-        if (token) {
+        if (getToken()) {
             try {
                 const data = await api.getBookmarks();
                 const bookmarkIds = Array.isArray(data) ? data.map((b: any) => b.productId || b.product?.id || b.id) : (data && Array.isArray(data.data) ? data.data.map((b: any) => b.productId || b.product?.id || b.id) : []);
@@ -101,7 +103,7 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
       toast.error('ขออภัย สินค้านี้หมดชั่วคราว');
       return;
     }
-    if (!localStorage.getItem('token')) {
+    if (!getToken()) {
       toast.error('กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้าลงตะกร้า');
       navigate('/login'); return;
     }
@@ -110,7 +112,7 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
 
   const toggleBookmark = async (e: React.MouseEvent, productId: string) => {
     e.preventDefault(); e.stopPropagation();
-    if (!localStorage.getItem('token')) {
+    if (!getToken()) {
         toast.error('กรุณาเข้าสู่ระบบเพื่อบันทึกสินค้าที่สนใจ');
         navigate('/login'); return;
     }
@@ -248,7 +250,6 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-900/5 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
                       <img src={getImageUrl(product)} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out mix-blend-multiply" />
                       
-                      {/* ✅ ป้ายสินค้าหมด (ซ้ายล่าง) */}
                       {isOutOfStock && (
                           <div className="absolute bottom-4 left-4 bg-red-50 text-red-600 border border-red-200 text-xs font-extrabold px-3 py-1.5 rounded-xl shadow-sm z-20">
                             สินค้าหมด
@@ -273,15 +274,7 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
                               </div>
                           </div>
 
-                          <button 
-                            onClick={(e) => handleAddToCart(e, product)} 
-                            disabled={isOutOfStock}
-                            className={`p-3.5 rounded-2xl transition-all border border-slate-100
-                              ${isOutOfStock 
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'bg-slate-50 hover:bg-[#ff8e53] text-slate-600 hover:text-white shadow-sm hover:shadow-lg hover:shadow-orange-500/30 transform hover:scale-105 hover:border-transparent'
-                              }`}
-                          >
+                          <button onClick={(e) => handleAddToCart(e, product)} className="bg-slate-50 hover:bg-[#ff8e53] text-slate-600 hover:text-white p-3.5 rounded-2xl transition-all shadow-sm hover:shadow-lg hover:shadow-orange-500/30 transform hover:scale-105 border border-slate-100 hover:border-transparent">
                               <ShoppingCart size={20} />
                           </button>
                       </div>
