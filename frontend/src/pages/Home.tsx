@@ -1,4 +1,3 @@
-// frontend/src/pages/Home.tsx
 import { useState, useEffect } from 'react';
 import { Loader } from 'lucide-react'; 
 import * as api from '../services/api'; 
@@ -232,9 +231,11 @@ const Home = () => {
              <>
                 <SeasonalPromotion products={seasonalProducts} title={seasonalProducts[0]?.promo?.title} season={seasonalProducts[0]?.promo?.title ? getSeasonFromPromoTitle(seasonalProducts[0].promo.title) : undefined} />
                 <FlashSale products={products} />
-                <ProductGrid title="✨ แนะนำสำหรับคุณ" items={recommendedProducts} bookmarks={bookmarks} setBookmarks={setBookmarks} />
-                <ProductGrid title="🔥 โปรโมชันพิเศษ" items={promoProducts} bookmarks={bookmarks} setBookmarks={setBookmarks} />
-                <ProductGrid title="🛋️ สินค้ามาใหม่" items={generalProducts} bookmarks={bookmarks} setBookmarks={setBookmarks} />
+                
+                {/* ✅ เพิ่ม horizontal={true} ตรงนี้ */}
+                <ProductGrid title="✨ แนะนำสำหรับคุณ" items={recommendedProducts} bookmarks={bookmarks} setBookmarks={setBookmarks} horizontal={true} />
+                <ProductGrid title="🔥 โปรโมชันพิเศษ" items={promoProducts} bookmarks={bookmarks} setBookmarks={setBookmarks} theme="promo" horizontal={true} />
+                <ProductGrid title="🛋️ สินค้ามาใหม่" items={generalProducts} bookmarks={bookmarks} setBookmarks={setBookmarks} horizontal={true} />
              </>
           )}
         </main>

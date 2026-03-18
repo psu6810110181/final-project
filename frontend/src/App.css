@@ -40,3 +40,12 @@
 .read-the-docs {
   color: #888;
 }
+
+/* ✅ ซ่อน scrollbar สำหรับแถบเลื่อนแนวนอน */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
