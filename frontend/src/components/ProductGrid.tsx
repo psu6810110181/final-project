@@ -19,6 +19,7 @@ interface ProductGridProps {
   setBookmarks: React.Dispatch<React.SetStateAction<string[]>>;
   theme?: 'default' | 'promo'; 
   horizontal?: boolean; 
+  gridCols?: 4 | 5; // ✅ รองรับการแสดงแถวละ 5
 }
 
 const calculateDiscountPrice = (price: string | number, promo: Promotion) => {
@@ -43,7 +44,7 @@ const getImageUrl = (product: Product) => {
 const ProductGrid: React.FC<ProductGridProps> = ({ 
   title, items, showPagination = false, 
   currentPage = 1, totalPages = 1, onPageChange,
-  bookmarks, setBookmarks, theme = 'default', horizontal = false 
+  bookmarks, setBookmarks, theme = 'default', horizontal = false, gridCols = 4 // ✅ รับค่าจำนวนคอลัมน์
 }) => {
   const { addToCart } = useCart();
   const navigate = useNavigate();
@@ -94,6 +95,11 @@ const ProductGrid: React.FC<ProductGridProps> = ({
     pageText: isPromo ? 'text-red-500 hover:bg-red-50' : 'text-[#148F96] hover:bg-[#148F96] hover:text-white'
   };
 
+  // ✅ ปรับ Layout ให้รองรับแบบ 5 คอลัมน์สำหรับหน้าจอใหญ่
+  const gridClasses = horizontal 
+    ? "flex overflow-x-auto gap-6 pb-8 scrollbar-hide relative z-10 items-stretch" 
+    : `grid grid-cols-2 md:grid-cols-3 ${gridCols === 5 ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-6 relative z-10 items-stretch`;
+
   return (
     <div className="mb-16">
       {title && (
@@ -119,17 +125,16 @@ const ProductGrid: React.FC<ProductGridProps> = ({
 
           <div 
             ref={horizontal ? scrollRef : null}
-            className={horizontal 
-              ? "flex overflow-x-auto gap-8 pb-4 scrollbar-hide relative z-10" 
-              : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10"}
+            className={gridClasses} // ✅ ใช้ Class Grid ที่คำนวณมาใหม่
             style={horizontal ? { scrollbarWidth: 'none', msOverflowStyle: 'none' } : {}}
           >
             {items.map((product) => (
               <Link 
                 to={`/product/${product.id}`} 
                 key={product.id} 
-                className={`group relative block ${horizontal ? "w-[260px] md:w-[280px] shrink-0" : "h-full"}`}
+                className={`group relative block ${horizontal ? "w-[260px] md:w-[280px] shrink-0 h-auto flex flex-col" : "h-full flex flex-col w-full text-left"}`}
               >
+                {/* 🛑 ห้ามแก้ไข Card นี้เด็ดขาด 🛑 */}
                 <div className={`bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.06)] transition-all duration-500 overflow-hidden border border-gray-100 h-full flex flex-col relative translate-y-0 hover:-translate-y-2 ${cTheme.cardHover}`}>
                   
                   {product.promo && (
@@ -149,7 +154,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
 
                   <div className="p-6 flex flex-col flex-1">
                       <div className={`text-xs font-bold tracking-widest uppercase mb-2 ${cTheme.categoryText}`}>{product.category || (isPromo ? 'PROMOTION' : 'GENERAL')}</div>
-                      <h3 className={`font-semibold text-slate-800 text-xl mb-2 line-clamp-2 transition-colors leading-snug ${cTheme.titleHover}`}>{product.name}</h3>
+                      <h3 className={`font-semibold text-slate-800 text-xl mb-2 line-clamp-2 transition-colors leading-snug min-h-[3rem] ${cTheme.titleHover}`}>{product.name}</h3>
                       <p className="text-slate-500 text-sm mb-6 line-clamp-2 leading-relaxed">{product.description || "ไม่มีรายละเอียด"}</p>
                       
                       <div className="mt-auto flex items-end justify-between pt-4 border-t border-gray-100">
@@ -175,6 +180,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
                       </div>
                   </div>
                 </div>
+                {/* 🛑 สิ้นสุด Card */}
               </Link>
             ))}
           </div>
@@ -191,7 +197,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
         </div>
       )}
 
-      {/* ✅ แก้ไข: อนุญาตให้แสดง Pagination เสมอ ถ้าเงื่อนไขครบ */}
+      {/* ✅ Pagination ทำงานในทุกมุมมอง ไม่ว่าจะแนวนอนหรือแนวตั้ง */}
       {showPagination && totalPages > 1 && onPageChange && (
         <div className="flex justify-center items-center gap-4 mt-12">
           <button 
