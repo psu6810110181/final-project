@@ -52,6 +52,10 @@ const ProductGrid: React.FC<ProductGridProps> = ({
 
   const handleAddToCart = async (e: React.MouseEvent, product: Product) => {
     e.preventDefault();
+    if (Number(product.stock) <= 0) {
+      toast.error('ขออภัย สินค้านี้หมดชั่วคราว');
+      return;
+    }
     if (!localStorage.getItem('token')) { toast.error('กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้า'); navigate('/login'); return; }
     await addToCart(product.id, 1); 
   };
@@ -95,7 +99,6 @@ const ProductGrid: React.FC<ProductGridProps> = ({
     pageText: isPromo ? 'text-red-500 hover:bg-red-50' : 'text-[#148F96] hover:bg-[#148F96] hover:text-white'
   };
 
-  // ✅ เพิ่ม py-6 เข้าไปใน Grid Classes สำหรับทั้ง 2 แบบ เพื่อให้มีพื้นที่เหลือสำหรับการ์ดเด้งขึ้นบนและแผ่เงา
   const gridClasses = horizontal 
     ? "flex overflow-x-auto gap-6 py-6 px-2 scrollbar-hide relative z-10 items-stretch" 
     : `grid grid-cols-2 md:grid-cols-3 ${gridCols === 5 ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-6 py-6 px-2 relative z-10 items-stretch`;
@@ -128,61 +131,78 @@ const ProductGrid: React.FC<ProductGridProps> = ({
             className={gridClasses} 
             style={horizontal ? { scrollbarWidth: 'none', msOverflowStyle: 'none' } : {}}
           >
-            {items.map((product) => (
-              <Link 
-                to={`/product/${product.id}`} 
-                key={product.id} 
-                className={`group relative block ${horizontal ? "w-[260px] md:w-[280px] shrink-0 h-auto flex flex-col" : "h-full flex flex-col w-full text-left"}`}
-              >
-                {/* 🛑 ห้ามแก้ไข Card นี้เด็ดขาด 🛑 */}
-                <div className={`bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.06)] transition-all duration-500 overflow-hidden border border-gray-100 h-full flex flex-col relative translate-y-0 hover:-translate-y-2 ${cTheme.cardHover}`}>
-                  
-                  {product.promo && (
-                      <div className="absolute top-4 left-4 bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-bold px-3 py-1.5 rounded-full z-20 shadow-lg tracking-wider">
-                          {product.promo.title.toUpperCase()}
-                      </div>
-                  )}
+            {items.map((product) => {
+              const isOutOfStock = Number(product.stock) <= 0;
 
-                  <button onClick={(e) => toggleBookmark(e, product.id)} className="absolute top-4 right-4 p-2.5 bg-white/80 backdrop-blur-md hover:bg-white rounded-full z-20 shadow-sm text-gray-400 hover:text-yellow-500 transition-all hover:scale-110 border border-gray-100">
-                      <Star size={20} fill={bookmarks.includes(product.id) ? "currentColor" : "none"} className={bookmarks.includes(product.id) ? "text-yellow-400" : ""} />
-                  </button>
+              return (
+                <Link 
+                  to={`/product/${product.id}`} 
+                  key={product.id} 
+                  className={`group relative block ${horizontal ? "w-[260px] md:w-[280px] shrink-0 h-auto flex flex-col" : "h-full flex flex-col w-full text-left"} ${isOutOfStock ? 'opacity-80' : ''}`}
+                >
+                  <div className={`bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.06)] transition-all duration-500 overflow-hidden border border-gray-100 h-full flex flex-col relative translate-y-0 hover:-translate-y-2 ${cTheme.cardHover}`}>
+                    
+                    {product.promo && (
+                        <div className="absolute top-4 left-4 bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-bold px-3 py-1.5 rounded-full z-20 shadow-lg tracking-wider">
+                            {product.promo.title.toUpperCase()}
+                        </div>
+                    )}
 
-                  <div className="h-60 overflow-hidden bg-slate-50 relative">
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/10 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
-                      <img src={getImageUrl(product)} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
-                  </div>
+                    <button onClick={(e) => toggleBookmark(e, product.id)} className="absolute top-4 right-4 p-2.5 bg-white/80 backdrop-blur-md hover:bg-white rounded-full z-20 shadow-sm text-gray-400 hover:text-yellow-500 transition-all hover:scale-110 border border-gray-100">
+                        <Star size={20} fill={bookmarks.includes(product.id) ? "currentColor" : "none"} className={bookmarks.includes(product.id) ? "text-yellow-400" : ""} />
+                    </button>
 
-                  <div className="p-6 flex flex-col flex-1">
-                      <div className={`text-xs font-bold tracking-widest uppercase mb-2 ${cTheme.categoryText}`}>{product.category || (isPromo ? 'PROMOTION' : 'GENERAL')}</div>
-                      <h3 className={`font-semibold text-slate-800 text-xl mb-2 line-clamp-2 transition-colors leading-snug min-h-[3rem] ${cTheme.titleHover}`}>{product.name}</h3>
-                      <p className="text-slate-500 text-sm mb-6 line-clamp-2 leading-relaxed">{product.description || "ไม่มีรายละเอียด"}</p>
-                      
-                      <div className="mt-auto flex items-end justify-between pt-4 border-t border-gray-100">
-                          <div>
-                              {product.promo ? (
-                                  <>
-                                      <div className="flex items-center gap-2 mb-1">
-                                          <span className="text-slate-400 line-through text-sm">฿{Number(product.price).toLocaleString()}</span>
-                                          <span className="text-[10px] text-red-600 bg-red-50 px-2 py-0.5 rounded-md font-bold">
-                                              ลด {product.promo.discountType === 'PERCENTAGE' ? `${product.promo.discountValue}%` : `฿${product.promo.discountValue}`}
-                                          </span>
-                                      </div>
-                                      <div className="text-2xl font-black text-red-600 drop-shadow-sm">฿{calculateDiscountPrice(product.price, product.promo).toLocaleString()}</div>
-                                  </>
-                              ) : (
-                                  <div className="text-2xl font-black text-slate-800 drop-shadow-sm">฿{Number(product.price).toLocaleString()}</div>
-                              )}
+                    <div className="h-60 overflow-hidden bg-slate-50 relative">
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/10 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
+                        <img src={getImageUrl(product)} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
+                        
+                        {/* ✅ ป้ายสินค้าหมด (อยู่มุมซ้ายล่างของรูป) */}
+                        {isOutOfStock && (
+                          <div className="absolute bottom-4 left-4 bg-red-50 text-red-600 border border-red-200 text-xs font-extrabold px-3 py-1.5 rounded-xl shadow-sm z-20">
+                            สินค้าหมด
                           </div>
+                        )}
+                    </div>
 
-                          <button onClick={(e) => handleAddToCart(e, product)} className={`bg-slate-50 p-3 rounded-2xl transition-all hover:scale-105 hover:shadow-lg border border-gray-100 hover:border-transparent ${cTheme.btnCart}`}>
-                              <ShoppingCart size={20} />
-                          </button>
-                      </div>
+                    <div className="p-6 flex flex-col flex-1">
+                        <div className={`text-xs font-bold tracking-widest uppercase mb-2 ${cTheme.categoryText}`}>{product.category || (isPromo ? 'PROMOTION' : 'GENERAL')}</div>
+                        <h3 className={`font-semibold text-slate-800 text-xl mb-2 line-clamp-2 transition-colors leading-snug min-h-[3rem] ${cTheme.titleHover}`}>{product.name}</h3>
+                        <p className="text-slate-500 text-sm mb-6 line-clamp-2 leading-relaxed">{product.description || "ไม่มีรายละเอียด"}</p>
+                        
+                        <div className="mt-auto flex items-end justify-between pt-4 border-t border-gray-100">
+                            <div>
+                                {product.promo ? (
+                                    <>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-slate-400 line-through text-sm">฿{Number(product.price).toLocaleString()}</span>
+                                            <span className="text-[10px] text-red-600 bg-red-50 px-2 py-0.5 rounded-md font-bold">
+                                                ลด {product.promo.discountType === 'PERCENTAGE' ? `${product.promo.discountValue}%` : `฿${product.promo.discountValue}`}
+                                            </span>
+                                        </div>
+                                        <div className="text-2xl font-black text-red-600 drop-shadow-sm">฿{calculateDiscountPrice(product.price, product.promo).toLocaleString()}</div>
+                                    </>
+                                ) : (
+                                    <div className="text-2xl font-black text-slate-800 drop-shadow-sm">฿{Number(product.price).toLocaleString()}</div>
+                                )}
+                            </div>
+
+                            <button 
+                                onClick={(e) => handleAddToCart(e, product)} 
+                                disabled={isOutOfStock}
+                                className={`p-3 rounded-2xl transition-all border border-gray-100 
+                                  ${isOutOfStock 
+                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                                    : `bg-slate-50 hover:scale-105 hover:shadow-lg hover:border-transparent ${cTheme.btnCart}`
+                                  }`}
+                            >
+                                <ShoppingCart size={20} />
+                            </button>
+                        </div>
+                    </div>
                   </div>
-                </div>
-                {/* 🛑 สิ้นสุด Card */}
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
 
           {horizontal && items.length > 4 && (

@@ -94,6 +94,10 @@ const SeasonalPromotion: React.FC<SeasonalPromotionProps> = ({ products, title, 
 
   const handleAddToCart = async (e: React.MouseEvent, product: ProductWithPromo) => {
     e.preventDefault();
+    if (Number(product.stock) <= 0) {
+      toast.error('ขออภัย สินค้านี้หมดชั่วคราว');
+      return;
+    }
     if (!localStorage.getItem('token')) {
       toast.error('กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้าลงตะกร้า');
       navigate('/login'); return;
@@ -256,7 +260,6 @@ const SeasonalPromotion: React.FC<SeasonalPromotionProps> = ({ products, title, 
           </button>
         )}
 
-        {/* ✅ แก้ไข: เพิ่ม py-6 เข้าไปใน Container ที่ครอบ Grid แนวนอน เผื่อพื้นที่ให้การ์ดลอยขึ้นไปได้โดยไม่โดนตัด */}
         <div 
           ref={scrollRef}
           className="flex overflow-x-auto gap-8 py-6 px-1 scrollbar-hide relative z-10 items-stretch"
@@ -264,13 +267,13 @@ const SeasonalPromotion: React.FC<SeasonalPromotionProps> = ({ products, title, 
         >
           {products.map((product) => {
             if (!product.promo) return null;
+
+            const isOutOfStock = Number(product.stock) <= 0;
             const originalPrice = Number(product.price);
             const discountedPrice = calculateDiscountPrice(product.price, product.promo);
 
             return (
-              <Link to={`/product/${product.id}`} key={product.id} className="group relative flex flex-col w-[280px] shrink-0 text-left">
-                  
-                  {/* 🛑 Card ของเดิม 100% ห้ามแก้ไขเด็ดขาด 🛑 */}
+              <Link to={`/product/${product.id}`} key={product.id} className={`group relative flex flex-col w-[280px] shrink-0 text-left ${isOutOfStock ? 'opacity-80' : ''}`}>
                   <div className={`bg-white rounded-[2rem] shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border-2 h-full flex flex-col relative transform hover:-translate-y-2 isolate ${getBorderColor()}`}>
                   
                   <div className={`absolute top-4 left-4 bg-gradient-to-r ${getBadgeStyle()} text-white text-[11px] font-black px-3.5 py-1.5 rounded-full z-20 shadow-lg tracking-widest flex items-center gap-1 border border-white/30`}>
@@ -287,6 +290,13 @@ const SeasonalPromotion: React.FC<SeasonalPromotionProps> = ({ products, title, 
                   <div className="h-60 overflow-hidden bg-slate-100 relative rounded-t-[2rem]" style={{ transform: 'translateZ(0)' }}>
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-900/10 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
                       <img src={getImageUrl(product)} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out mix-blend-multiply" />
+                      
+                      {/* ✅ ป้ายสินค้าหมด (ซ้ายล่าง) */}
+                      {isOutOfStock && (
+                          <div className="absolute bottom-4 left-4 bg-red-50 text-red-600 border border-red-200 text-xs font-extrabold px-3 py-1.5 rounded-xl shadow-sm z-20">
+                            สินค้าหมด
+                          </div>
+                      )}
                   </div>
 
                   <div className="p-6 flex flex-col flex-1 bg-white relative z-10">
@@ -305,22 +315,25 @@ const SeasonalPromotion: React.FC<SeasonalPromotionProps> = ({ products, title, 
                                       ลด {product.promo.discountType === 'PERCENTAGE' ? `${product.promo.discountValue}%` : `฿${product.promo.discountValue}`}
                                   </span>
                               </div>
-                              <div className="text-2xl font-black text-slate-800">
+                              <div className="text-2xl font-black text-red-600">
                                   ฿{discountedPrice.toLocaleString()}
                               </div>
                           </div>
 
                           <button 
                               onClick={(e) => handleAddToCart(e, product)} 
-                              className="bg-[#148F96]/10 hover:bg-[#148F96] text-[#148F96] hover:text-white p-3.5 rounded-2xl transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-[#148F96]/40 transform hover:scale-105" 
+                              disabled={isOutOfStock}
+                              className={`p-3.5 rounded-2xl transition-all duration-300 border border-slate-100
+                                ${isOutOfStock
+                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                  : 'bg-[#148F96]/10 hover:bg-[#148F96] text-[#148F96] hover:text-white shadow-sm hover:shadow-xl hover:shadow-[#148F96]/40 transform hover:scale-105 hover:border-transparent'
+                                }`} 
                           >
                               <ShoppingCart size={20} />
                           </button>
                       </div>
                   </div>
                   </div>
-                  {/* 🛑 จบ Card 🛑 */}
-
               </Link>
             );
           })}
