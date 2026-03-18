@@ -92,9 +92,9 @@ import { BookmarksModule } from './bookmarks/bookmarks.module';
             database: configService.get<string>('DB_DATABASE'),
             
             // 👇 เติมโค้ด 3 บรรทัดนี้ลงไป เพื่อบังคับเปิด SSL ให้ AWS RDS
-            ssl: {
-              rejectUnauthorized: false,
-            },
+            //ssl: {
+              //rejectUnauthorized: false,
+            //},
 
             autoLoadEntities: true,
             synchronize: true,
