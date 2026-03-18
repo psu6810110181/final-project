@@ -89,6 +89,20 @@ export interface Promotion {
   updatedAt?: string;
 }
 
+// ✅ สร้าง Helper function ดึง Token จากที่ไหนก็ได้ที่มี
+export const getToken = () => {
+  return localStorage.getItem('token') || sessionStorage.getItem('token');
+};
+
+// ✅ สร้าง Header สำหรับเคสที่ต้องการส่ง Token แยก (ถ้า axios interceptor ยังไม่ได้ทำ)
+export const authHeader = () => {
+  const token = getToken();
+  if (token) {
+    return { Authorization: `Bearer ${token}` };
+  }
+  return {};
+};
+
 // ---------------------------------------------------------
 // ✅ API Functions
 // ---------------------------------------------------------

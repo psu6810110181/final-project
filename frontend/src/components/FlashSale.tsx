@@ -41,6 +41,9 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null); 
 
+  // ✅ เช็ค Token จากทั้ง 2 ที่
+  const getToken = () => localStorage.getItem('token') || sessionStorage.getItem('token');
+
   useEffect(() => {
     const fetchFlashSales = async () => {
       try {
@@ -50,8 +53,7 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
     };
 
     const fetchBookmarks = async () => {
-        const token = localStorage.getItem('token');
-        if (token) {
+        if (getToken()) {
             try {
                 const data = await api.getBookmarks();
                 const bookmarkIds = Array.isArray(data) ? data.map((b: any) => b.productId || b.product?.id || b.id) : (data && Array.isArray(data.data) ? data.data.map((b: any) => b.productId || b.product?.id || b.id) : []);
@@ -97,7 +99,11 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
 
   const handleAddToCart = async (e: React.MouseEvent, product: Product) => {
     e.preventDefault();
-    if (!localStorage.getItem('token')) {
+    if (Number(product.stock) <= 0) {
+      toast.error('ขออภัย สินค้านี้หมดชั่วคราว');
+      return;
+    }
+    if (!getToken()) {
       toast.error('กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้าลงตะกร้า');
       navigate('/login'); return;
     }
@@ -106,7 +112,7 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
 
   const toggleBookmark = async (e: React.MouseEvent, productId: string) => {
     e.preventDefault(); e.stopPropagation();
-    if (!localStorage.getItem('token')) {
+    if (!getToken()) {
         toast.error('กรุณาเข้าสู่ระบบเพื่อบันทึกสินค้าที่สนใจ');
         navigate('/login'); return;
     }
@@ -212,7 +218,6 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
           </button>
         )}
 
-        {/* ✅ แก้ไข: เพิ่ม py-6 px-1 เผื่อพื้นที่ให้ตอนโฮเวอร์แล้ว Card ลอยขึ้นไม่โดนตัด */}
         <div 
           ref={scrollRef}
           className="flex overflow-x-auto gap-8 py-6 px-1 scrollbar-hide relative z-10 items-stretch"
@@ -222,16 +227,15 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
             const promotion = flashSales.find(sale => sale.products?.some(p => p.id === product.id));
             if (!promotion) return null;
 
+            const isOutOfStock = Number(product.stock) <= 0;
             const originalPrice = typeof product.price === 'string' ? Number(product.price) : product.price;
             const discountedPrice = calculateDiscountedPrice(product, promotion);
 
             return (
-              <Link to={`/product/${product.id}`} key={product.id} className="group relative flex flex-col w-[280px] shrink-0 text-left">
-                  
-                  {/* 🛑 Card ของเดิม 100% ห้ามแก้ไขเด็ดขาด 🛑 */}
+              <Link to={`/product/${product.id}`} key={product.id} className={`group relative flex flex-col w-[280px] shrink-0 text-left ${isOutOfStock ? 'opacity-80' : ''}`}>
                   <div className="bg-white/90 backdrop-blur-xl border border-white rounded-[2rem] shadow-xl hover:shadow-2xl hover:shadow-[#ff8e53]/20 transition-all duration-500 overflow-hidden h-full flex flex-col relative transform hover:-translate-y-2 isolate">
                   
-                  <div className="absolute top-4 left-4 bg-gradient-to-r from-[#ff8e53] to-[#D65A31] text-white text-[11px] font-black px-3.5 py-1.5 rounded-full z-20 shadow-lg tracking-widest flex items-center gap-1 border border-white/50">
+                  <div className="absolute top-4 left-4 bg-gradient-to-r from-[#ff8e53] to-[#D65A31] text-white text-[11px] font-black px-3.5 py-1.5 rounded-full z-20 shadow-md tracking-widest flex items-center gap-1 border border-white/50">
                       <Zap size={14}/> {promotion.title.toUpperCase()}
                   </div>
 
@@ -245,6 +249,12 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
                   <div className="h-60 overflow-hidden bg-slate-50 relative rounded-t-[2rem]" style={{ transform: 'translateZ(0)' }}>
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-900/5 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
                       <img src={getImageUrl(product)} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out mix-blend-multiply" />
+                      
+                      {isOutOfStock && (
+                          <div className="absolute bottom-4 left-4 bg-red-50 text-red-600 border border-red-200 text-xs font-extrabold px-3 py-1.5 rounded-xl shadow-sm z-20">
+                            สินค้าหมด
+                          </div>
+                      )}
                   </div>
 
                   <div className="p-6 flex flex-col flex-1 bg-white/90 relative z-10">
@@ -270,8 +280,6 @@ const FlashSale: React.FC<FlashSaleProps> = ({ products: allProducts = [] }) => 
                       </div>
                   </div>
                   </div>
-                  {/* 🛑 จบ Card 🛑 */}
-
               </Link>
             );
           })}

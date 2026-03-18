@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Trash2, Minus, Plus, MapPin, X } from 'lucide-react'; 
-import { useNavigate, useLocation } from 'react-router-dom'; // ✅ นำเข้า useLocation เพิ่ม
+import { useNavigate, useLocation } from 'react-router-dom'; 
 import { useCart, calculateDiscountPrice } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import * as api from '../services/api';
@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 
 const Cart = () => {
   const navigate = useNavigate();
-  const location = useLocation(); // ✅ ใช้ตรวจจับการเปลี่ยนหน้า
+  const location = useLocation(); 
   const [isProcessing, setIsProcessing] = useState(false);
   const [address, setAddress] = useState("");
   const [showAddressModal, setShowAddressModal] = useState(false);
@@ -17,6 +17,10 @@ const Cart = () => {
   const { cartItems, removeFromCart, updateCartItem, cartTotal, fetchCart } = useCart();
   const { user } = useAuth();
   
+  // ✅ สร้างฟังก์ชันช่วยดึง Token จากทั้งสองที่ (กรณีที่ API Service อาจต้องใช้ หรือใช้เช็คสิทธิ์)
+  const getToken = () => localStorage.getItem('token') || sessionStorage.getItem('token');
+  const isLoggedIn = !!getToken();
+
   const totalInstallQty = cartItems.reduce((sum: number, item: any) => sum + (item.installationQty || 0), 0);
   const totalProductQty = cartItems.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
   const deliveryEstimationText = totalProductQty >= 4 ? "5-7 วัน" : "3 วัน";
@@ -29,12 +33,17 @@ const Cart = () => {
   const shippingFee = cartItems.length > 0 ? 150 : 0; 
   const total = cartTotal + installationFee + shippingFee;
 
-  // ✅ แก้ไข: บังคับให้ดึงข้อมูลจาก Profile (Backend) เป็นอันดับแรกเสมอ
   useEffect(() => {
+    // ✅ ถ้าไม่ได้ Login ให้เด้งกลับไปหน้าหลัก (ป้องกันกรณีหลุดเข้ามา)
+    if (!isLoggedIn) {
+      toast.error('กรุณาเข้าสู่ระบบเพื่อดูตะกร้าสินค้า');
+      navigate('/login');
+      return;
+    }
+
     const fetchAddress = async () => {
       let latestDbAddress = "";
 
-      // 1. ดึงที่อยู่ล่าสุดจาก Backend ก่อน (มั่นใจที่สุดว่าตรงกับหน้า Profile)
       if (user) {
           try {
               const profileData = await api.getProfile();
@@ -50,14 +59,10 @@ const Cart = () => {
 
       const savedLocalAddress = localStorage.getItem('delivery_address');
 
-      // 2. ตัดสินใจเลือกที่อยู่
       if (latestDbAddress) {
-          // ถ้า Profile มีที่อยู่ ให้ใช้ของ Profile เสมอ
           setAddress(latestDbAddress);
-          // ลบของเก่าในเครื่องทิ้งไปเลย เพื่อไม่ให้กวนกันในอนาคต
           localStorage.removeItem('delivery_address'); 
       } else if (savedLocalAddress) {
-          // ถ้า Profile ไม่มีที่อยู่ แต่ผู้ใช้เคยพิมพ์ค้างไว้ในตะกร้า ให้ใช้อันนั้น
           setAddress(savedLocalAddress);
       } else {
           setAddress("");
@@ -65,7 +70,7 @@ const Cart = () => {
     };
 
     fetchAddress();
-  }, [user, location.pathname]); // ✅ เพิ่ม location.pathname ดึงข้อมูลใหม่ทุกครั้งที่กดเข้ามาหน้านี้
+  }, [user, location.pathname, isLoggedIn, navigate]); 
 
   const handleSaveAddress = () => {
     setAddress(tempAddress);
@@ -100,6 +105,12 @@ const Cart = () => {
   };
 
   const handleCheckout = async () => {
+    if (!isLoggedIn) {
+      toast.error('กรุณาเข้าสู่ระบบก่อนสั่งซื้อ');
+      navigate('/login');
+      return;
+    }
+    
     try {
       setIsProcessing(true);
       const checkoutRes = await api.checkout(address);
@@ -122,6 +133,8 @@ const Cart = () => {
       setIsProcessing(false);
     }
   };
+
+  if (!isLoggedIn) return null; // ป้องกันการ Render แวบแรกก่อน Navigate
 
   return (
     <div className="bg-[#9AB6B8] min-h-screen py-12 font-sans text-gray-800">

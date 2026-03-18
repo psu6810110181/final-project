@@ -1,10 +1,11 @@
 // frontend/src/contexts/CartContext.tsx
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import * as api from '../services/api'; 
-import type { Promotion, Variant } from '../services/api'; // ✅ นำเข้า Variant ด้วย
+import type { Promotion, Variant } from '../services/api'; 
+import { useAuth } from './AuthContext'; // ✅ นำเข้า useAuth เพื่อเช็คสถานะ User
 import toast from 'react-hot-toast';
 
-// ✅ ฟังก์ชันคำนวณราคาส่วนลด (ใช้ร่วมกัน)
+// ✅ ฟังก์ชันคำนวณราคาส่วนลด (ใช้ร่วมกันทั่วทั้ง App)
 export function calculateDiscountPrice(price: string | number, promo?: Promotion) {
   const p = Number(price);
   if (!promo) return p;
@@ -16,7 +17,7 @@ export interface CartItem {
   id: number; 
   quantity: number;
   installationQty?: number; 
-  variant?: Variant; // ✅ เพิ่ม variant มารองรับระบบตัวเลือกสินค้า (ใช้ Type ชัดเจนปลอดภัยกว่า any)
+  variant?: Variant; // ✅ รองรับ Variant สินค้า
   product: {
     id: string;   
     name: string;
@@ -30,7 +31,6 @@ export interface CartItem {
 
 interface CartContextType {
   cartItems: CartItem[];
-  // ✅ เพิ่ม variantId เข้าไปที่นี่
   addToCart: (productId: string, quantity: number, installationQty?: number, variantId?: number) => Promise<void>;
   removeFromCart: (id: number) => Promise<void>;
   updateCartItem: (id: number, quantity?: number, installationQty?: number) => Promise<void>;
@@ -47,54 +47,66 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth(); // ✅ ดึงข้อมูล user จาก AuthContext
+
+  // ✅ ฟังก์ชันดึง Token แบบครอบคลุม
+  const getAnyToken = () => localStorage.getItem('token') || sessionStorage.getItem('token');
 
   const fetchCart = async () => {
-    const token = localStorage.getItem('token');
+    const token = getAnyToken();
+    
+    // ถ้าไม่มี Token ไม่ต้องเรียก API ให้เสียเวลาและลด Error 401 ใน Console
     if (!token) {
-        setCartItems([]);
-        return;
+      setCartItems([]);
+      return;
     }
 
     try {
       setIsLoading(true);
+      // ดึงทั้งข้อมูลตะกร้า และโปรโมชั่นพร้อมกันเพื่อความเร็ว
       const [cartRes, promoData] = await Promise.all([
-          api.getCart(),
-          api.getAllPromotions().catch(() => []) 
+        api.getCart(),
+        api.getAllPromotions().catch(() => []) 
       ]);
 
       let fetchedItems: CartItem[] = [];
 
+      // จัดการโครงสร้างข้อมูลที่ส่งกลับมาจาก Backend
       if (cartRes.data && Array.isArray(cartRes.data.items)) {
-         fetchedItems = cartRes.data.items;
-      } 
-      else if (Array.isArray(cartRes.data)) {
-         fetchedItems = cartRes.data;
+        fetchedItems = cartRes.data.items;
+      } else if (Array.isArray(cartRes.data)) {
+        fetchedItems = cartRes.data;
       }
 
+      // ตรวจสอบโปรโมชั่นที่กำลัง Active อยู่ในปัจจุบัน
       const now = new Date();
       const promoMap = new Map<string, Promotion>();
+      
       promoData.forEach((promo: Promotion) => {
-          const startDate = new Date(promo.startDate);
-          const endDate = new Date(promo.endDate);
-          const isCurrentlyActive = promo.isActive && now >= startDate && now <= endDate;
-          if (isCurrentlyActive) {
-              promo.products?.forEach((prod: any) => {
-                  if (!promoMap.has(prod.id)) promoMap.set(prod.id, promo);
-              });
-          }
+        const startDate = new Date(promo.startDate);
+        const endDate = new Date(promo.endDate);
+        const isCurrentlyActive = promo.isActive && now >= startDate && now <= endDate;
+        
+        if (isCurrentlyActive) {
+          promo.products?.forEach((prod: any) => {
+            if (!promoMap.has(prod.id)) promoMap.set(prod.id, promo);
+          });
+        }
       });
 
+      // นำโปรโมชั่นไปใส่ในข้อมูลสินค้าแต่ละชิ้นในตะกร้า
       const mappedItems = fetchedItems.map(item => {
-          if (item.product) {
-              item.product.promo = promoMap.get(item.product.id);
-          }
-          return item;
+        if (item.product) {
+          item.product.promo = promoMap.get(item.product.id);
+        }
+        return item;
       });
 
+      // เรียงลำดับตามชื่อสินค้า (ภาษาไทย)
       const sortedItems = mappedItems.sort((a, b) => {
-          const nameA = a.product?.name || '';
-          const nameB = b.product?.name || '';
-          return nameA.localeCompare(nameB, 'th'); 
+        const nameA = a.product?.name || '';
+        const nameB = b.product?.name || '';
+        return nameA.localeCompare(nameB, 'th'); 
       });
 
       setCartItems(sortedItems); 
@@ -107,23 +119,26 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // ✅ useEffect จัดการการดึงข้อมูลเมื่อ User เปลี่ยนสถานะ (Login/Logout)
   useEffect(() => {
-    fetchCart();
-  }, []);
+    const token = getAnyToken();
+    if (token && user) {
+      fetchCart();
+    } else {
+      setCartItems([]); // ล้างตะกร้าทันทีที่ Logout หรือไม่มี Token
+    }
+  }, [user]);
 
-  // ✅ รับ variantId เข้ามาและส่งต่อให้ api.addToCart
+  // ✅ ฟังก์ชันเพิ่มสินค้า (รองรับ variantId)
   const addToCart = async (productId: string, quantity: number, installationQty: number = 0, variantId?: number) => {
     try {
       await api.addToCart(productId, quantity, installationQty, variantId);
       toast.success('เพิ่มลงตะกร้าแล้ว!'); 
-      await fetchCart(); 
+      await fetchCart(); // อัปเดตตะกร้าทันที
     } catch (error: any) {
       console.error('Add to cart failed:', error);
-      
-      // ✅ ดึงข้อความ Error จริงๆ จาก Backend มาแสดง แทนคำว่า "เกิดข้อผิดพลาด..."
       const backendError = error.response?.data?.message;
       const errorMessage = Array.isArray(backendError) ? backendError[0] : (backendError || 'เกิดข้อผิดพลาดในการเพิ่มสินค้า');
-      
       toast.error(`เพิ่มไม่สำเร็จ: ${errorMessage}`); 
       throw error; 
     }
@@ -135,6 +150,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       await fetchCart();
     } catch (error) {
       console.error('Remove item failed:', error);
+      toast.error('ไม่สามารถลบสินค้าได้');
     }
   };
 
@@ -156,28 +172,30 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const resetCart = () => {
+    setCartItems([]); 
+  };
+
+  // ✅ คำนวณราคาทั้งหมด (เช็คราคาจาก Variant เป็นหลัก)
   const safeCartItems = Array.isArray(cartItems) ? cartItems : [];
 
   const cartTotal = safeCartItems.reduce((total, item) => {
     if (!item || !item.product) return total; 
     
-    // ✅ ดึงราคาจาก Variant ถ้าไม่มีให้ดึงราคาจาก Product หลัก (ครอบ Number เผื่อข้อมูลมาเป็น String)
+    // ดึงราคาจากตัวเลือก (Variant) ถ้าไม่มีใช้ราคาหลัก
     const basePrice = item.variant ? Number(item.variant.price) : Number(item.product.price);
     
-    // ใช้ฟังก์ชันคำนวณส่วนลด
+    // คำนวณส่วนลดโปรโมชั่น
     const finalPrice = calculateDiscountPrice(basePrice, item.product.promo);
     const quantity = Number(item.quantity) || 0;
     
     return total + (finalPrice * quantity);
   }, 0);
   
+  // ✅ นับจำนวนชิ้นทั้งหมดในตะกร้า
   const cartCount = safeCartItems.reduce((count, item) => {
     return count + Number(item?.quantity || 0);
   }, 0);
-
-  const resetCart = () => {
-    setCartItems([]); 
-  };
 
   return (
     <CartContext.Provider value={{ 

@@ -2,14 +2,26 @@
 import * as api from '../services/api';
 import { Package, Calendar, ChevronRight, Clock, CheckCircle, XCircle, MapPin, X, Truck, CreditCard, Banknote } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 const OrderHistory = () => {
   const [orders, setOrders] = useState<api.Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<api.Order | null>(null);
+  
+  const navigate = useNavigate();
+
+  // ✅ สร้างฟังก์ชันช่วยดึง Token
+  const getToken = () => localStorage.getItem('token') || sessionStorage.getItem('token');
+  const isLoggedIn = !!getToken();
 
   const fetchOrders = async () => {
+    if (!isLoggedIn) {
+      navigate('/login');
+      return;
+    }
+    
     try {
       setError(null);
       const data = await api.getMyOrders(); 
@@ -35,9 +47,8 @@ const OrderHistory = () => {
     return () => {
       window.removeEventListener('pageshow', handlePageShow);
     };
-  }, []);
+  }, [isLoggedIn]);
 
-  // ✅ Check for payment success URL parameter and refresh orders
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('success') === 'true') {
@@ -119,6 +130,7 @@ const OrderHistory = () => {
     return date.toISOString();
   };
 
+  if (!isLoggedIn) return null;
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">กำลังโหลดประวัติการสั่งซื้อ...</div>;
 
   return (
@@ -261,7 +273,6 @@ const OrderHistory = () => {
                       <div className="flex-1">
                         <p className="font-semibold text-sm text-gray-800">{item.product?.name || 'สินค้าไม่ทราบชื่อ'}</p>
                         
-                        {/* ✅ แสดงคุณสมบัติของสินค้า (รองรับทั้งแบบมี Variant และสินค้าหลัก) */}
                         {(() => {
                           const displayColor = item.variant?.color || item.product?.color || item.product?.mainColor;
                           const displayMaterial = item.variant?.material || item.product?.material || item.product?.mainMaterial;
