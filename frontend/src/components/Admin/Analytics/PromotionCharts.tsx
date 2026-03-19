@@ -11,6 +11,9 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 
+// ✅ นำเข้า SearchableSelect
+import { SearchableSelect } from '../SearchableDropdown'; // ปรับ Path ให้ชี้ไปหาไฟล์ของคุณ (สมมติว่าอยู่โฟลเดอร์เดียวกันหรือใกล้เคียง)
+
 interface PromotionChartsProps {
   flashSales: api.Promotion[];
   seasonSales: api.Promotion[];
@@ -199,44 +202,50 @@ const PromotionCharts: React.FC<PromotionChartsProps> = ({ flashSales, seasonSal
 
   return (
     <div className="bg-white/90 backdrop-blur-2xl p-8 rounded-[2rem] border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-10 relative overflow-hidden">
-      <div className="flex flex-col xl:flex-row xl:justify-between xl:items-start mb-8 gap-5 relative z-10">
+      <div className="flex flex-col xl:flex-row xl:justify-between xl:items-center mb-8 gap-5 relative z-10">
         <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3 tracking-wide whitespace-nowrap">
           <TrendingUp className="text-rose-500" size={28} /> สถิติโปรโมชัน
         </h2>
         
-        <div className="flex flex-wrap gap-3 items-center">
+        <div className="flex flex-wrap gap-4 items-end">
           
-          {/* ✅ แทนที่ Emoji ด้วย Icon ด้านซ้าย */}
-          <div className="relative flex items-center">
-            <Zap size={14} className="absolute left-3 text-rose-500 pointer-events-none" />
-            <select 
+          {/* ✅ แทนที่ Select ธรรมดา ด้วย SearchableSelect */}
+          <div style={{ minWidth: '220px' }}>
+            <label style={{ fontSize: '12px', color: '#64748b', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '700', textTransform: 'uppercase' }}>
+              <Zap size={12} className="text-rose-500" /> เลือกรอบ Flash Sale
+            </label>
+            <SearchableSelect 
               value={selectedFlashSaleId} 
-              onChange={(e) => setSelectedFlashSaleId(e.target.value)}
-              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl pl-9 pr-8 py-2.5 focus:outline-none focus:ring-2 focus:ring-rose-500/50 appearance-none min-w-[160px]"
-            >
-              <option value="latest">Flash Sale ล่าสุด</option>
-              {flashSales.map(f => <option key={f.id} value={f.id}>{f.title}</option>)}
-            </select>
+              onChange={(val) => setSelectedFlashSaleId(val || 'latest')} 
+              options={[
+                { value: "latest", label: "Flash Sale ล่าสุด" },
+                ...flashSales.map(f => ({ value: f.id, label: f.title }))
+              ]} 
+              placeholder="ค้นหา Flash Sale..." 
+            />
           </div>
 
-          {/* ✅ แทนที่ Emoji ด้วย Icon ด้านซ้าย */}
-          <div className="relative flex items-center">
-            <CalendarDays size={14} className="absolute left-3 text-blue-500 pointer-events-none" />
-            <select 
+          <div style={{ minWidth: '220px' }}>
+            <label style={{ fontSize: '12px', color: '#64748b', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '700', textTransform: 'uppercase' }}>
+              <CalendarDays size={12} className="text-blue-500" /> เลือกรอบ Seasonal
+            </label>
+            <SearchableSelect 
               value={selectedSeasonSaleId} 
-              onChange={(e) => setSelectedSeasonSaleId(e.target.value)}
-              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl pl-9 pr-8 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none min-w-[160px]"
-            >
-              <option value="latest">Season Sale ล่าสุด</option>
-              {seasonSales.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
-            </select>
+              onChange={(val) => setSelectedSeasonSaleId(val || 'latest')} 
+              options={[
+                { value: "latest", label: "Season Sale ล่าสุด" },
+                ...seasonSales.map(s => ({ value: s.id, label: s.title }))
+              ]} 
+              placeholder="ค้นหา Season Sale..." 
+            />
           </div>
 
-          <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 flex-shrink-0">
-            <button onClick={() => setPromoViewMode('separated')} className={`p-1.5 rounded-lg transition-all ${promoViewMode === 'separated' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`} title="แยกกราฟ">
+          {/* ปุ่มสลับโหมดกราฟ ขยับให้ความสูงพอดีกับ Dropdown */}
+          <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 flex-shrink-0 h-[44px]">
+            <button onClick={() => setPromoViewMode('separated')} className={`px-2.5 rounded-lg transition-all flex items-center justify-center ${promoViewMode === 'separated' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`} title="แยกกราฟ">
               <SplitSquareHorizontal size={18} />
             </button>
-            <button onClick={() => setPromoViewMode('combined')} className={`p-1.5 rounded-lg transition-all ${promoViewMode === 'combined' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`} title="รวมกราฟ">
+            <button onClick={() => setPromoViewMode('combined')} className={`px-2.5 rounded-lg transition-all flex items-center justify-center ${promoViewMode === 'combined' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`} title="รวมกราฟ">
               <Layers size={18} />
             </button>
           </div>
