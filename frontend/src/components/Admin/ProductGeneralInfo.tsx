@@ -1,6 +1,7 @@
 import React from "react";
 import toast from 'react-hot-toast';
-import { SearchableSelect, MultiSearchableSelect } from './SearchableDropdown'; // ✅ นำเข้า SearchableDropdown
+import { SearchableSelect, MultiSearchableSelect } from './SearchableDropdown';
+import { Package, Sparkles, FileText, ImagePlus } from 'lucide-react'; // ✅ นำเข้า Icons
 
 interface ProductGeneralInfoProps {
   name: string; setName: (v: string) => void;
@@ -44,7 +45,9 @@ const ProductGeneralInfo: React.FC<ProductGeneralInfoProps> = (props) => {
     <>
       <section style={cardStyle}>
         <header style={{ borderBottom: `1px solid ${colors.border}`, paddingBottom: '12px', marginBottom: '20px' }}>
-          <h3 style={{ margin: 0, fontSize: '18px', color: colors.textMain }}>📦 ข้อมูลทั่วไป</h3>
+          <h3 style={{ margin: 0, fontSize: '18px', color: colors.textMain, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Package size={20} color={colors.primary} /> ข้อมูลทั่วไป
+          </h3>
         </header>
         
         <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap' }}>
@@ -56,8 +59,9 @@ const ProductGeneralInfo: React.FC<ProductGeneralInfoProps> = (props) => {
               {props.imageUrl ? (
                 <img src={props.imageUrl} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94A3B8' }}>
-                  <span>+ อัปโหลดรูปภาพ</span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94A3B8', gap: '8px' }}>
+                  <ImagePlus size={28} />
+                  <span style={{ fontSize: '13px', fontWeight: '500' }}>อัปโหลดรูปภาพ</span>
                 </div>
               )}
             </label>
@@ -80,7 +84,6 @@ const ProductGeneralInfo: React.FC<ProductGeneralInfoProps> = (props) => {
             <div style={{ display: 'flex', gap: '16px' }}>
               <div style={{ flex: 1 }}>
                 <label style={labelStyle}>หมวดหมู่สินค้า <span style={{color: colors.danger}}>*</span></label>
-                {/* ✅ ใช้ SearchableSelect แทน */}
                 <SearchableSelect 
                   value={props.selectedCategory} 
                   onChange={props.setSelectedCategory} 
@@ -93,7 +96,6 @@ const ProductGeneralInfo: React.FC<ProductGeneralInfoProps> = (props) => {
               </div>
               <div style={{ flex: 1 }}>
                 <label style={labelStyle}>ห้อง</label>
-                {/* ✅ ใช้ SearchableSelect แทน */}
                 <SearchableSelect 
                   value={props.selectedRoom} 
                   onChange={props.setSelectedRoom} 
@@ -143,8 +145,9 @@ const ProductGeneralInfo: React.FC<ProductGeneralInfoProps> = (props) => {
 
             {/* Features */}
             <div>
-              <label style={labelStyle}>✨ คุณสมบัติพิเศษ</label>
-              {/* ✅ ใช้ MultiSearchableSelect สำหรับเลือกหลายค่า */}
+              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Sparkles size={16} color="#F59E0B" /> คุณสมบัติพิเศษ
+              </label>
               <MultiSearchableSelect 
                 values={props.selectedFeatures} 
                 onChange={props.setSelectedFeatures} 
@@ -158,7 +161,9 @@ const ProductGeneralInfo: React.FC<ProductGeneralInfoProps> = (props) => {
 
       {/* Description */}
       <section style={cardStyle}>
-        <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: colors.textMain }}>📝 รายละเอียดสินค้า</h3>
+        <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: colors.textMain, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <FileText size={20} color={colors.textMuted} /> รายละเอียดสินค้า
+        </h3>
         <textarea placeholder="อธิบายจุดเด่น วัสดุ ขนาด..." value={props.description} onChange={e => props.setDescription(e.target.value)} style={{ ...inputStyle, minHeight: '120px', resize: 'vertical' }} />
       </section>
     </>

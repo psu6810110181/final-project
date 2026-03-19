@@ -9,7 +9,7 @@ import type { Product, Promotion } from '../services/api';
 export type ProductWithPromo = Product & { promo?: Promotion };
 
 interface ProductGridProps {
-  title?: string;
+  title?: React.ReactNode;
   items: ProductWithPromo[];
   showPagination?: boolean;
   currentPage?: number;

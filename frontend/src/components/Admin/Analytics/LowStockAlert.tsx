@@ -1,4 +1,5 @@
 import React from 'react';
+import { AlertTriangle } from 'lucide-react'; // ✅ นำเข้า Icon
 
 interface LowStockAlertProps {
   lowStockItems: any[];
@@ -9,7 +10,10 @@ const LowStockAlert: React.FC<LowStockAlertProps> = ({ lowStockItems }) => {
 
   return (
     <div className="bg-white/80 backdrop-blur-xl border border-rose-100 rounded-3xl p-5 mb-10 flex items-center gap-5 shadow-[0_8px_30px_rgb(225,29,72,0.06)]">
-      <div className="text-3xl animate-pulse text-rose-500 drop-shadow-sm">⚠️</div>
+      {/* ✅ เปลี่ยน Emoji เป็น Icon */}
+      <div className="flex-shrink-0">
+        <AlertTriangle size={36} className="text-rose-500 animate-pulse drop-shadow-sm" />
+      </div>
       <div className="flex-1">
         <div className="font-bold text-rose-600 text-lg mb-1 tracking-wide">
           การแจ้งเตือน: สินค้าใกล้หมดสต็อก ({lowStockItems.length} รายการ)

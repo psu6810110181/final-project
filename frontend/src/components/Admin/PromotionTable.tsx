@@ -1,5 +1,6 @@
 import React from "react";
 import { type Promotion } from "../../services/api";
+import { Zap, CalendarDays } from "lucide-react"; // ✅ นำเข้า Icons
 
 interface PromotionTableProps {
   promotions: Promotion[];
@@ -52,7 +53,15 @@ const PromotionTable: React.FC<PromotionTableProps> = ({
                       </td>
                       <td style={{ padding: '16px 20px', fontSize: '15px', color: colors.secondary, fontWeight: '700' }}>
                         {promotion.discountType === 'PERCENTAGE' ? `${promotion.discountValue}%` : `฿${Number(promotion.discountValue).toLocaleString()}`}
-                        <div style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '400' }}>{promotion.isFlashSale ? '🔥 Flash Sale' : '📅 Seasonal'}</div>
+                        
+                        {/* ✅ เปลี่ยน Emoji เป็น Icon */}
+                        <div style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '400', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                          {promotion.isFlashSale ? (
+                            <><Zap size={14} color={colors.secondary} /> Flash Sale</>
+                          ) : (
+                            <><CalendarDays size={14} color={colors.primary} /> Seasonal</>
+                          )}
+                        </div>
                       </td>
                       <td style={{ padding: '16px 20px', fontSize: '14px', color: colors.textMain }}>
                         <div>{formatDate(promotion.startDate)}</div>

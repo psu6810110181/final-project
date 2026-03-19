@@ -3,6 +3,7 @@ import api from "../../services/api";
 import Confirm from "../../components/Confirm";
 import toast from "react-hot-toast";
 import OrderTable from "../../components/Admin/OrderTable";
+import { Package, AlertTriangle } from 'lucide-react';
 
 const ManageOrders: React.FC = () => {
   const [allOrders, setAllOrders] = useState<any[]>([]);
@@ -87,18 +88,24 @@ const ManageOrders: React.FC = () => {
     return date;
   };
 
-  return (
+return (
     <article style={{ maxWidth: '1300px', margin: '0 auto', padding: '10px 0', fontFamily: "'Prompt', sans-serif" }}>
       <header style={{ background: 'linear-gradient(to right, #ffffff, #f8fafc)', padding: '24px 32px', borderRadius: '16px', boxShadow: '0 4px 20px -2px rgba(0,0,0,0.04)', border: `1px solid ${colors.border}`, borderLeft: `8px solid ${colors.warning}`, marginBottom: '28px', display: 'flex', alignItems: 'center', gap: '24px' }}>
-        <div style={{ width: '64px', height: '64px', background: colors.warningLight, borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>📦</div>
+        {/* ✅ เปลี่ยน Emoji 📦 เป็น Icon Package */}
+        <div style={{ width: '64px', height: '64px', background: colors.warningLight, borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.warning }}>
+          <Package size={32} />
+        </div>
         <div>
-          <h2 style={{ margin: 0, color: '#1E293B', fontSize: '24px', fontWeight: '700' }}>จัดการคำสั่งซื้อ (Orders)</h2>
+          <h2 style={{ margin: 0, color: '#1E293B', fontSize: '24px', fontWeight: '700' }}>จัดการคำสั่งซื้อ</h2>
           <p style={{ margin: '6px 0 0 0', color: '#64748B', fontSize: '15px' }}>ตรวจสอบรายการสั่งซื้อ อัปเดตสถานะการชำระเงิน และกำหนดการจัดส่ง</p>
         </div>
       </header>
 
+      {/* ✅ เปลี่ยน Emoji ⚠️ เป็น Icon AlertTriangle และจัดให้อยู่กึ่งกลางระนาบเดียวกับข้อความ */}
       {errorMessage && (
-        <div style={{ background: colors.dangerLight, color: colors.danger, padding: '16px 20px', borderRadius: '12px', marginBottom: '24px', fontWeight: '500' }}>⚠️ {errorMessage}</div>
+        <div style={{ background: colors.dangerLight, color: colors.danger, padding: '16px 20px', borderRadius: '12px', marginBottom: '24px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <AlertTriangle size={20} /> {errorMessage}
+        </div>
       )}
 
       <section style={{ background: colors.bgWhite, borderRadius: '16px', border: `1px solid ${colors.border}`, minHeight: '400px' }}>

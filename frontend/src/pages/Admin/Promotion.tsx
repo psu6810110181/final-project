@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import api, { type Promotion, type Product } from "../../services/api";
 import Confirm from "../../components/Confirm";
 import toast from "react-hot-toast";
+import { Target, Plus, AlertTriangle } from "lucide-react"; // ✅ นำเข้า Icons
 
 // นำเข้า Component ลูกที่ถูกแยกออกไป
 import PromotionForm from "../../components/Admin/PromotionForm";
@@ -173,18 +174,27 @@ const PromotionManager: React.FC = () => {
         marginBottom: '28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-          <div style={{ width: '64px', height: '64px', background: colors.primaryLight, borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>🎯</div>
+          {/* ✅ เปลี่ยน Emoji 🎯 เป็น Icon Target */}
+          <div style={{ width: '64px', height: '64px', background: colors.primaryLight, borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.primary }}>
+            <Target size={32} />
+          </div>
           <div>
             <h2 style={{ margin: 0, color: '#1E293B', fontSize: '24px', fontWeight: '700' }}>จัดการโปรโมชั่นสินค้า</h2>
             <p style={{ margin: '6px 0 0 0', color: '#64748B', fontSize: '15px' }}>สร้าง แก้ไข และจัดการโปรโมชั่น</p>
           </div>
         </div>
-        <button onClick={() => setShowForm(true)} style={{ padding: '12px 20px', background: colors.primary, color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
-          ➕ สร้างโปรโมชั่นใหม่
+        {/* ✅ เปลี่ยน Emoji ➕ เป็น Icon Plus */}
+        <button onClick={() => setShowForm(true)} style={{ padding: '12px 20px', background: colors.primary, color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Plus size={18} /> สร้างโปรโมชั่นใหม่
         </button>
       </header>
 
-      {error && <div style={{ background: colors.dangerLight, color: colors.danger, padding: '16px 20px', borderRadius: '12px', marginBottom: '24px', fontWeight: '500' }}>⚠️ {error}</div>}
+      {/* ✅ เปลี่ยน Emoji ⚠️ เป็น Icon AlertTriangle */}
+      {error && (
+        <div style={{ background: colors.dangerLight, color: colors.danger, padding: '16px 20px', borderRadius: '12px', marginBottom: '24px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <AlertTriangle size={20} /> {error}
+        </div>
+      )}
 
       <PromotionTable 
         promotions={promotions} loading={loading} colors={colors} 

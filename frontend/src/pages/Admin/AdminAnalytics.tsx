@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Loader, Package, Star, TrendingDown, TrendingUp } from 'lucide-react';
+import { Loader, Package, Star, TrendingDown, TrendingUp, AlertTriangle } from 'lucide-react'; // ✅ นำเข้า AlertTriangle
 import * as api from '../../services/api';
 import toast from 'react-hot-toast';
-import { type AnalyzedProduct } from '../../types/analytics'; // หรือแก้เป็น path ที่คุณสร้าง interface
+import { type AnalyzedProduct } from '../../types/analytics'; 
 
 // นำเข้า Components ย่อยที่เราแยกไว้
 import LowStockAlert from '../../components/Admin/Analytics/LowStockAlert';
@@ -96,7 +96,7 @@ const AdminAnalytics: React.FC = () => {
           toast.error(`มีสินค้า ${lowStockAlerts.length} รายการ สต็อกใกล้หมด!`, {
             id: 'low-stock-alert',
             duration: 4000,
-            icon: '⚠️',
+            icon: <AlertTriangle color="#ef4444" size={24} />, // ✅ เปลี่ยนจาก Emoji เป็น Icon
             style: { background: '#fff', color: '#1e293b', border: '1px solid #ef4444' }
           });
         }
@@ -122,11 +122,9 @@ const AdminAnalytics: React.FC = () => {
     return imgName.startsWith('http') ? imgName : `${API_BASE_URL}/uploads/${imgName}`;
   };
 
-  // กรองโปรโมชันส่งให้ตัวสร้างกราฟ
   const flashSales = useMemo(() => promotionsData.filter(p => p.isFlashSale).sort((a,b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()), [promotionsData]);
   const seasonSales = useMemo(() => promotionsData.filter(p => !p.isFlashSale).sort((a,b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()), [promotionsData]);
 
-  // เรียงลำดับสินค้า
   const sortedSalesProducts = useMemo(() => [...productsData].sort((a, b) => salesFilter === 'best' ? b.sold - a.sold : a.sold - b.sold).slice(0, 10), [productsData, salesFilter]);
   const sortedReviewProducts = useMemo(() => [...productsData].filter(p => reviewFilter === 'avg' ? p.reviewCount > 0 : Math.floor(p.avgRating) === Number(reviewFilter)).sort((a, b) => b.avgRating - a.avgRating).slice(0, 10), [productsData, reviewFilter]);
 

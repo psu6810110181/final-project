@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
 import { BarChart3 } from 'lucide-react';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer, 
+  Cell 
+} from 'recharts';
 
 interface RevenueChartProps {
   ordersData: any[];
@@ -22,7 +32,13 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ ordersData }) => {
          else if (h < 18) bins[2] += Number(o.totalAmount);
          else bins[3] += Number(o.totalAmount);
       });
-      return [ { label: '00:00-06:00', val: bins[0] }, { label: '06:00-12:00', val: bins[1] }, { label: '12:00-18:00', val: bins[2] }, { label: '18:00-24:00', val: bins[3] } ];
+      // ✅ เปลี่ยนจาก val เป็น Total เพื่อให้ตรงกับ nameKey
+      return [ 
+        { label: '00:00-06:00', Total: bins[0] }, 
+        { label: '06:00-12:00', Total: bins[1] }, 
+        { label: '12:00-18:00', Total: bins[2] }, 
+        { label: '18:00-24:00', Total: bins[3] } 
+      ];
     }
     if (revenueFilter === 'week') {
       const dayLabels = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
@@ -31,7 +47,7 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ ordersData }) => {
          const targetDate = new Date();
          targetDate.setDate(now.getDate() - i);
          const dayTotal = validOrders.filter(o => new Date(o.orderDate).toDateString() === targetDate.toDateString()).reduce((sum, o) => sum + Number(o.totalAmount), 0);
-         data.push({ label: dayLabels[targetDate.getDay()], val: dayTotal });
+         data.push({ label: dayLabels[targetDate.getDay()], Total: dayTotal });
       }
       return data;
     }
@@ -43,7 +59,7 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ ordersData }) => {
           const wTotal = validOrders.filter(o => {
              const od = new Date(o.orderDate); return od >= weekStart && od <= weekEnd;
           }).reduce((sum, o) => sum + Number(o.totalAmount), 0);
-          data.push({ label: `สัปดาห์ที่ ${4-i}`, val: wTotal });
+          data.push({ label: `สัปดาห์ที่ ${4-i}`, Total: wTotal });
       }
       return data;
     }
@@ -54,18 +70,44 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ ordersData }) => {
          const d = new Date(o.orderDate);
          if (d.getFullYear() === now.getFullYear()) bins[d.getMonth()] += Number(o.totalAmount);
       });
-      return bins.map((v, i) => ({ label: monthLabels[i], val: v }));
+      return bins.map((v, i) => ({ label: monthLabels[i], Total: v }));
     }
     return [];
   };
 
   const chartData = generateRealChartData();
-  const maxVal = Math.max(...chartData.map(d => d.val), 100);
+
+  // ✅ Custom Tooltip ในสไตล์ของ shadcn/ui (มี Indicator Dot)
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white/95 backdrop-blur-md border border-slate-200 shadow-[0_4px_20px_rgb(0,0,0,0.08)] rounded-xl p-3.5 min-w-[150px] z-50 relative">
+          <div className="text-slate-500 text-[11px] font-bold uppercase mb-2.5 tracking-wider">{label}</div>
+          <div className="flex items-center justify-between gap-6 text-sm font-semibold">
+            <div className="flex items-center gap-2">
+              {/* Indicator Dot (สีของ Recharts ที่พ่นมา หรือกำหนดเอง) */}
+              <span 
+                className="w-2.5 h-2.5 rounded-[3px] shadow-sm border border-black/5" 
+                style={{ backgroundColor: payload[0].color || '#3b82f6' }}
+              ></span>
+              <span className="text-slate-600">{payload[0].name}</span>
+            </div>
+            <span className="text-slate-900 font-bold tracking-tight">
+              ฿{Number(payload[0].value).toLocaleString()}
+            </span>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="bg-white/90 backdrop-blur-2xl p-8 rounded-[2rem] border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-8 relative overflow-hidden group">
+      {/* Background Glow */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 blur-[80px] pointer-events-none transition-colors duration-700" />
       
+      {/* Header & Controls */}
       <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 relative z-10 gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3 tracking-wide">
@@ -73,11 +115,20 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ ordersData }) => {
           </h2>
         </div>
         <div className="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200 shadow-inner">
-          {[ {id:'day', label:'วันนี้'}, {id:'week', label:'สัปดาห์'}, {id:'month', label:'เดือน'}, {id:'year', label:'ปี'} ].map((filter) => (
+          {[ 
+            { id: 'day', label: 'วันนี้' }, 
+            { id: 'week', label: 'สัปดาห์' }, 
+            { id: 'month', label: 'เดือน' }, 
+            { id: 'year', label: 'ปี' } 
+          ].map((filter) => (
             <button
               key={filter.id}
               onClick={() => setRevenueFilter(filter.id as any)}
-              className={`px-5 py-2 rounded-lg text-xs font-bold tracking-wide transition-all duration-300 ${revenueFilter === filter.id ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}
+              className={`px-5 py-2 rounded-lg text-xs font-bold tracking-wide transition-all duration-300 ${
+                revenueFilter === filter.id 
+                  ? 'bg-white text-blue-600 shadow-sm' 
+                  : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'
+              }`}
             >
               {filter.label}
             </button>
@@ -85,24 +136,56 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ ordersData }) => {
         </div>
       </div>
 
-      <div className="h-72 flex items-end justify-between gap-3 pt-6 border-b border-slate-200 relative z-10">
-        <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-6 opacity-30">
-            <div className="border-t border-dashed border-slate-300 w-full h-0"></div>
-            <div className="border-t border-dashed border-slate-300 w-full h-0"></div>
-            <div className="border-t border-dashed border-slate-300 w-full h-0"></div>
-        </div>
-        {chartData.map((d, i) => (
-          <div key={i} className="flex-1 flex flex-col items-center gap-3 relative group/bar cursor-pointer">
-            <div className="opacity-0 group-hover/bar:opacity-100 absolute -top-10 bg-slate-800 text-white font-bold text-xs py-1.5 px-3 rounded-lg whitespace-nowrap transition-all duration-300 shadow-lg translate-y-2 group-hover/bar:translate-y-0 z-10">
-                ฿{d.val.toLocaleString()}
-            </div>
-            <div 
-              className="w-full max-w-[60px] bg-gradient-to-t from-blue-600 to-blue-300 rounded-t-xl opacity-80 group-hover/bar:opacity-100 transition-all duration-500 group-hover/bar:shadow-md"
-              style={{ height: `${(d.val / maxVal) * 100}%`, minHeight: '4px' }}
-            ></div>
-            <span className="text-xs font-bold text-slate-500 tracking-wide truncate w-full text-center group-hover/bar:text-blue-600 transition-colors">{d.label}</span>
-          </div>
-        ))}
+      {/* Chart Area */}
+      <div className="h-72 w-full relative z-10 mt-4">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            {/* สี Gradient สำหรับแท่งกราฟ */}
+            <defs>
+              <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#3b82f6" stopOpacity={1}/>
+                <stop offset="100%" stopColor="#60a5fa" stopOpacity={0.6}/>
+              </linearGradient>
+            </defs>
+
+            {/* Grid แนวนอนแบบบางๆ */}
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+            
+            <XAxis 
+              dataKey="label" 
+              axisLine={false} 
+              tickLine={false} 
+              tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }} 
+              dy={10} 
+            />
+            
+            <YAxis 
+              axisLine={false} 
+              tickLine={false} 
+              tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} 
+              tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}
+            />
+
+            {/* ✅ Tooltip Style แบบ Shadcn */}
+            <Tooltip 
+              content={<CustomTooltip />} 
+              cursor={{ fill: 'rgba(241, 245, 249, 0.6)' }} // สีพื้นหลังตอน hover แท่งกราฟ
+            />
+
+            {/* ✅ แท่งกราฟ Bar (เชื่อมกับชื่อ Key ว่า Total) */}
+            <Bar 
+              dataKey="Total" 
+              name="Total" // เป็นตัวกำหนด nameKey ใน Tooltip
+              radius={[6, 6, 0, 0]} 
+              maxBarSize={50}
+              animationDuration={1500}
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill="url(#colorRevenue)" />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );
