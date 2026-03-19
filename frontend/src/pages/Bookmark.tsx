@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Heart, Loader, Star } from 'lucide-react';
 import * as api from '../services/api'; 
 import type { Promotion, Category, Room, Feature, Color, Material, Size } from '../services/api';
 import toast from 'react-hot-toast';
-import { useCart } from '../contexts/CartContext';
 import TabBar from '../components/TabBar'; 
 import ProductGrid, { type ProductWithPromo } from '../components/ProductGrid';
 import HomeFilterBar from '../components/HomeFilterBar'; 
@@ -39,9 +38,6 @@ const BookmarkPage = () => {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   const [currentPage, setCurrentPage] = useState<number>(1);
-
-  const { addToCart } = useCart();
-  const navigate = useNavigate();
 
   useEffect(() => { setCurrentPage(1); }, [selectedPromotions, selectedCategories, selectedRooms, selectedFeatures, selectedColors, selectedMaterials, selectedSizes, minPrice, maxPrice, searchTerm]);
 

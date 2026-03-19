@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import toast from 'react-hot-toast'; // ✅ นำเข้า toast สำหรับแจ้งเตือน
+import React from "react";
+import toast from 'react-hot-toast';
+import { SearchableSelect, MultiSearchableSelect } from './SearchableDropdown'; // ✅ นำเข้า SearchableDropdown
 
 interface ProductGeneralInfoProps {
   name: string; setName: (v: string) => void;
@@ -18,17 +19,7 @@ interface ProductGeneralInfoProps {
 }
 
 const ProductGeneralInfo: React.FC<ProductGeneralInfoProps> = (props) => {
-  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
-  const [showRoomDropdown, setShowRoomDropdown] = useState(false);
-  const [showMainColorDropdown, setShowMainColorDropdown] = useState(false);
-  const [showMainMaterialDropdown, setShowMainMaterialDropdown] = useState(false);
-  const [showMainSizeDropdown, setShowMainSizeDropdown] = useState(false);
 
-  const toggleFeature = (featureName: string) => {
-    props.setSelectedFeatures(prev => prev.includes(featureName) ? prev.filter(f => f !== featureName) : [...prev, featureName]);
-  };
-
-  // ✅ ฟังก์ชันจัดการการเปลี่ยนแปลงคลังหลัก (ป้องกันติดลบ)
   const handleMainStockChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     if (val === '') {
@@ -89,86 +80,77 @@ const ProductGeneralInfo: React.FC<ProductGeneralInfoProps> = (props) => {
             <div style={{ display: 'flex', gap: '16px' }}>
               <div style={{ flex: 1 }}>
                 <label style={labelStyle}>หมวดหมู่สินค้า <span style={{color: colors.danger}}>*</span></label>
-                <div style={{ position: 'relative', ...inputStyle, padding: 0, cursor: 'pointer' }}>
-                  <div onClick={() => setShowCategoryDropdown(!showCategoryDropdown)} style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between' }}>
-                    <span>{props.selectedCategory || '-- เลือก --'}</span> <span>▼</span>
-                  </div>
-                  {showCategoryDropdown && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: `1px solid ${colors.border}`, zIndex: 10, maxHeight: '200px', overflowY: 'auto' }}>
-                      {props.categoriesList.map(cat => (
-                        <div key={cat.id} onClick={() => { props.setSelectedCategory(props.selectedCategory === cat.name ? "" : cat.name); setShowCategoryDropdown(false); }} style={{ padding: '8px 16px', cursor: 'pointer' }}>
-                          {cat.name}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                {/* ✅ ใช้ SearchableSelect แทน */}
+                <SearchableSelect 
+                  value={props.selectedCategory} 
+                  onChange={props.setSelectedCategory} 
+                  options={[
+                    { value: "", label: "-- เลิกเลือก --" },
+                    ...props.categoriesList.map(c => ({ value: c.name, label: c.name }))
+                  ]} 
+                  placeholder="ค้นหาหมวดหมู่..." 
+                />
               </div>
               <div style={{ flex: 1 }}>
                 <label style={labelStyle}>ห้อง</label>
-                <div style={{ position: 'relative', ...inputStyle, padding: 0, cursor: 'pointer' }}>
-                  <div onClick={() => setShowRoomDropdown(!showRoomDropdown)} style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between' }}>
-                    <span>{props.selectedRoom || '-- เลือก --'}</span> <span>▼</span>
-                  </div>
-                  {showRoomDropdown && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: `1px solid ${colors.border}`, zIndex: 10, maxHeight: '200px', overflowY: 'auto' }}>
-                      {props.roomsList.map(room => (
-                        <div key={room.id} onClick={() => { props.setSelectedRoom(props.selectedRoom === room.name ? "" : room.name); setShowRoomDropdown(false); }} style={{ padding: '8px 16px', cursor: 'pointer' }}>
-                          {room.name}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                {/* ✅ ใช้ SearchableSelect แทน */}
+                <SearchableSelect 
+                  value={props.selectedRoom} 
+                  onChange={props.setSelectedRoom} 
+                  options={[
+                    { value: "", label: "-- เลิกเลือก --" },
+                    ...props.roomsList.map(r => ({ value: r.name, label: r.name }))
+                  ]} 
+                  placeholder="ค้นหาห้อง..." 
+                />
               </div>
             </div>
 
-            {/* คุณสมบัติหลัก 4 ช่อง */}
+            {/* คุณสมบัติหลัก */}
             <div style={{ display: 'flex', gap: '16px' }}>
-              {[ 
-                { label: 'สีหลัก', val: props.selectedMainColor, set: props.setSelectedMainColor, list: props.colorsList, show: showMainColorDropdown, setShow: setShowMainColorDropdown },
-                { label: 'วัสดุหลัก', val: props.selectedMainMaterial, set: props.setSelectedMainMaterial, list: props.materialsList, show: showMainMaterialDropdown, setShow: setShowMainMaterialDropdown },
-                { label: 'ขนาดหลัก', val: props.selectedMainSize, set: props.setSelectedMainSize, list: props.sizesList, show: showMainSizeDropdown, setShow: setShowMainSizeDropdown }
-              ].map((item, idx) => (
-                <div key={idx} style={{ flex: 1 }}>
-                  <label style={labelStyle}>{item.label}</label>
-                  <div style={{ position: 'relative', ...inputStyle, padding: 0, cursor: 'pointer' }}>
-                    <div onClick={() => item.setShow(!item.show)} style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between' }}>
-                      <span>{item.val || '-'}</span> <span>▼</span>
-                    </div>
-                    {item.show && (
-                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: `1px solid ${colors.border}`, zIndex: 10, maxHeight: '200px', overflowY: 'auto' }}>
-                        {item.list.map(opt => (
-                          <div key={opt.id} onClick={() => { item.set(item.val === opt.name ? "" : opt.name); item.setShow(false); }} style={{ padding: '8px 16px', cursor: 'pointer' }}>
-                            {opt.name}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>สีหลัก</label>
+                <SearchableSelect 
+                  value={props.selectedMainColor} 
+                  onChange={props.setSelectedMainColor} 
+                  options={[{ value: "", label: "-- เลิกเลือก --" }, ...props.colorsList.map(c => ({ value: c.name, label: c.name }))]} 
+                  placeholder="ค้นหาสี..." 
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>วัสดุหลัก</label>
+                <SearchableSelect 
+                  value={props.selectedMainMaterial} 
+                  onChange={props.setSelectedMainMaterial} 
+                  options={[{ value: "", label: "-- เลิกเลือก --" }, ...props.materialsList.map(m => ({ value: m.name, label: m.name }))]} 
+                  placeholder="ค้นหาวัสดุ..." 
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>ขนาดหลัก</label>
+                <SearchableSelect 
+                  value={props.selectedMainSize} 
+                  onChange={props.setSelectedMainSize} 
+                  options={[{ value: "", label: "-- เลิกเลือก --" }, ...props.sizesList.map(s => ({ value: s.name, label: s.name }))]} 
+                  placeholder="ค้นหาขนาด..." 
+                />
+              </div>
               <div style={{ flex: 1 }}>
                 <label style={labelStyle}>คลังหลัก</label>
-                {/* ✅ ผูก Event onChange และใส่ min="0" ป้องกันการติดลบ */}
-                <input type="number" min="0" value={props.mainStock} onChange={handleMainStockChange} style={inputStyle} />
+                <input type="number" min="0" value={props.mainStock} onChange={handleMainStockChange} style={{...inputStyle, padding: '10px 16px', height: '44px'}} />
               </div>
             </div>
 
             {/* Features */}
             <div>
               <label style={labelStyle}>✨ คุณสมบัติพิเศษ</label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', padding: '12px', background: colors.bgLight, borderRadius: '10px', border: `1px solid ${colors.border}` }}>
-                {props.featuresList.map(feat => {
-                  const isSelected = props.selectedFeatures.includes(feat.name);
-                  return (
-                    <label key={feat.id} style={{ display: 'flex', gap: '6px', cursor: 'pointer', background: isSelected ? colors.primaryLight : 'white', border: `1px solid ${isSelected ? colors.primary : colors.border}`, padding: '6px 14px', borderRadius: '30px', fontSize: '13px' }}>
-                      <input type="checkbox" checked={isSelected} onChange={() => toggleFeature(feat.name)} style={{ display: 'none' }} />
-                      {feat.name}
-                    </label>
-                  );
-                })}
-              </div>
+              {/* ✅ ใช้ MultiSearchableSelect สำหรับเลือกหลายค่า */}
+              <MultiSearchableSelect 
+                values={props.selectedFeatures} 
+                onChange={props.setSelectedFeatures} 
+                options={props.featuresList.map(f => ({ value: f.name, label: f.name }))} 
+                placeholder="ค้นหาคุณสมบัติพิเศษ (เลือกได้หลายอัน)..." 
+              />
             </div>
           </div>
         </div>

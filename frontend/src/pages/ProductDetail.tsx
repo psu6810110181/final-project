@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom'; 
 import { Star, Minus, Plus, ChevronRight, Loader, Check } from 'lucide-react'; 
 import { useCart } from '../contexts/CartContext';
-import { useAuth } from '../contexts/AuthContext'; 
 import toast from 'react-hot-toast'; 
 import * as api from '../services/api'; 
 import type { Product } from '../services/api'; 
@@ -22,7 +21,6 @@ const getColorHex = (colorName: string) => {
 const ProductDetail = () => {
   const { id } = useParams(); 
   const { addToCart } = useCart();
-  const { user } = useAuth(); 
   const navigate = useNavigate(); 
 
   const [product, setProduct] = useState<Product | null>(null); 

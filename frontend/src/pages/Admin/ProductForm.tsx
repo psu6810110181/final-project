@@ -1,9 +1,21 @@
 import React, { useState, useEffect } from "react";
-import api from "../../services/api"; 
-import { createProduct, updateProduct, getAllCategories, getAllRooms, getAllFeatures, getAllColors, getAllMaterials, getAllSizes } from "../../services/api"; 
+import api, { 
+  createProduct, 
+  updateProduct, 
+  getAllCategories, 
+  getAllRooms, 
+  getAllFeatures, 
+  getAllColors, 
+  getAllMaterials, 
+  getAllSizes,
+  getAllProducts
+} from "../../services/api"; 
 import toast from "react-hot-toast"; 
 import ProductGeneralInfo from "../../components/Admin/ProductGeneralInfo";
-import ProductVariants, {type Variant } from "../../components/Admin/ProductVariants";
+import ProductVariants, { type Variant } from "../../components/Admin/ProductVariants";
+
+// ✅ นำเข้า SearchableSelect ที่เราเพิ่งสร้าง
+import { SearchableSelect } from "../../components/Admin/SearchableDropdown";
 
 interface ProductFormProps {
   editingProductId: string | null;
@@ -12,6 +24,9 @@ interface ProductFormProps {
 }
 
 const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, onSuccess }) => {
+  const [localEditingId, setLocalEditingId] = useState<string | null>(editingProductId);
+  const [allProductsList, setAllProductsList] = useState<any[]>([]);
+
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
@@ -39,14 +54,20 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   useEffect(() => {
-    Promise.all([getAllCategories(), getAllRooms(), getAllFeatures(), getAllColors(), getAllMaterials(), getAllSizes()])
-      .then(([cats, rms, fts, cols, mats, szs]) => {
+    Promise.all([
+      getAllCategories(), getAllRooms(), getAllFeatures(), 
+      getAllColors(), getAllMaterials(), getAllSizes(),
+      getAllProducts() 
+    ])
+      .then(([cats, rms, fts, cols, mats, szs, prods]) => {
         setCategoriesList(cats); setRoomsList(rms); setFeaturesList(fts);
         setColorsList(cols); setMaterialsList(mats); setSizesList(szs);
+        setAllProductsList(Array.isArray(prods) ? prods : (prods as any).data || []);
       }).catch(console.error);
   }, []);
 
   useEffect(() => {
+    setLocalEditingId(editingProductId);
     if (editingProductId) fetchProductDetails(editingProductId);
     else resetForm();
   }, [editingProductId]);
@@ -76,12 +97,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
           originalImage: v.image?.startsWith('http') || v.image?.startsWith('blob:') ? "" : v.image
         })));
       } else setVariants([{ color: "", material: "", size: "", price: "", stock: "" }]);
-    } catch (error) { toast.error("ไม่สามารถโหลดข้อมูลสินค้าเพื่อแก้ไขได้"); }
+    } catch (error) { 
+      toast.error("ไม่สามารถโหลดข้อมูลสินค้าเพื่อแก้ไขได้"); 
+    }
   };
 
   const resetForm = () => {
     setName(""); setPrice(""); setDescription(""); setImageUrl(""); setImageFile(null); setOriginalMainImage("");
     setSelectedCategory(""); setSelectedRoom(""); setSelectedFeatures([]); setSelectedMainColor(""); setSelectedMainMaterial(""); setSelectedMainSize("");
+    setMainStock("");
     setVariants([{ color: "", material: "", size: "", price: "", stock: "" }]);
   };
 
@@ -104,7 +128,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
     if (selectedMainSize) formData.append('size', selectedMainSize);
 
     if (imageFile) formData.append('image', imageFile);
-    else if (editingProductId && originalMainImage) formData.append('existingImage', originalMainImage);
+    else if (localEditingId && originalMainImage) formData.append('existingImage', originalMainImage);
 
     variants.forEach((v, index) => { if (v.imageFile) formData.append(`variantImage_${index}`, v.imageFile); });
     if (selectedFeatures.length > 0) formData.append('features', JSON.stringify(selectedFeatures)); 
@@ -118,16 +142,59 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
     if (formattedVariants.length > 0) formData.append('variants', JSON.stringify(formattedVariants));
 
     try {
-      if (editingProductId) { await updateProduct(editingProductId, formData); toast.success("แก้ไขสินค้าสำเร็จ"); } 
-      else { await createProduct(formData); toast.success("บันทึกสินค้าสำเร็จ"); }
+      if (localEditingId) { 
+        await updateProduct(localEditingId, formData); 
+        toast.success("แก้ไขสินค้าสำเร็จ"); 
+      } else { 
+        await createProduct(formData); 
+        toast.success("บันทึกสินค้าสำเร็จ"); 
+      }
       setTimeout(onSuccess, 1500); 
-    } catch (error) { toast.error("เกิดข้อผิดพลาดในการบันทึกข้อมูล"); }
+    } catch (error) { 
+      toast.error("เกิดข้อผิดพลาดในการบันทึกข้อมูล"); 
+    }
   };
 
   return (
     <article style={{ maxWidth: '1000px', margin: '0 auto', padding: '10px 0', fontFamily: "'Prompt', sans-serif" }}>
-      <header style={{ background: '#F8FAFC', padding: '24px 32px', borderRadius: '16px', borderLeft: `8px solid ${editingProductId ? '#148F96' : '#D65A31'}`, marginBottom: '28px', display: 'flex', gap: '24px' }}>
-        <div><h2 style={{ margin: 0, fontSize: '24px' }}>{editingProductId ? 'แก้ไขข้อมูลสินค้า' : 'เพิ่มสินค้าใหม่'}</h2></div>
+      
+      {/* ✅ ส่วน Header และ Dropdown แบบใหม่ที่มี Search */}
+      <header style={{ 
+        background: '#F8FAFC', padding: '24px 32px', borderRadius: '16px', 
+        borderLeft: `8px solid ${localEditingId ? '#148F96' : '#D65A31'}`, 
+        marginBottom: '28px', display: 'flex', flexDirection: 'column', gap: '16px' 
+      }}>
+        
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+          <h2 style={{ margin: 0, fontSize: '24px', color: '#1e293b' }}>
+            {localEditingId ? 'แก้ไขข้อมูลสินค้า' : 'เพิ่มสินค้าใหม่'}
+          </h2>
+
+          <div style={{ flex: '1', minWidth: '280px', maxWidth: '400px' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>
+              🔍 ค้นหาสินค้าเพื่อดึงข้อมูลมาแก้ไข
+            </label>
+            
+            {/* ✅ เรียกใช้ SearchableSelect */}
+            <SearchableSelect 
+              value={localEditingId || ""}
+              onChange={(val) => {
+                setLocalEditingId(val || null);
+                if (val) fetchProductDetails(val);
+                else resetForm();
+              }}
+              options={[
+                { value: "", label: "-- ➕ สร้างสินค้าใหม่ (เคลียร์ฟอร์ม) --" },
+                ...allProductsList.map((product) => ({
+                  value: product.id,
+                  label: `${product.name} (คงเหลือ: ${product.stock})`
+                }))
+              ]}
+              placeholder="ค้นหารายชื่อสินค้า..."
+            />
+            
+          </div>
+        </div>
       </header>
 
       <form onSubmit={handleConfirm}>
@@ -143,9 +210,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
           variants={variants} setVariants={setVariants} colorsList={colorsList} materialsList={materialsList} sizesList={sizesList}
         />
         <footer style={{ display: "flex", justifyContent: "flex-end", gap: "16px", padding: '10px 0 40px 0' }}>
-          {editingProductId && <button type="button" onClick={onCancel} style={{ padding: "14px 28px", background: 'white', borderRadius: "10px", border: '1px solid #E5E7EB', cursor: "pointer" }}>ยกเลิก</button>}
-          <button type="submit" style={{ padding: "14px 32px", background: editingProductId ? '#148F96' : '#D65A31', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>
-            {editingProductId ? 'บันทึกการแก้ไข' : 'ยืนยันการเพิ่มสินค้า'}
+          {localEditingId && (
+            <button type="button" onClick={onCancel} style={{ padding: "14px 28px", background: 'white', borderRadius: "10px", border: '1px solid #E5E7EB', cursor: "pointer", fontWeight: 'bold' }}>
+              ยกเลิกการแก้ไข
+            </button>
+          )}
+          <button type="submit" style={{ padding: "14px 32px", background: localEditingId ? '#148F96' : '#D65A31', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' }}>
+            {localEditingId ? 'บันทึกการแก้ไข' : 'ยืนยันการเพิ่มสินค้า'}
           </button>
         </footer>
       </form>
