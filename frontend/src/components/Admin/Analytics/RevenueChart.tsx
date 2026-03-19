@@ -180,7 +180,7 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ ordersData }) => {
               maxBarSize={50}
               animationDuration={1500}
             >
-              {chartData.map((entry, index) => (
+              {chartData.map(( index) => (
                 <Cell key={`cell-${index}`} fill="url(#colorRevenue)" />
               ))}
             </Bar>
