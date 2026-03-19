@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader } from 'lucide-react'; 
+import { Loader, Flame } from 'lucide-react'; // ✅ นำเข้า Icon Flame
 import * as api from '../services/api'; 
 import type { Product, Category, Room, Feature, Color, Material, Size, Promotion } from '../services/api';
 import toast from 'react-hot-toast';
@@ -46,7 +46,7 @@ const HomepagePromotion = () => {
 
   const [currentPage, setCurrentPage] = useState<number>(1);
   
-  // ✅ แยก State สำหรับจัดการ Limit และ Page ของ "แต่ละโปรโมชัน"
+  // แยก State สำหรับจัดการ Limit และ Page ของ "แต่ละโปรโมชัน"
   const [promoLimits, setPromoLimits] = useState<Record<string, number>>({});
   const [promoPages, setPromoPages] = useState<Record<string, number>>({});
 
@@ -96,7 +96,8 @@ const HomepagePromotion = () => {
         setMaterials(Array.isArray(materialsData) ? materialsData : []);
         setSizes(Array.isArray(sizesData) ? sizesData : []);
 
-        const token = localStorage.getItem('token');
+        // ✅ แก้ไข: เช็คโทเคนทั้งจาก localStorage และ sessionStorage
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         if (token) {
           try {
             const bookmarkData = await api.getBookmarks();
@@ -110,7 +111,8 @@ const HomepagePromotion = () => {
     fetchData();
 
     const handleBookmarkUpdate = () => {
-      const token = localStorage.getItem('token');
+      // ✅ แก้ไข: เช็คโทเคนทั้งจาก localStorage และ sessionStorage ตอนอัปเดตแบบ Real-time
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       if (token) {
           api.getBookmarks().then(data => setBookmarks((Array.isArray(data) ? data : (data?.data || [])).map((b: any) => b.productId || b.product?.id || b.id))).catch(() => {});
       } else setBookmarks([]);
@@ -201,7 +203,7 @@ const HomepagePromotion = () => {
              <ProductGrid 
                 title="ผลการค้นหาและตัวกรอง" 
                 items={paginatedFiltered} 
-                gridCols={5} // โหมด Filter โชว์ 5 แถว
+                gridCols={5} 
                 showPagination={true} currentPage={currentPage} totalPages={totalPagesFiltered} onPageChange={setCurrentPage}
                 bookmarks={bookmarks} setBookmarks={setBookmarks}
                 theme="promo" 
@@ -212,17 +214,13 @@ const HomepagePromotion = () => {
                  const allPromoItems = products.filter(p => p.promo?.id === promo.id);
                  if (allPromoItems.length === 0) return null;
 
-                 // ✅ ดึงลิมิตและหน้าที่กำลังดูอยู่ของ "โปรโมชันนี้" (ค่าเริ่มต้นคือ ลิมิต 10, หน้า 1)
                  const currentLimit = promoLimits[promo.id] || 10;
                  const currentPromoPage = promoPages[promo.id] || 1;
 
-                 // ✅ โลจิกตัดแบ่งสินค้า
                  let displayItems: ProductWithPromo[] = [];
                  if (currentLimit < 20) {
-                     // ถ้ายังไม่ถูกกด "แสดงสินค้าเพิ่มเติม" ให้โชว์แค่ 10 ชิ้น
                      displayItems = allPromoItems.slice(0, currentLimit);
                  } else {
-                     // ถ้ากด "แสดงสินค้าเพิ่มเติม" แล้ว (ลิมิตเป็น 20) จะใช้ Pagination มาช่วย
                      const startIndex = (currentPromoPage - 1) * 20;
                      displayItems = allPromoItems.slice(startIndex, startIndex + 20);
                  }
@@ -232,21 +230,20 @@ const HomepagePromotion = () => {
                  return (
                    <div key={promo.id} className="relative mb-6 flex flex-col">
                      <ProductGrid 
-                        title={`🔥 ${promo.title}`} 
+                        // ✅ เปลี่ยน Emoji เป็น Icon Flame ตรงนี้
+                        title={<span className="flex items-center gap-2"><Flame className="text-red-500" size={24} /> {promo.title}</span>} 
                         items={displayItems} 
-                        gridCols={5} // แถวละ 5
-                        horizontal={false} // ห้ามเลื่อนซ้ายขวา
+                        gridCols={5} 
+                        horizontal={false} 
                         bookmarks={bookmarks} 
                         setBookmarks={setBookmarks} 
                         theme="promo" 
-                        // 💡 โชว์ Pagination เฉพาะตอนที่ลิมิตเป็น 20 และหน้าทั้งหมด > 1
                         showPagination={currentLimit >= 20 && totalPagesForThisPromo > 1}
                         currentPage={currentPromoPage}
                         totalPages={totalPagesForThisPromo}
                         onPageChange={(page) => setPromoPages(prev => ({ ...prev, [promo.id]: page }))}
                      />
 
-                     {/* ✅ ปุ่ม "แสดงสินค้าเพิ่มเติม" แสดงใต้เฉพาะโปรที่สินค้า > 10 ชิ้น */}
                      {currentLimit < 20 && allPromoItems.length > 10 && (
                        <div className="flex justify-center -mt-8 mb-12 relative z-20">
                           <button 

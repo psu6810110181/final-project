@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader, Sparkles, Armchair } from 'lucide-react'; // ✅ นำเข้า Icons
+import { Loader, Sparkles, Armchair } from 'lucide-react';
 import * as api from '../services/api'; 
 import type { Product, Category, Room, Feature, Color, Material, Size, Promotion } from '../services/api';
 import toast from 'react-hot-toast';
@@ -12,7 +12,6 @@ import HomeFilterBar from '../components/HomeFilterBar';
 import { getSeasonFromPromoTitle } from '../constants/seasonalThemes';
 import heroBackground from '../assets/background.jpg';
 
-// ✅ ปรับเป็น 20 ชิ้นต่อหน้า (แถวละ 5 = 4 แถว) สำหรับหน้าที่ 2 เป็นต้นไป
 const ITEMS_PER_PAGE_GRID = 20;
 
 function calculateDiscountPrice(price: string | number, promo: Promotion) {
@@ -32,7 +31,7 @@ const Home = () => {
 
   const [recommendedProducts, setRecommendedProducts] = useState<ProductWithPromo[]>([]);
   const [seasonalProducts, setSeasonalProducts] = useState<ProductWithPromo[]>([]);
-  const [allGeneralProducts, setAllGeneralProducts] = useState<ProductWithPromo[]>([]); // ✅ สินค้าทั่วไปทั้งหมด (เพื่อเอามาจัดหน้า)
+  const [allGeneralProducts, setAllGeneralProducts] = useState<ProductWithPromo[]>([]); 
 
   const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -101,9 +100,9 @@ const Home = () => {
         setMaterials(Array.isArray(materialsData) ? materialsData : []);
         setSizes(Array.isArray(sizesData) ? sizesData : []);
 
-        // Algorithm แนะนำสินค้า
+        // ✅ แก้ไข: เช็คโทเคนทั้งจาก localStorage และ sessionStorage สำหรับประวัติการซื้อ
         let purchasedIds: string[] = [];
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         if (token) {
           try {
             const myOrdersData = await api.getMyOrders();
@@ -123,9 +122,10 @@ const Home = () => {
           setRecommendedProducts([...productsWithPromo].sort((a, b) => Number(a.stock) - Number(b.stock)).slice(0, 10));
         }
 
-        setSeasonalProducts(productsWithPromo.filter(p => p.promo && !p.promo.isFlashSale).slice(0, 10)); // แถวละ 10
-        setAllGeneralProducts(productsWithPromo.filter(p => !p.promo)); // ✅ เก็บสินค้าทั่วไปทั้งหมดไว้เตรียมแบ่งหน้า (ยกเลิกแถวโปรโมชันแล้ว)
+        setSeasonalProducts(productsWithPromo.filter(p => p.promo && !p.promo.isFlashSale).slice(0, 10)); 
+        setAllGeneralProducts(productsWithPromo.filter(p => !p.promo));
 
+        // ✅ แก้ไข: เช็คโทเคนทั้งจาก localStorage และ sessionStorage สำหรับดึง Bookmark ตอนเริ่มโหลด
         if (token) {
           try {
             const bookmarkData = await api.getBookmarks();
@@ -139,7 +139,8 @@ const Home = () => {
     fetchData();
 
     const handleBookmarkUpdate = () => {
-      const token = localStorage.getItem('token');
+      // ✅ แก้ไข: เช็คโทเคนทั้งจาก localStorage และ sessionStorage ตอนดึง Real-time
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       if (token) {
           api.getBookmarks().then(data => setBookmarks((Array.isArray(data) ? data : (data?.data || [])).map((b: any) => b.productId || b.product?.id || b.id))).catch(() => {});
       } else setBookmarks([]);
@@ -170,12 +171,9 @@ const Home = () => {
 
   const hasAnyFilter = selectedCategories.length > 0 || selectedRooms.length > 0 || selectedFeatures.length > 0 || minPrice !== '' || maxPrice !== '' || searchTerm !== '' || selectedColors.length > 0 || selectedMaterials.length > 0 || selectedSizes.length > 0;
 
-  // ✅ การแบ่งหน้าสำหรับโหมดมี Filter
   const totalPagesFiltered = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE_GRID);
   const paginatedFiltered = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE_GRID, currentPage * ITEMS_PER_PAGE_GRID);
 
-  // ✅ การแบ่งหน้าสำหรับโหมดหน้าแรกปกติ (ดึงจากสินค้าทั่วไปที่เหลือ)
-  // หน้า 1 โชว์ 10 ชิ้น หน้า 2 เป็นต้นไปโชว์ 20 ชิ้น
   const totalPagesDefault = allGeneralProducts.length > 10 ? 1 + Math.ceil((allGeneralProducts.length - 10) / ITEMS_PER_PAGE_GRID) : 1;
   let paginatedDefaultGeneral: ProductWithPromo[] = [];
   if (currentPage === 1) {
@@ -196,7 +194,6 @@ const Home = () => {
 
       <div className="relative z-10"><TabBar /></div>
 
-      {/* --- 🎬 HERO SECTION --- */}
       <div className="relative h-[60vh] min-h-[450px] flex flex-col justify-center items-center text-center overflow-hidden z-10">
         <div className="absolute inset-0 bg-slate-900/60 z-10" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#F9F9F9] via-transparent to-transparent z-10" />
@@ -215,7 +212,6 @@ const Home = () => {
         </div>
       </div>
 
-      {/* --- 🎬 FILTER BAR --- */}
       <HomeFilterBar 
         categories={categories} rooms={rooms} features={features} colors={colors} materials={materials} sizes={sizes}
         selectedCategories={selectedCategories} setSelectedCategories={setSelectedCategories}
@@ -230,20 +226,18 @@ const Home = () => {
         filteredCount={filteredProducts.length}
       />
 
-      {/* --- MAIN CONTENT --- */}
       <div className="container mx-auto px-4 relative z-20">
         <main>
           {hasAnyFilter ? (
              <ProductGrid 
                 title="ผลการค้นหา" 
                 items={paginatedFiltered} 
-                gridCols={5} // ✅ ตั้งเป็น 5 แถว
+                gridCols={5}
                 showPagination={true} currentPage={currentPage} totalPages={totalPagesFiltered} onPageChange={setCurrentPage}
                 bookmarks={bookmarks} setBookmarks={setBookmarks}
              />
           ) : (
              <>
-                {/* หน้าที่ 1 โชว์ทุกแถว / หน้า 2+ จะซ่อนหมดเหลือแค่สินค้าทั่วไป */}
                 {currentPage === 1 && (
                   <>
                     <SeasonalPromotion products={seasonalProducts} title={seasonalProducts[0]?.promo?.title} season={seasonalProducts[0]?.promo?.title ? getSeasonFromPromoTitle(seasonalProducts[0].promo.title) : undefined} />
@@ -258,14 +252,13 @@ const Home = () => {
                   </>
                 )}
                 
-                {/* แถวสินค้าทั่วไป มีตลอดทุกหน้า */}
                 <ProductGrid 
                   title={<span className="flex items-center gap-2"><Armchair className="text-slate-700" size={24} /> {currentPage === 1 ? "สินค้าทั่วไป" : `สินค้าทั่วไป (หน้า ${currentPage})`}</span>} 
                   items={paginatedDefaultGeneral} 
                   bookmarks={bookmarks} 
                   setBookmarks={setBookmarks} 
-                  horizontal={currentPage === 1} // ✅ หน้า 1 ให้เลื่อนแนวนอน
-                  gridCols={currentPage === 1 ? 4 : 5} // ✅ หน้าที่ 2+ เปลี่ยนเป็น 5 คอลัมน์
+                  horizontal={currentPage === 1}
+                  gridCols={currentPage === 1 ? 4 : 5}
                   showPagination={true} 
                   currentPage={currentPage} 
                   totalPages={totalPagesDefault} 
