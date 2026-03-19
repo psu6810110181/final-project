@@ -33,7 +33,7 @@ export interface Material { id: number; name: string; }
 export interface Size { id: number; name: string; }
 
 export interface Variant {
-  id?: number; // ✅ เพิ่ม id ของ variant เผื่อต้องใช้งาน
+  id?: number; 
   color: string;
   material: string;
   size: string;
@@ -65,12 +65,17 @@ export interface Order {
   paymentSlip?: string;
 }
 
+// ✅ อัปเดต Interface Review ให้รองรับข้อมูลที่ดึงมาแสดงในหน้าจัดการรีวิว
 export interface Review {
   id?: string;
   productId: string;
   rating: number;
   comment: string;
-  user?: { username: string };
+  user?: any;
+  product?: any;
+  productVariant?: any;
+  orderItem?: any;
+  orderId?: string;
   createdAt?: string;
 }
 
@@ -89,12 +94,10 @@ export interface Promotion {
   updatedAt?: string;
 }
 
-// ✅ สร้าง Helper function ดึง Token จากที่ไหนก็ได้ที่มี
 export const getToken = () => {
   return localStorage.getItem('token') || sessionStorage.getItem('token');
 };
 
-// ✅ สร้าง Header สำหรับเคสที่ต้องการส่ง Token แยก (ถ้า axios interceptor ยังไม่ได้ทำ)
 export const authHeader = () => {
   const token = getToken();
   if (token) {
@@ -251,16 +254,11 @@ export const getCart = async () => {
   return await api.get('/cart-items');
 };
 
-// ✅ แก้ไขให้รับ variantId ได้ และกรองค่าก่อนส่งให้ Backend
 export const addToCart = async (productId: string | number, quantity: number, installationQty: number = 0, variantId?: number) => {
-  // ✅ จัดเตรียมข้อมูลพื้นฐาน
   const payload: any = { productId, quantity, installationQty };
-  
-  // ✅ ตรวจสอบว่าถ้ามี variantId จริงๆ ค่อยแนบไป (ป้องกันการส่ง null/undefined ไปให้ Backend)
   if (variantId !== undefined && variantId !== null) {
     payload.variantId = variantId;
   }
-  
   return await api.post('/cart-items', payload);
 };
 
@@ -316,7 +314,6 @@ export const getAllOrders = async () => {
   return response.data;
 };
 
-// สำหรับปุ่มชำระเงินต่อ (Retry Payment)
 export const retryPayment = async (orderId: string) => {
   const response = await api.post(`/orders/${orderId}/retry-payment`);
   return response.data;
@@ -360,7 +357,14 @@ export const togglePromotionStatus = async (id: string, isActive: boolean) => {
   return response.data;
 };
 
-// 12. Reviews
+// ---------------------------------------------------------
+// ✅ 12. Reviews
+// ---------------------------------------------------------
+export const getAllReviews = async (): Promise<any[]> => {
+  const response = await api.get('/reviews');
+  return response.data;
+};
+
 export const getReviewsByProduct = async (productId: string): Promise<Review[]> => {
   const response = await api.get(`/reviews/product/${productId}`);
   return response.data;
@@ -372,7 +376,7 @@ export const createReview = async (reviewData: Review) => {
 };
 
 // ---------------------------------------------------------
-// ✅ 13. Bookmarks (สินค้าที่สนใจ)
+// 13. Bookmarks (สินค้าที่สนใจ)
 // ---------------------------------------------------------
 export const getBookmarks = async () => {
   const response = await api.get('/bookmarks');
@@ -387,13 +391,12 @@ export const addBookmark = async (productId: string) => {
 export const removeBookmark = async (productId: string) => {
   return await api.delete(`/bookmarks/${productId}`);
 };
-// เพิ่มฟังก์ชันสำหรับขอเปลี่ยน Email
+
 export const requestEmailChange = async (data: { currentPassword: string; newEmail: string }) => {
   const response = await api.post('/users/change-email-request', data);
   return response.data;
 };
 
-// เพิ่มฟังก์ชันสำหรับขอเปลี่ยน Password
 export const changePassword = async (data: { currentPassword: string; newPassword: string }) => {
   const response = await api.post('/users/change-password', data);
   return response.data;
@@ -404,9 +407,9 @@ export const verifyEmailChange = async (token: string) => {
   return response.data;
 };
 
-// เพิ่มฟังก์ชันดึงสินค้าแบบรับหน้า
 export const getProducts = async (page: number = 1, limit: number = 12) => {
   const response = await api.get(`/products?page=${page}&limit=${limit}`);
   return response.data;
 };
+
 export default api;

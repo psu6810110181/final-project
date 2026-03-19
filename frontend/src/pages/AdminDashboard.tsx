@@ -5,25 +5,24 @@ import ProductForm from "./Admin/ProductForm";
 import ManageSystem from "./Admin/ManageSystem";
 import ManageOrders from "./Admin/ManageOrders";
 import PromotionManager from "./Admin/Promotion";
+import AdminAnalytics from "./Admin/AdminAnalytics";
+import AdminReviews from "./Admin/AdminReviews"; // ✅ นำเข้าหน้าใหม่
 
 const AdminDashboard: React.FC = () => {
-  // State ควบคุมหน้าหลัก และ ID สินค้าที่กำลังแก้ไข
-  const [activeView, setActiveView] = useState<'addProduct' | 'manageSystem' | 'manageOrders' | 'managePromotions'>('addProduct');
+  // ✅ เพิ่ม 'manageReviews' เข้าไปใน type ของ activeView
+  const [activeView, setActiveView] = useState<'analytics' | 'addProduct' | 'manageSystem' | 'manageOrders' | 'managePromotions' | 'manageReviews'>('analytics');
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
 
-  // เมื่อกดปุ่มแก้ไขจากหน้า ManageSystem
   const handleEditProduct = (productId: string) => {
     setEditingProductId(productId);
     setActiveView('addProduct');
   };
 
-  // เมื่อกดเมนูเพิ่มสินค้า (ล้างค่า ID ทิ้ง)
   const handleAddProductMenuClick = () => {
     setEditingProductId(null);
     setActiveView('addProduct');
   };
 
-  // เมื่อบันทึกสำเร็จ หรือกดยกเลิก
   const handleFormSuccessOrCancel = () => {
     setEditingProductId(null);
     setActiveView('manageSystem');
@@ -35,6 +34,11 @@ const AdminDashboard: React.FC = () => {
         
         {/* MAIN SECTION */}
         <div className="main-section">
+          
+          {activeView === 'analytics' && (
+            <AdminAnalytics />
+          )}
+
           {activeView === 'addProduct' && (
             <ProductForm 
               editingProductId={editingProductId} 
@@ -54,9 +58,15 @@ const AdminDashboard: React.FC = () => {
           {activeView === 'managePromotions' && (
             <PromotionManager />
           )}
+
+          {/* ✅ เพิ่มการแสดงผลหน้าระบบจัดการรีวิว */}
+          {activeView === 'manageReviews' && (
+            <AdminReviews />
+          )}
         </div>
         
         {/* RIGHT NAVIGATION SIDEBAR */}
+        {/* อย่าลืมไปเพิ่มปุ่ม "จัดการรีวิว" ใน AdminSideBar.tsx ให้เปลี่ยนสถานะมาเป็น 'manageReviews' ด้วยนะครับ */}
         <AdminSideBar 
           activeView={activeView} 
           editingProductId={editingProductId}
