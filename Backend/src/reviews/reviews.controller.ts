@@ -17,7 +17,13 @@ export class ReviewsController {
     return await this.reviewsService.create(userId, createReviewDto);
   }
 
-  // 2. ดึงรีวิวทั้งหมดตาม ID สินค้า (เพื่อแสดงหน้า Product Detail)
+  // ✅ 2. เพิ่ม Endpoint GET /reviews สำหรับดึงข้อมูลรีวิวทั้งหมด (หน้า Admin ใช้ Endpoint นี้)
+  @Get()
+  async findAll() {
+    return await this.reviewsService.findAll();
+  }
+
+  // 3. ดึงรีวิวทั้งหมดตาม ID สินค้า (เพื่อแสดงหน้า Product Detail)
   @Get('product/:productId')
   async findByProduct(@Param('productId') productId: string) {
     return await this.reviewsService.findByProduct(productId);

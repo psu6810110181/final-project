@@ -5,11 +5,12 @@ import ProductForm from "./Admin/ProductForm";
 import ManageSystem from "./Admin/ManageSystem";
 import ManageOrders from "./Admin/ManageOrders";
 import PromotionManager from "./Admin/Promotion";
-import AdminAnalytics from "./Admin/AdminAnalytics"; // ✅ นำเข้าหน้าใหม่
+import AdminAnalytics from "./Admin/AdminAnalytics";
+import AdminReviews from "./Admin/AdminReviews"; // ✅ นำเข้าหน้าใหม่
 
 const AdminDashboard: React.FC = () => {
-  // ✅ เพิ่ม 'analytics' เข้าไปใน type ของ activeView
-  const [activeView, setActiveView] = useState<'analytics' | 'addProduct' | 'manageSystem' | 'manageOrders' | 'managePromotions'>('analytics');
+  // ✅ เพิ่ม 'manageReviews' เข้าไปใน type ของ activeView
+  const [activeView, setActiveView] = useState<'analytics' | 'addProduct' | 'manageSystem' | 'manageOrders' | 'managePromotions' | 'manageReviews'>('analytics');
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
 
   const handleEditProduct = (productId: string) => {
@@ -34,7 +35,6 @@ const AdminDashboard: React.FC = () => {
         {/* MAIN SECTION */}
         <div className="main-section">
           
-          {/* ✅ เพิ่มเงื่อนไขการแสดงผลหน้า Analytics */}
           {activeView === 'analytics' && (
             <AdminAnalytics />
           )}
@@ -58,9 +58,15 @@ const AdminDashboard: React.FC = () => {
           {activeView === 'managePromotions' && (
             <PromotionManager />
           )}
+
+          {/* ✅ เพิ่มการแสดงผลหน้าระบบจัดการรีวิว */}
+          {activeView === 'manageReviews' && (
+            <AdminReviews />
+          )}
         </div>
         
         {/* RIGHT NAVIGATION SIDEBAR */}
+        {/* อย่าลืมไปเพิ่มปุ่ม "จัดการรีวิว" ใน AdminSideBar.tsx ให้เปลี่ยนสถานะมาเป็น 'manageReviews' ด้วยนะครับ */}
         <AdminSideBar 
           activeView={activeView} 
           editingProductId={editingProductId}

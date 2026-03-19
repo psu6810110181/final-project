@@ -56,8 +56,12 @@ export class ReviewsService {
     });
   }
 
-  findAll() {
-    return this.reviewRepository.find({ relations: ['user', 'product', 'order'] });
+  // ✅ อัปเดตให้เรียงข้อมูลจากล่าสุด และดึง Relation ที่จำเป็นมาแสดงในหน้า Admin
+  async findAll() {
+    return await this.reviewRepository.find({ 
+      relations: ['user', 'product', 'order'], // หากมี productVariant ใน entity ให้ใส่ 'productVariant' เพิ่มเข้าไปใน Array นี้ได้ครับ
+      order: { createdAt: 'DESC' } 
+    });
   }
 
   // review id เป็น number ถูกแล้ว ตาม Entity ของ review

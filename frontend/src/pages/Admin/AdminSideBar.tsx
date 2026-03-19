@@ -1,10 +1,11 @@
 import React from "react";
 
 interface AdminSideBarProps {
-  // ✅ เพิ่ม 'analytics' เข้าไปใน Type เพื่อให้ TypeScript ไม่ฟ้อง Error
-  activeView: 'analytics' | 'addProduct' | 'manageSystem' | 'manageOrders' | 'managePromotions';
+  // ✅ เพิ่ม 'manageReviews' เข้าไปใน Type เพื่อให้ TypeScript ไม่ฟ้อง Error
+  activeView: 'analytics' | 'addProduct' | 'manageSystem' | 'manageOrders' | 'managePromotions' | 'manageReviews';
   editingProductId: string | null;
-  onChangeView: (view: 'analytics' | 'manageSystem' | 'manageOrders' | 'managePromotions') => void;
+  // ✅ เพิ่ม 'manageReviews' ในฟังก์ชัน onChangeView ด้วย
+  onChangeView: (view: 'analytics' | 'manageSystem' | 'manageOrders' | 'managePromotions' | 'manageReviews') => void;
   onAddProductClick: () => void;
 }
 
@@ -18,7 +19,6 @@ const AdminSideBar: React.FC<AdminSideBarProps> = ({
     <div className="side-navigation">
       <div className="nav-header">จัดการระบบ</div> 
       
-      {/* 📊 เมนูใหม่: ภาพรวมและสถิติ */}
       <button 
         className={`nav-item-btn ${activeView === 'analytics' ? 'active' : ''}`}
         onClick={() => onChangeView('analytics')}
@@ -52,6 +52,14 @@ const AdminSideBar: React.FC<AdminSideBarProps> = ({
         onClick={() => onChangeView('managePromotions')}
       >
         🎯 จัดการโปรโมชั่น
+      </button>
+
+      {/* ✅ เพิ่มปุ่มสำหรับเมนูระบบจัดการรีวิว */}
+      <button 
+        className={`nav-item-btn ${activeView === 'manageReviews' ? 'active' : ''}`}
+        onClick={() => onChangeView('manageReviews')}
+      >
+        ⭐ จัดการรีวิว
       </button>
     </div>
   );
