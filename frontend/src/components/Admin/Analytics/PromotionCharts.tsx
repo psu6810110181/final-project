@@ -88,7 +88,6 @@ const PromotionCharts: React.FC<PromotionChartsProps> = ({ flashSales, seasonSal
     return { labels, dataSets };
   };
 
-  // ✅ Custom Tooltip ในสไตล์ของ shadcn/ui รองรับการแสดงผลหลายเส้น
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
@@ -116,7 +115,6 @@ const PromotionCharts: React.FC<PromotionChartsProps> = ({ flashSales, seasonSal
     return null;
   };
 
-  // ✅ ฟังก์ชันแปลงข้อมูลและวาดด้วย Recharts
   const renderRechartsBarChart = (title: string, timelineData: { labels: string[], dataSets: {name: string, color: string, data: number[], isFlash: boolean}[] }) => {
     if (timelineData.dataSets.length === 0) return (
       <div className="bg-white/80 backdrop-blur-xl p-5 rounded-3xl border border-slate-200 shadow-sm flex-1 flex flex-col items-center justify-center text-slate-400 min-h-[250px]">
@@ -124,8 +122,6 @@ const PromotionCharts: React.FC<PromotionChartsProps> = ({ flashSales, seasonSal
       </div>
     );
 
-    // แปลงข้อมูลจาก Format เดิม ให้เข้ากับ Recharts
-    // ตัวอย่าง Output: [{ label: '1 ต.ค.', 'Flash Sale': 500, 'Season Sale': 1200 }, ...]
     const rechartsData = timelineData.labels.map((label, i) => {
       const dataPoint: any = { label };
       timelineData.dataSets.forEach(ds => {
@@ -138,7 +134,6 @@ const PromotionCharts: React.FC<PromotionChartsProps> = ({ flashSales, seasonSal
         <div className="bg-white/90 backdrop-blur-2xl p-6 rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] w-full flex-1 flex flex-col relative overflow-hidden group">
            <div className="absolute top-0 right-0 w-48 h-48 blur-[80px] opacity-20 pointer-events-none transition-opacity duration-700" style={{ backgroundColor: timelineData.dataSets[0]?.color }}></div>
 
-           {/* Header ของกราฟ */}
            <div className="flex justify-between items-start mb-6 relative z-10">
              <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 shadow-sm text-slate-700">
@@ -158,7 +153,6 @@ const PromotionCharts: React.FC<PromotionChartsProps> = ({ flashSales, seasonSal
              </div>
            </div>
            
-           {/* 📈 วาดกราฟด้วย Recharts */}
            <div className="h-64 w-full relative mt-auto z-10 -ml-4">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={rechartsData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -170,7 +164,7 @@ const PromotionCharts: React.FC<PromotionChartsProps> = ({ flashSales, seasonSal
                     tickLine={false} 
                     tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} 
                     dy={10} 
-                    tickFormatter={(val) => val.split(' ')[0] + ' ' + val.split(' ')[1]} // ย่อให้เหลือแค่วันเดือน
+                    tickFormatter={(val) => val.split(' ')[0] + ' ' + val.split(' ')[1]}
                   />
                   
                   <YAxis 
@@ -185,7 +179,6 @@ const PromotionCharts: React.FC<PromotionChartsProps> = ({ flashSales, seasonSal
                     cursor={{ fill: 'rgba(241, 245, 249, 0.6)' }}
                   />
 
-                  {/* เรนเดอร์แท่งกราฟแบบอัตโนมัติ ตามจำนวนชุดข้อมูล */}
                   {timelineData.dataSets.map((ds, idx) => (
                     <Bar 
                       key={idx} 
@@ -212,23 +205,32 @@ const PromotionCharts: React.FC<PromotionChartsProps> = ({ flashSales, seasonSal
         </h2>
         
         <div className="flex flex-wrap gap-3 items-center">
-          <select 
-            value={selectedFlashSaleId} 
-            onChange={(e) => setSelectedFlashSaleId(e.target.value)}
-            className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-rose-500/50 appearance-none max-w-[200px]"
-          >
-            <option value="latest">⚡ Flash Sale ล่าสุด</option>
-            {flashSales.map(f => <option key={f.id} value={f.id}>{f.title}</option>)}
-          </select>
+          
+          {/* ✅ แทนที่ Emoji ด้วย Icon ด้านซ้าย */}
+          <div className="relative flex items-center">
+            <Zap size={14} className="absolute left-3 text-rose-500 pointer-events-none" />
+            <select 
+              value={selectedFlashSaleId} 
+              onChange={(e) => setSelectedFlashSaleId(e.target.value)}
+              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl pl-9 pr-8 py-2.5 focus:outline-none focus:ring-2 focus:ring-rose-500/50 appearance-none min-w-[160px]"
+            >
+              <option value="latest">Flash Sale ล่าสุด</option>
+              {flashSales.map(f => <option key={f.id} value={f.id}>{f.title}</option>)}
+            </select>
+          </div>
 
-          <select 
-            value={selectedSeasonSaleId} 
-            onChange={(e) => setSelectedSeasonSaleId(e.target.value)}
-            className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none max-w-[200px]"
-          >
-            <option value="latest">📅 Season Sale ล่าสุด</option>
-            {seasonSales.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
-          </select>
+          {/* ✅ แทนที่ Emoji ด้วย Icon ด้านซ้าย */}
+          <div className="relative flex items-center">
+            <CalendarDays size={14} className="absolute left-3 text-blue-500 pointer-events-none" />
+            <select 
+              value={selectedSeasonSaleId} 
+              onChange={(e) => setSelectedSeasonSaleId(e.target.value)}
+              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl pl-9 pr-8 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none min-w-[160px]"
+            >
+              <option value="latest">Season Sale ล่าสุด</option>
+              {seasonSales.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
+            </select>
+          </div>
 
           <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 flex-shrink-0">
             <button onClick={() => setPromoViewMode('separated')} className={`p-1.5 rounded-lg transition-all ${promoViewMode === 'separated' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`} title="แยกกราฟ">

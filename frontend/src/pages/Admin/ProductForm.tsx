@@ -13,9 +13,8 @@ import api, {
 import toast from "react-hot-toast"; 
 import ProductGeneralInfo from "../../components/Admin/ProductGeneralInfo";
 import ProductVariants, { type Variant } from "../../components/Admin/ProductVariants";
-
-// ✅ นำเข้า SearchableSelect ที่เราเพิ่งสร้าง
 import { SearchableSelect } from "../../components/Admin/SearchableDropdown";
+import { Search } from "lucide-react"; // ✅ นำเข้า Icon Search
 
 interface ProductFormProps {
   editingProductId: string | null;
@@ -171,11 +170,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
           </h2>
 
           <div style={{ flex: '1', minWidth: '280px', maxWidth: '400px' }}>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>
-              🔍 ค้นหาสินค้าเพื่อดึงข้อมูลมาแก้ไข
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 'bold', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>
+              <Search size={14} /> ค้นหาสินค้าเพื่อดึงข้อมูลมาแก้ไข
             </label>
             
-            {/* ✅ เรียกใช้ SearchableSelect */}
             <SearchableSelect 
               value={localEditingId || ""}
               onChange={(val) => {
@@ -184,7 +182,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ editingProductId, onCancel, o
                 else resetForm();
               }}
               options={[
-                { value: "", label: "-- ➕ สร้างสินค้าใหม่ (เคลียร์ฟอร์ม) --" },
+                { value: "", label: "-- สร้างสินค้าใหม่ (เคลียร์ฟอร์ม) --" },
                 ...allProductsList.map((product) => ({
                   value: product.id,
                   label: `${product.name} (คงเหลือ: ${product.stock})`

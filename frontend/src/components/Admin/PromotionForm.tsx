@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from "react";
 import toast from "react-hot-toast";
 import { type Promotion, type Product } from "../../services/api";
+import { Target, Zap, CalendarDays, ShoppingBag, AlertTriangle } from "lucide-react"; // ✅ นำเข้า Icons
 
 interface PromotionFormProps {
   formData: any;
@@ -42,11 +43,12 @@ const PromotionForm: React.FC<PromotionFormProps> = ({
     { value: 'FIXED_AMOUNT', label: 'จำนวนเงินคงที่ (บาท)' }
   ];
 
+  // ✅ เอา Icon ออกจาก Option เพราะ HTML Select พื้นฐานไม่รองรับ SVG ใน Option
   const seasonOptions = [
-    { value: 'SUMMER', label: 'Summer (ฤดูร้อน)', icon: '☀️' },
-    { value: 'WINTER', label: 'Winter (ฤดูหนาว)', icon: '❄️' },
-    { value: 'SPRING', label: 'Spring (ฤดูใบไม้ผลิ)', icon: '🌸' },
-    { value: 'AUTUMN', label: 'Autumn (ฤดูใบไม้ร่วง)', icon: '🍂' }
+    { value: 'SUMMER', label: 'Summer (ฤดูร้อน)' },
+    { value: 'WINTER', label: 'Winter (ฤดูหนาว)' },
+    { value: 'SPRING', label: 'Spring (ฤดูใบไม้ผลิ)' },
+    { value: 'AUTUMN', label: 'Autumn (ฤดูใบไม้ร่วง)' }
   ];
 
   return (
@@ -91,7 +93,7 @@ const PromotionForm: React.FC<PromotionFormProps> = ({
                 >
                   <option value="">เลือกฤดูกาล...</option>
                   {seasonOptions.map(option => (
-                    <option key={option.value} value={option.value}>{option.icon} {option.label}</option>
+                    <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
                 <div style={{ fontSize: '12px', color: colors.textMuted, marginTop: '4px' }}>
@@ -161,28 +163,32 @@ const PromotionForm: React.FC<PromotionFormProps> = ({
 
           {/* ประเภทโปรโมชั่น */}
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: colors.textMain }}>🎯 ประเภทโปรโมชั่น</label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontWeight: '600', color: colors.textMain }}>
+              <Target size={18} color={colors.textMain} /> ประเภทโปรโมชั่น
+            </label>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
                 type="button"
                 onClick={() => setFormData({...formData, isFlashSale: true})}
-                style={{ flex: 1, padding: '12px 16px', border: `2px solid ${formData.isFlashSale ? colors.secondary : colors.border}`, borderRadius: '8px', background: formData.isFlashSale ? colors.secondaryLight : colors.bgWhite, color: formData.isFlashSale ? colors.secondary : colors.textMuted, cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}
+                style={{ flex: 1, padding: '12px 16px', border: `2px solid ${formData.isFlashSale ? colors.secondary : colors.border}`, borderRadius: '8px', background: formData.isFlashSale ? colors.secondaryLight : colors.bgWhite, color: formData.isFlashSale ? colors.secondary : colors.textMuted, cursor: 'pointer', fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
               >
-                🔥 Flash Sale
+                <Zap size={18} /> Flash Sale
               </button>
               <button
                 type="button"
                 onClick={() => setFormData({...formData, isFlashSale: false})}
-                style={{ flex: 1, padding: '12px 16px', border: `2px solid ${!formData.isFlashSale ? colors.primary : colors.border}`, borderRadius: '8px', background: !formData.isFlashSale ? colors.primaryLight : colors.bgWhite, color: !formData.isFlashSale ? colors.primary : colors.textMuted, cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}
+                style={{ flex: 1, padding: '12px 16px', border: `2px solid ${!formData.isFlashSale ? colors.primary : colors.border}`, borderRadius: '8px', background: !formData.isFlashSale ? colors.primaryLight : colors.bgWhite, color: !formData.isFlashSale ? colors.primary : colors.textMuted, cursor: 'pointer', fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
               >
-                📅 Seasonal
+                <CalendarDays size={18} /> Seasonal
               </button>
             </div>
           </div>
 
           {/* รายการสินค้าที่เลือก */}
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: colors.textMain }}>🛍️ เลือกสินค้าที่เข้าร่วมโปรโมชั่น</label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontWeight: '600', color: colors.textMain }}>
+              <ShoppingBag size={18} color={colors.textMain} /> เลือกสินค้าที่เข้าร่วมโปรโมชั่น
+            </label>
             <div style={{ border: `1px solid ${colors.border}`, borderRadius: '8px', padding: '12px', maxHeight: '200px', overflowY: 'auto', backgroundColor: colors.bgWhite }}>
               <div style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '8px' }}>เลือกสินค้า (เลือกแล้ว {formData.productIds.length} ชิ้น)</div>
               {products.length === 0 ? (
@@ -209,8 +215,8 @@ const PromotionForm: React.FC<PromotionFormProps> = ({
                           <div style={{ fontSize: '14px', fontWeight: '600', color: isAlreadyInOtherPromo ? colors.danger : colors.textMain }}>{product.name}</div>
                           <div style={{ fontSize: '12px', color: colors.textMuted }}>฿{Number(product.price).toLocaleString()}</div>
                           {isAlreadyInOtherPromo && (
-                            <div style={{ marginTop: '6px', display: 'inline-block', backgroundColor: colors.danger, color: 'white', fontSize: '11px', fontWeight: 'bold', padding: '2px 8px', borderRadius: '4px' }}>
-                              ⚠️ ติดโปรโมชั่น: {activePromoForThisProduct.title}
+                            <div style={{ marginTop: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: colors.danger, color: 'white', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '4px' }}>
+                              <AlertTriangle size={12} /> ติดโปรโมชั่น: {activePromoForThisProduct.title}
                             </div>
                           )}
                         </div>

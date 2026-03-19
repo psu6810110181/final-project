@@ -44,7 +44,9 @@ const BookmarkPage = () => {
   useEffect(() => {
     setIsVisible(true);
     const fetchBookmarksAndData = async () => {
-      const token = localStorage.getItem('token');
+      // ✅ แก้ไข: เช็คโทเคนทั้งจาก localStorage และ sessionStorage
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      
       if (!token) {
           setIsLoggedIn(false);
           setLoading(false);
@@ -235,7 +237,7 @@ const BookmarkPage = () => {
             <div className="mt-8">
                <ProductGrid 
                   items={paginatedProducts} 
-                  gridCols={5} // ✅ เปลี่ยนให้โชว์เป็นแถวละ 5 การ์ด
+                  gridCols={5}
                   showPagination={true} 
                   currentPage={currentPage} 
                   totalPages={totalPages} 

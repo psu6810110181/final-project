@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader } from 'lucide-react'; 
+import { Loader, Sparkles, Armchair } from 'lucide-react'; // ✅ นำเข้า Icons
 import * as api from '../services/api'; 
 import type { Product, Category, Room, Feature, Color, Material, Size, Promotion } from '../services/api';
 import toast from 'react-hot-toast';
@@ -248,13 +248,19 @@ const Home = () => {
                   <>
                     <SeasonalPromotion products={seasonalProducts} title={seasonalProducts[0]?.promo?.title} season={seasonalProducts[0]?.promo?.title ? getSeasonFromPromoTitle(seasonalProducts[0].promo.title) : undefined} />
                     <FlashSale products={products} />
-                    <ProductGrid title="✨ แนะนำสำหรับคุณ" items={recommendedProducts} bookmarks={bookmarks} setBookmarks={setBookmarks} horizontal={true} />
+                    <ProductGrid 
+                      title={<span className="flex items-center gap-2"><Sparkles className="text-amber-500" size={24} /> แนะนำสำหรับคุณ</span>} 
+                      items={recommendedProducts} 
+                      bookmarks={bookmarks} 
+                      setBookmarks={setBookmarks} 
+                      horizontal={true} 
+                    />
                   </>
                 )}
                 
                 {/* แถวสินค้าทั่วไป มีตลอดทุกหน้า */}
                 <ProductGrid 
-                  title={currentPage === 1 ? "🛋️ สินค้าทั่วไป" : `🛋️ สินค้าทั่วไป (หน้า ${currentPage})`} 
+                  title={<span className="flex items-center gap-2"><Armchair className="text-slate-700" size={24} /> {currentPage === 1 ? "สินค้าทั่วไป" : `สินค้าทั่วไป (หน้า ${currentPage})`}</span>} 
                   items={paginatedDefaultGeneral} 
                   bookmarks={bookmarks} 
                   setBookmarks={setBookmarks} 
