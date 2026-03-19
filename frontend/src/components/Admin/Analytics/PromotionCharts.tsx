@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import { TrendingUp, Zap, CalendarDays, Layers, SplitSquareHorizontal } from 'lucide-react';
 import * as api from '../../../services/api';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip as RechartsTooltip, 
+  ResponsiveContainer 
+} from 'recharts';
 
 interface PromotionChartsProps {
   flashSales: api.Promotion[];
@@ -79,27 +88,57 @@ const PromotionCharts: React.FC<PromotionChartsProps> = ({ flashSales, seasonSal
     return { labels, dataSets };
   };
 
-  const renderBeautifulBarChart = (title: string, timelineData: { labels: string[], dataSets: {name: string, color: string, data: number[], isFlash: boolean}[] }) => {
+  // ✅ Custom Tooltip ในสไตล์ของ shadcn/ui รองรับการแสดงผลหลายเส้น
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white/95 backdrop-blur-md border border-slate-200 shadow-[0_4px_20px_rgb(0,0,0,0.08)] rounded-xl p-3.5 min-w-[160px] z-50 relative">
+          <div className="text-slate-500 text-[11px] font-bold uppercase mb-2.5 tracking-wider">{label}</div>
+          <div className="flex flex-col gap-2.5">
+            {payload.map((entry: any, index: number) => (
+              <div key={index} className="flex items-center justify-between gap-6 text-sm font-semibold">
+                <div className="flex items-center gap-2">
+                  <span 
+                    className="w-2.5 h-2.5 rounded-[3px] shadow-sm border border-black/5" 
+                    style={{ backgroundColor: entry.color }}
+                  ></span>
+                  <span className="text-slate-600 truncate max-w-[140px]">{entry.name}</span>
+                </div>
+                <span className="text-slate-900 font-bold tracking-tight">
+                  ฿{Number(entry.value).toLocaleString()}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // ✅ ฟังก์ชันแปลงข้อมูลและวาดด้วย Recharts
+  const renderRechartsBarChart = (title: string, timelineData: { labels: string[], dataSets: {name: string, color: string, data: number[], isFlash: boolean}[] }) => {
     if (timelineData.dataSets.length === 0) return (
       <div className="bg-white/80 backdrop-blur-xl p-5 rounded-3xl border border-slate-200 shadow-sm flex-1 flex flex-col items-center justify-center text-slate-400 min-h-[250px]">
         <p>ไม่มีข้อมูลโปรโมชัน</p>
       </div>
     );
 
-    const allValues = timelineData.dataSets.flatMap(d => d.data);
-    const localMax = Math.max(...allValues, 100);
-    const labelsCount = timelineData.labels.length;
-    const xStep = 100 / labelsCount;
-    const numDatasets = timelineData.dataSets.length;
-    
-    const barWidth = numDatasets === 1 ? xStep * 0.35 : xStep * 0.28;
-    const gap = numDatasets === 1 ? 0 : xStep * 0.05;
-    const totalGroupWidth = (numDatasets * barWidth) + ((numDatasets - 1) * gap);
+    // แปลงข้อมูลจาก Format เดิม ให้เข้ากับ Recharts
+    // ตัวอย่าง Output: [{ label: '1 ต.ค.', 'Flash Sale': 500, 'Season Sale': 1200 }, ...]
+    const rechartsData = timelineData.labels.map((label, i) => {
+      const dataPoint: any = { label };
+      timelineData.dataSets.forEach(ds => {
+        dataPoint[ds.name] = ds.data[i];
+      });
+      return dataPoint;
+    });
 
     return (
         <div className="bg-white/90 backdrop-blur-2xl p-6 rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] w-full flex-1 flex flex-col relative overflow-hidden group">
            <div className="absolute top-0 right-0 w-48 h-48 blur-[80px] opacity-20 pointer-events-none transition-opacity duration-700" style={{ backgroundColor: timelineData.dataSets[0]?.color }}></div>
 
+           {/* Header ของกราฟ */}
            <div className="flex justify-between items-start mb-6 relative z-10">
              <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 shadow-sm text-slate-700">
@@ -107,7 +146,7 @@ const PromotionCharts: React.FC<PromotionChartsProps> = ({ flashSales, seasonSal
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-800 text-lg tracking-wide">{title}</h3>
-                  <div className="flex gap-4 mt-1.5">
+                  <div className="flex flex-wrap gap-4 mt-1.5">
                     {timelineData.dataSets.map((ds, idx) => (
                       <div key={idx} className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
                         <span className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: ds.color }}></span>
@@ -119,54 +158,47 @@ const PromotionCharts: React.FC<PromotionChartsProps> = ({ flashSales, seasonSal
              </div>
            </div>
            
-           <div className="h-56 w-full relative mt-auto px-1 z-10">
-              <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
-                 {[0, 25, 50, 75, 100].map(percent => (
-                   <line key={percent} x1="0" x2="100" y1={percent} y2={percent} stroke="#e2e8f0" strokeWidth="0.5" strokeDasharray="1 2" />
-                 ))}
-                 
-                 {timelineData.labels.map((_, i) => {
-                   const groupCenterX = (i + 0.5) * xStep;
-                   const startX = groupCenterX - (totalGroupWidth / 2);
+           {/* 📈 วาดกราฟด้วย Recharts */}
+           <div className="h-64 w-full relative mt-auto z-10 -ml-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={rechartsData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  
+                  <XAxis 
+                    dataKey="label" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} 
+                    dy={10} 
+                    tickFormatter={(val) => val.split(' ')[0] + ' ' + val.split(' ')[1]} // ย่อให้เหลือแค่วันเดือน
+                  />
+                  
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} 
+                    tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}
+                  />
 
-                   return (
-                     <g key={`group-${i}`} className="group/bunch cursor-pointer">
-                       <rect x={groupCenterX - xStep/2} y="0" width={xStep} height="100" fill="transparent" />
-                       
-                       {timelineData.dataSets.map((ds, j) => {
-                          const val = ds.data[i] || 0;
-                          const h = (val / localMax) * 85; 
-                          const y = 100 - h;
-                          const x = startX + (j * (barWidth + gap));
-                          const r = Math.min(1.5, barWidth / 2, h / 2); 
-                          
-                          const pathD = h > 0.5 
-                            ? `M ${x},100 L ${x},${y + r} Q ${x},${y} ${x + r},${y} L ${x + barWidth - r},${y} Q ${x + barWidth},${y} ${x + barWidth},${y + r} L ${x + barWidth},100 Z` 
-                            : `M ${x},100 L ${x},99.5 L ${x + barWidth},99.5 L ${x + barWidth},100 Z`; 
+                  <RechartsTooltip 
+                    content={<CustomTooltip />} 
+                    cursor={{ fill: 'rgba(241, 245, 249, 0.6)' }}
+                  />
 
-                          return (
-                            <g key={`bar-${i}-${j}`}>
-                               <path d={pathD} fill={ds.color} className="transition-all duration-700 opacity-90 group-hover/bunch:opacity-100" />
-                               {val > 0 && (
-                                 <text x={x + barWidth/2} y={y - 3} fill={ds.color} fontSize="4" fontWeight="900" textAnchor="middle" className="opacity-0 group-hover/bunch:opacity-100 transition-opacity drop-shadow-sm">
-                                    {val >= 10000 ? `${(val/1000).toFixed(1)}k` : val.toLocaleString()}
-                                 </text>
-                               )}
-                            </g>
-                          )
-                       })}
-                     </g>
-                   )
-                 })}
-              </svg>
-           </div>
-           
-           <div className="flex justify-between mt-2 text-[10px] text-slate-400 font-semibold relative z-10 border-t border-slate-100 pt-3">
-              {timelineData.labels.map((label, i) => (
-                <span key={i} className="text-center w-full block whitespace-nowrap">
-                  {label.split(' ')[0] + ' ' + label.split(' ')[1]}
-                </span>
-              ))}
+                  {/* เรนเดอร์แท่งกราฟแบบอัตโนมัติ ตามจำนวนชุดข้อมูล */}
+                  {timelineData.dataSets.map((ds, idx) => (
+                    <Bar 
+                      key={idx} 
+                      dataKey={ds.name} 
+                      name={ds.name} 
+                      fill={ds.color} 
+                      radius={[4, 4, 0, 0]} 
+                      maxBarSize={45} 
+                      animationDuration={1500}
+                    />
+                  ))}
+                </BarChart>
+              </ResponsiveContainer>
            </div>
         </div>
     )
@@ -212,11 +244,11 @@ const PromotionCharts: React.FC<PromotionChartsProps> = ({ flashSales, seasonSal
       <div className="flex flex-col md:flex-row gap-6">
         {promoViewMode === 'separated' ? (
           <>
-            {renderBeautifulBarChart("ยอดขาย Flash Sale", generateChartTimeline([activeFlashSale]))}
-            {renderBeautifulBarChart("ยอดขาย Seasonal Sale", generateChartTimeline([activeSeasonSale]))}
+            {renderRechartsBarChart("ยอดขาย Flash Sale", generateChartTimeline([activeFlashSale]))}
+            {renderRechartsBarChart("ยอดขาย Seasonal Sale", generateChartTimeline([activeSeasonSale]))}
           </>
         ) : (
-          renderBeautifulBarChart("เปรียบเทียบยอดขายโปรโมชัน (รวม)", generateChartTimeline([activeFlashSale, activeSeasonSale]))
+          renderRechartsBarChart("เปรียบเทียบยอดขายโปรโมชัน (รวม)", generateChartTimeline([activeFlashSale, activeSeasonSale]))
         )}
       </div>
     </div>
