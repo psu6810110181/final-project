@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import toast from 'react-hot-toast'; // ✅ นำเข้า toast สำหรับแจ้งเตือน
+import React from "react";
+import toast from 'react-hot-toast';
+import { SearchableSelect } from './SearchableDropdown'; // ✅ นำเข้า SearchableDropdown
 
 export interface Variant {
   color: string; material: string; size: string;
@@ -14,11 +15,7 @@ interface ProductVariantsProps {
 }
 
 const ProductVariants: React.FC<ProductVariantsProps> = ({ variants, setVariants, colorsList, materialsList, sizesList }) => {
-  const [colorDropdowns, setColorDropdowns] = useState<boolean[]>([]);
-  const [materialDropdowns, setMaterialDropdowns] = useState<boolean[]>([]);
-  const [sizeDropdowns, setSizeDropdowns] = useState<boolean[]>([]);
 
-  // ✅ ปรับปรุง handleVariantChange เพื่อดักจับสต็อกติดลบ
   const handleVariantChange = (index: number, field: keyof Omit<Variant, 'imageFile'>, value: string) => {
     const newVariants = [...variants];
     
@@ -43,7 +40,7 @@ const ProductVariants: React.FC<ProductVariantsProps> = ({ variants, setVariants
                 toast.error('ราคาต้องไม่ติดลบ');
                 newVariants[index][field] = '0';
             } else {
-                newVariants[index][field] = value; // ให้พิมพ์ทศนิยมได้
+                newVariants[index][field] = value;
             }
         }
     } else {
@@ -65,16 +62,10 @@ const ProductVariants: React.FC<ProductVariantsProps> = ({ variants, setVariants
 
   const addVariant = () => {
     setVariants([...variants, { color: "", material: "", size: "", price: "", stock: "", imageUrl: "" }]);
-    setColorDropdowns([...colorDropdowns, false]);
-    setMaterialDropdowns([...materialDropdowns, false]);
-    setSizeDropdowns([...sizeDropdowns, false]);
   };
 
   const removeVariant = (index: number) => {
     setVariants(variants.filter((_, i) => i !== index));
-    setColorDropdowns(colorDropdowns.filter((_, i) => i !== index));
-    setMaterialDropdowns(materialDropdowns.filter((_, i) => i !== index));
-    setSizeDropdowns(sizeDropdowns.filter((_, i) => i !== index));
   };
 
   const colors = { textMain: '#1F2937', textMuted: '#6B7280', border: '#E5E7EB', bgLight: '#F9FAFB', danger: '#EF4444' };
@@ -90,7 +81,7 @@ const ProductVariants: React.FC<ProductVariantsProps> = ({ variants, setVariants
 
       <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {variants.map((variant, index) => (
-          <li key={index} style={{ display: 'flex', gap: '16px', background: '#FFF', padding: '16px', borderRadius: '12px', border: `1px solid ${colors.border}`, flexWrap: 'wrap' }}>
+          <li key={index} style={{ display: 'flex', gap: '16px', background: '#FFF', padding: '16px', borderRadius: '12px', border: `1px solid ${colors.border}`, flexWrap: 'wrap', alignItems: 'center' }}>
             
             {/* รูปตัวเลือก */}
             <div style={{ width: '80px', height: '80px' }}>
@@ -101,49 +92,51 @@ const ProductVariants: React.FC<ProductVariantsProps> = ({ variants, setVariants
             </div>
 
             {/* สี / วัสดุ / ขนาด */}
-            <div style={{ display: 'flex', flex: 1, gap: '12px' }}>
-              {[
-                { label: 'สี', val: variant.color, field: 'color', list: colorsList, show: colorDropdowns[index], setShow: (v: boolean) => { const n = [...colorDropdowns]; n[index] = v; setColorDropdowns(n); } },
-                { label: 'วัสดุ', val: variant.material, field: 'material', list: materialsList, show: materialDropdowns[index], setShow: (v: boolean) => { const n = [...materialDropdowns]; n[index] = v; setMaterialDropdowns(n); } },
-                { label: 'ขนาด', val: variant.size, field: 'size', list: sizesList, show: sizeDropdowns[index], setShow: (v: boolean) => { const n = [...sizeDropdowns]; n[index] = v; setSizeDropdowns(n); } }
-              ].map((item, idx) => (
-                <div key={idx} style={{ flex: 1 }}>
-                  <label style={{ fontSize: '12px', color: colors.textMuted }}>{item.label}</label>
-                  <div style={{ position: 'relative', ...inputStyle, padding: 0, cursor: 'pointer' }}>
-                    <div onClick={() => item.setShow(!item.show)} style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between' }}>
-                      <span>{item.val || '-'}</span> <span>▼</span>
-                    </div>
-                    {item.show && (
-                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: `1px solid ${colors.border}`, zIndex: 10, maxHeight: '150px', overflowY: 'auto' }}>
-                        {item.list.map(opt => (
-                          <div key={opt.id} onClick={() => { handleVariantChange(index, item.field as any, item.val === opt.name ? "" : opt.name); item.setShow(false); }} style={{ padding: '8px 16px', cursor: 'pointer' }}>
-                            {opt.name}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+            <div style={{ display: 'flex', flex: 1, gap: '12px', minWidth: '300px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '4px', display: 'block' }}>สี</label>
+                <SearchableSelect 
+                  value={variant.color} 
+                  onChange={(val) => handleVariantChange(index, 'color', val)} 
+                  options={[{ value: "", label: "-- เลิกเลือก --" }, ...colorsList.map(c => ({ value: c.name, label: c.name }))]} 
+                  placeholder="เลือกสี..." 
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '4px', display: 'block' }}>วัสดุ</label>
+                <SearchableSelect 
+                  value={variant.material} 
+                  onChange={(val) => handleVariantChange(index, 'material', val)} 
+                  options={[{ value: "", label: "-- เลิกเลือก --" }, ...materialsList.map(m => ({ value: m.name, label: m.name }))]} 
+                  placeholder="เลือกวัสดุ..." 
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '4px', display: 'block' }}>ขนาด</label>
+                <SearchableSelect 
+                  value={variant.size} 
+                  onChange={(val) => handleVariantChange(index, 'size', val)} 
+                  options={[{ value: "", label: "-- เลิกเลือก --" }, ...sizesList.map(s => ({ value: s.name, label: s.name }))]} 
+                  placeholder="เลือกขนาด..." 
+                />
+              </div>
             </div>
 
             {/* ราคา / สต็อก */}
             <div style={{ display: 'flex', gap: '12px', width: '220px' }}>
               <div style={{ flex: 1 }}>
-                <label style={{ fontSize: '12px' }}>ราคา</label>
-                {/* ✅ เพิ่ม min="0" สำหรับราคา */}
-                <input type="number" min="0" step="0.01" value={variant.price} onChange={e => handleVariantChange(index, 'price', e.target.value)} style={{...inputStyle, padding: '10px'}} />
+                <label style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '4px', display: 'block' }}>ราคา</label>
+                <input type="number" min="0" step="0.01" value={variant.price} onChange={e => handleVariantChange(index, 'price', e.target.value)} style={{...inputStyle, padding: '10px 14px', height: '44px'}} />
               </div>
               <div style={{ flex: 1 }}>
-                <label style={{ fontSize: '12px' }}>คลัง</label>
-                {/* ✅ เพิ่ม min="0" สำหรับคลังสต็อก */}
-                <input type="number" min="0" value={variant.stock} onChange={e => handleVariantChange(index, 'stock', e.target.value)} style={{...inputStyle, padding: '10px'}} />
+                <label style={{ fontSize: '12px', color: colors.textMuted, marginBottom: '4px', display: 'block' }}>คลัง</label>
+                <input type="number" min="0" value={variant.stock} onChange={e => handleVariantChange(index, 'stock', e.target.value)} style={{...inputStyle, padding: '10px 14px', height: '44px'}} />
               </div>
             </div>
 
             {/* ปุ่มลบ */}
             {variants.length > 1 && (
-              <button type="button" onClick={() => removeVariant(index)} style={{ background: '#FEF2F2', color: colors.danger, border: 'none', borderRadius: '8px', width: '40px', height: '40px', marginTop: '22px', cursor: 'pointer' }}>
+              <button type="button" onClick={() => removeVariant(index)} style={{ background: '#FEF2F2', color: colors.danger, border: 'none', borderRadius: '8px', width: '40px', height: '44px', marginTop: '20px', cursor: 'pointer' }}>
                 ❌
               </button>
             )}
@@ -151,7 +144,7 @@ const ProductVariants: React.FC<ProductVariantsProps> = ({ variants, setVariants
         ))}
       </ul>
 
-      <button type="button" onClick={addVariant} style={{ marginTop: '20px', width: '100%', background: '#F0F9FF', color: '#0284C7', border: '1px dashed #7DD3FC', padding: '14px', borderRadius: '10px', cursor: 'pointer' }}>
+      <button type="button" onClick={addVariant} style={{ marginTop: '20px', width: '100%', background: '#F0F9FF', color: '#0284C7', border: '1px dashed #7DD3FC', padding: '14px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' }}>
         + เพิ่มตัวเลือกสินค้า
       </button>
     </section>

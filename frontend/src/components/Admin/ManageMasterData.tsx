@@ -25,6 +25,7 @@ const ManageMasterData: React.FC = () => {
   const colors = {
     secondary: '#D65A31', secondaryLight: '#FCE8E1', textMain: '#1F2937', textMuted: '#6B7280',
     border: '#E5E7EB', bgLight: '#F9FAFB', bgWhite: '#FFFFFF', danger: '#EF4444', dangerLight: '#FEF2F2',
+    success: '#10B981', successLight: '#ECFDF5' // เพิ่มสีเขียวสำหรับข้อมูลใหม่
   };
 
   useEffect(() => { fetchMasterData(); }, []);
@@ -32,7 +33,6 @@ const ManageMasterData: React.FC = () => {
   const fetchMasterData = async () => {
     try {
       const [cats, rms, fts] = await Promise.all([getAllCategories(), getAllRooms(), getAllFeatures()]);
-      // ✅ แก้ไข: ดักจับเผื่อข้อมูลเป็น { data: [...] } เพื่อป้องกันการใช้ .map() กับ Object
       setCategoriesList(Array.isArray(cats) ? cats : (cats as any)?.data || []); 
       setRoomsList(Array.isArray(rms) ? rms : (rms as any)?.data || []); 
       setFeaturesList(Array.isArray(fts) ? fts : (fts as any)?.data || []);
@@ -42,15 +42,40 @@ const ManageMasterData: React.FC = () => {
       const cols = await getAllColors().catch(() => []);
       const mats = await getAllMaterials().catch(() => []);
       const szs = await getAllSizes().catch(() => []);
-      // ✅ แก้ไข: ดักจับเผื่อข้อมูลเป็น { data: [...] } 
       setColorsList(Array.isArray(cols) ? cols : (cols as any)?.data || []); 
       setMaterialsList(Array.isArray(mats) ? mats : (mats as any)?.data || []); 
       setSizesList(Array.isArray(szs) ? szs : (szs as any)?.data || []);
     } catch (error) { console.error(error); }
   };
 
+  const getActiveList = () => {
+    let list: any[] = [];
+    if (activeTab === 'category') list = categoriesList;
+    else if (activeTab === 'room') list = roomsList;
+    else if (activeTab === 'feature') list = featuresList;
+    else if (activeTab === 'color') list = colorsList;
+    else if (activeTab === 'material') list = materialsList;
+    else list = sizesList;
+
+    return Array.isArray(list) ? list : [];
+  };
+
+  // ✅ ฟังก์ชันตรวจสอบว่าคำที่พิมพ์มา ซ้ำกับในลิสต์หรือไม่
+  const isDuplicate = () => {
+    if (!newItemName.trim()) return false;
+    const currentList = getActiveList();
+    return currentList.some(
+      item => item.name.trim().toLowerCase() === newItemName.trim().toLowerCase()
+    );
+  };
+
   const handleAddMasterData = async () => {
     if (!newItemName.trim()) return;
+    if (isDuplicate()) {
+      toast.error("ไม่อนุญาตให้เพิ่มข้อมูลซ้ำ");
+      return;
+    }
+
     try {
       if (activeTab === 'category') await createCategory(newItemName);
       else if (activeTab === 'room') await createRoom(newItemName);
@@ -58,8 +83,13 @@ const ManageMasterData: React.FC = () => {
       else if (activeTab === 'color') await createColor(newItemName);
       else if (activeTab === 'material') await createMaterial(newItemName);
       else if (activeTab === 'size') await createSize(newItemName);
-      setNewItemName(""); fetchMasterData(); toast.success("เพิ่มข้อมูลสำเร็จ!");
-    } catch (error) { toast.error("เกิดข้อผิดพลาด"); }
+      
+      setNewItemName(""); 
+      fetchMasterData(); 
+      toast.success("เพิ่มข้อมูลสำเร็จ!");
+    } catch (error) { 
+      toast.error("เกิดข้อผิดพลาด"); 
+    }
   };
 
   const handleDeleteMasterData = async (id: number, itemName: string) => {
@@ -80,21 +110,26 @@ const ManageMasterData: React.FC = () => {
     });
   };
 
-  const getActiveList = () => {
-    let list: any[] = [];
-    if (activeTab === 'category') list = categoriesList;
-    else if (activeTab === 'room') list = roomsList;
-    else if (activeTab === 'feature') list = featuresList;
-    else if (activeTab === 'color') list = colorsList;
-    else if (activeTab === 'material') list = materialsList;
-    else list = sizesList;
-
-    // ✅ แก้ไข: คืนค่าเป็น Array เสมอ ป้องกันหน้าจอขาวจากคำสั่ง .map() ด้านล่าง
-    return Array.isArray(list) ? list : [];
-  };
-
   const getActiveIcon = () => ({ category: '📂', room: '🏠', feature: '✨', color: '🎨', material: '🪵', size: '📏' }[activeTab]);
   const getActiveNameTH = () => ({ category: 'หมวดหมู่สินค้า', room: 'หมวดหมู่ห้อง', feature: 'คุณสมบัติพิเศษ', color: 'สี', material: 'วัสดุ', size: 'ขนาด' }[activeTab]);
+
+  // ✅ เช็คสถานะเพื่อเปลี่ยนสี
+  const duplicate = isDuplicate();
+  const isNewAndValid = newItemName.trim().length > 0 && !duplicate;
+
+  let inputBorderColor = colors.border;
+  let inputBgColor = '#ffffff';
+  let message = "";
+
+  if (duplicate) {
+    inputBorderColor = colors.danger;
+    inputBgColor = colors.dangerLight;
+    message = "❌ ชื่อนี้มีอยู่ในระบบแล้ว";
+  } else if (isNewAndValid) {
+    inputBorderColor = colors.success;
+    inputBgColor = colors.successLight;
+    message = "✅ สามารถเพิ่มข้อมูลนี้ได้";
+  }
 
   return (
     <section>
@@ -110,7 +145,7 @@ const ManageMasterData: React.FC = () => {
         <nav style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '30px', padding: '6px', background: colors.bgLight, borderRadius: '12px', width: 'fit-content', border: `1px solid ${colors.border}` }}>
           {[{ id: 'category', n: 'หมวดหมู่สินค้า' }, { id: 'room', n: 'ห้อง' }, { id: 'feature', n: 'คุณสมบัติพิเศษ' }, { id: 'color', n: 'สี' }, { id: 'material', n: 'วัสดุ' }, { id: 'size', n: 'ขนาด' }].map(tab => (
             <button 
-              key={tab.id} onClick={() => setActiveTab(tab.id as any)} 
+              key={tab.id} onClick={() => { setActiveTab(tab.id as any); setNewItemName(""); }} 
               style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '14px', transition: 'all 0.2s', background: activeTab === tab.id ? colors.bgWhite : 'transparent', color: activeTab === tab.id ? colors.secondary : colors.textMuted, boxShadow: activeTab === tab.id ? '0 2px 4px rgba(0,0,0,0.05)' : 'none' }}
             >
               {tab.n}
@@ -134,10 +169,60 @@ const ManageMasterData: React.FC = () => {
             )}
           </ul>
 
+          {/* ✅ ฟอร์มเพิ่มข้อมูลที่อัปเดตระบบตรวจสอบแล้ว */}
           <form onSubmit={(e) => { e.preventDefault(); handleAddMasterData(); }} style={{ padding: '24px', background: colors.bgLight, borderRadius: '16px', border: `1px solid ${colors.border}` }}>
             <h4 style={{ margin: '0 0 16px 0', color: colors.textMain, fontSize: '16px' }}>✨ เพิ่ม{getActiveNameTH()}ใหม่</h4>
-            <input placeholder={`กรอกชื่อ${getActiveNameTH()}...`} value={newItemName} onChange={(e) => setNewItemName(e.target.value)} required style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: `1px solid ${colors.border}`, marginBottom: '16px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
-            <button type="submit" style={{ width: '100%', padding: '12px', background: colors.secondary, color: 'white', border: 'none', borderRadius: '10px', fontWeight: '600', fontSize: '15px', cursor: 'pointer' }}>เพิ่มข้อมูล</button>
+            
+            <input 
+              placeholder={`กรอกชื่อ${getActiveNameTH()}...`} 
+              value={newItemName} 
+              onChange={(e) => setNewItemName(e.target.value)} 
+              required 
+              style={{ 
+                width: '100%', 
+                padding: '12px 16px', 
+                borderRadius: '10px', 
+                border: `2px solid ${inputBorderColor}`, 
+                backgroundColor: inputBgColor,
+                marginBottom: message ? '8px' : '16px', 
+                fontSize: '14px', 
+                outline: 'none', 
+                boxSizing: 'border-box',
+                transition: 'all 0.3s ease'
+              }} 
+            />
+            
+            {/* แสดงข้อความแจ้งเตือน */}
+            {message && (
+              <div style={{ 
+                fontSize: '13px', 
+                fontWeight: '600', 
+                color: duplicate ? colors.danger : colors.success, 
+                marginBottom: '16px',
+                paddingLeft: '4px'
+              }}>
+                {message}
+              </div>
+            )}
+
+            <button 
+              type="submit" 
+              disabled={duplicate || !newItemName.trim()}
+              style={{ 
+                width: '100%', 
+                padding: '12px', 
+                background: duplicate || !newItemName.trim() ? '#9CA3AF' : colors.secondary, 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: '10px', 
+                fontWeight: '600', 
+                fontSize: '15px', 
+                cursor: duplicate || !newItemName.trim() ? 'not-allowed' : 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              เพิ่มข้อมูล
+            </button>
           </form>
         </div>
       </div>
